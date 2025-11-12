@@ -243,7 +243,7 @@
   - _Requirements: All functional and non-functional requirements_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA engineer with audio testing expertise | Task: Perform manual integration tests following design.md testing strategy, measuring latency, jitter, and classification accuracy on real Android hardware with documented procedures and results | Restrictions: Must use real Android device (not emulator), must use audio loopback cable for latency test, must record metronome to WAV for jitter analysis, must recruit 5+ testers for calibration accuracy, document all test procedures and results in markdown report, include screenshots and audio recordings as evidence | Leverage: Audio loopback cable, DAW software for waveform analysis, Android audio latency test apps, statistical analysis for calibration accuracy | Success: Test report documents: (1) Measured end-to-end latency < 20ms, (2) Metronome jitter = 0 samples verified, (3) Mean calibration accuracy > 90% across testers, (4) E2E training session completes without crashes, all acceptance criteria from requirements verified, test procedures are reproducible | Instructions: Mark task 6.3 as in progress [-], use log-implementation tool with artifacts (test report markdown file with results, latency measurements, jitter analysis data, accuracy statistics, test device specifications), mark as complete [x]_
 
-- [ ] 6.4. Build release APK and verify functionality
+- [x] 6.4. Build release APK and verify functionality
   - Files: `android/app/build.gradle.kts`, release configuration
   - Configure release build with ProGuard/R8 optimizations
   - Build Rust library for ARM64 and ARMv7 targets
