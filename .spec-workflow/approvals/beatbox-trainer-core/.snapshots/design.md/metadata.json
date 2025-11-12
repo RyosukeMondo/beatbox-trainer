@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/beatbox-trainer-core/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-12T15:26:40.455Z",
+      "trigger": "initial",
+      "approvalId": "approval_1762961200453_d6gck1tt6",
+      "approvalTitle": "Design Document - Beatbox Trainer Core"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-12T15:28:02.499Z",
+      "trigger": "approved",
+      "approvalId": "approval_1762961200453_d6gck1tt6",
+      "approvalTitle": "Design Document - Beatbox Trainer Core"
+    }
+  ]
+}

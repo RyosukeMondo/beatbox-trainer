@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/beatbox-trainer-core/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-12T15:32:47.318Z",
+      "trigger": "initial",
+      "approvalId": "approval_1762961567316_id8bn73zp",
+      "approvalTitle": "Tasks Document - Beatbox Trainer Core"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-12T15:33:21.965Z",
+      "trigger": "approved",
+      "approvalId": "approval_1762961567316_id8bn73zp",
+      "approvalTitle": "Tasks Document - Beatbox Trainer Core"
+    }
+  ]
+}
