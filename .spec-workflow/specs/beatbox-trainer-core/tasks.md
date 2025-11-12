@@ -81,7 +81,7 @@
   - _Requirements: Req 5 (Onset Detection)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Music Information Retrieval (MIR) engineer with Rust DSP expertise | Task: Implement OnsetDetector in rust/src/analysis/onset.rs following design.md Component 3 and requirement 5, using rustfft for 256-sample FFT with spectral flux onset detection and adaptive thresholding | Restrictions: FFT window size must be exactly 256 samples with hop size = 64 (75% overlap), spectral flux must use only positive differences (max(0, ...)), median calculation for adaptive threshold must be efficient (use running median or approximation), process() must return Vec<u64> of onset timestamps in sample count | Leverage: rustfft::FftPlanner API, VecDeque for circular flux signal buffer, median calculation algorithms | Success: OnsetDetector::new(sample_rate) initializes with 256-point FFT planner, process(audio_buffer) detects percussive onsets with adaptive threshold, onset timestamps are accurate to within hop size (64 samples), false positive rate < 10% on test audio | Instructions: Mark task 3.1 as in progress [-], use log-implementation tool with artifacts (OnsetDetector struct, spectral flux formula, adaptive threshold logic, peak picking algorithm, unit test results), mark as complete [x]_
 
-- [ ] 3.2. Implement FeatureExtractor for DSP features
+- [x] 3.2. Implement FeatureExtractor for DSP features
   - Files: `rust/src/analysis/features.rs`
   - Create Features struct with fields: centroid, zcr, flatness, rolloff, decay_time_ms
   - Implement FeatureExtractor with 1024-sample FFT for high frequency resolution
