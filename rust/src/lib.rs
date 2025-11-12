@@ -6,6 +6,7 @@ pub mod api;
 pub mod audio;
 pub mod analysis;
 pub mod calibration;
+pub mod error;
 
 // Generated FFI bridge code (created by flutter_rust_bridge codegen)
 #[allow(
