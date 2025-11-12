@@ -49,7 +49,7 @@
   - _Requirements: Req 3 (Lock-Free Audio Thread)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Real-time audio systems engineer with Rust expertise | Task: Implement BufferPool struct in rust/src/audio/buffer_pool.rs following design.md Component 2 and requirement 3, using rtrb::RingBuffer to create lock-free dual-queue object pool pattern with pre-allocated f32 Vec buffers | Restrictions: All allocations must happen in new(), no heap allocations in push/pop operations, buffer count and size must be configurable constants, split() must transfer ownership cleanly | Leverage: rtrb::RingBuffer::new() API, Rust ownership rules for Send + Sync types | Success: BufferPool::new(16, 2048) creates and pre-fills pool with 16 buffers, split() returns (data_prod, data_cons), (pool_prod, pool_cons) with correct types, all operations are Send + Sync, compiles without unsafe code | Instructions: Mark task 2.1 as in progress [-], use log-implementation tool with artifacts (struct definition, method signatures, buffer allocation strategy, thread safety guarantees), mark as complete [x]_
 
-- [ ] 2.2. Implement Metronome click generation logic
+- [x] 2.2. Implement Metronome click generation logic
   - Files: `rust/src/audio/metronome.rs`
   - Create function generate_click_sample() that returns 20ms white noise burst or 1kHz sine wave
   - Implement BPM-to-samples_per_beat conversion: (sample_rate × 60) / BPM
