@@ -29,6 +29,12 @@ fn init_logging() {
 
 /// JNI_OnLoad is called when the native library is loaded by Android
 /// This function initializes the Android context required by oboe-rs
+///
+/// # Safety
+/// This function is called by the Android runtime when System.loadLibrary() is executed.
+/// The JavaVM pointer provided by the Android runtime is guaranteed to be valid for the
+/// lifetime of the process. We must initialize ndk-context before any Oboe operations
+/// to prevent "android context was not initialized" panics.
 #[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
@@ -38,17 +44,16 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_v
     info!("JNI_OnLoad called - initializing Android context");
 
     // Initialize ndk-context for oboe-rs to access Android audio subsystem
-    // SAFETY: This function must be called before any Oboe operations
-    // The JavaVM pointer is guaranteed to be valid by the Android runtime
-    let ctx = ndk_context::AndroidContext::new_with_vm(unsafe {
-        jni::JavaVM::from_raw(vm.get_java_vm_pointer()).unwrap()
-    });
-
-    ndk_context::initialize_android_context(ctx.vm(), ctx.context());
+    // SAFETY: The JavaVM pointer is guaranteed to be valid by the Android runtime
+    // and will remain valid for the lifetime of the process.
+    // We extract the raw pointer and pass it to ndk_context::initialize_android_context.
+    unsafe {
+        ndk_context::initialize_android_context(vm.get_java_vm_pointer() as *mut _);
+    }
 
     info!("Android context initialized successfully");
 
-    // Return JNI version
+    // Return JNI version 1.6 to indicate successful initialization
     jni::sys::JNI_VERSION_1_6
 }
 

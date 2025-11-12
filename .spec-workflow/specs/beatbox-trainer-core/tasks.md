@@ -11,7 +11,7 @@
   - _Requirements: Req 1 (Audio I/O), Req 4 (JNI Integration)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust developer specializing in Android NDK integration | Task: Initialize Rust audio library crate with proper Android NDK configuration in rust/Cargo.toml and rust/src/lib.rs, adding all required dependencies (oboe-rs v0.6+, rtrb v0.3+, rustfft v6+, jni v0.21+, ndk-context v0.1+) following requirements 1 and 4 from requirements.md and design patterns from design.md | Restrictions: Must configure crate-type = ["cdylib"] for JNI, do not add unnecessary dependencies, ensure Android NDK targets are properly specified (aarch64-linux-android, armv7-linux-androideabi) | Leverage: Standard Cargo.toml patterns for Android libraries, oboe-rs documentation for audio dependencies | Success: Cargo.toml compiles for Android targets, all dependencies resolve correctly, lib.rs contains basic crate structure with proper module declarations, crate builds successfully with cargo build --target aarch64-linux-android | Instructions: After completing this task, mark task 1.1 as in progress [-] in tasks.md before starting, then use log-implementation tool to record implementation details with artifacts (list all crates added with versions, file structure created), then mark as complete [x] in tasks.md_
 
-- [ ] 1.2. Implement JNI_OnLoad initialization function
+- [x] 1.2. Implement JNI_OnLoad initialization function
   - Files: `rust/src/lib.rs`
   - Implement JNI_OnLoad function that initializes ndk_context for Oboe integration
   - Use #[cfg(target_os = "android")] conditional compilation
