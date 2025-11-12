@@ -20,7 +20,7 @@
   - _Requirements: Req 4 (JNI Initialization)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Android native developer with Rust/JNI expertise | Task: Implement JNI_OnLoad function in rust/src/lib.rs following requirement 4, using jni and ndk-context crates to properly initialize Android context for oboe-rs as specified in design.md Component 1 (AudioEngine) | Restrictions: Must use #[cfg(target_os = "android")] guard, must return JNI_VERSION_1_6, do not perform blocking operations in JNI_OnLoad, ensure unsafe code is properly documented | Leverage: JNI_OnLoad signature from jni crate docs, ndk_context::initialize_android_context API | Success: JNI_OnLoad function compiles without errors, unsafe blocks are properly justified, function returns correct JNI version, initialization prevents "android context was not initialized" panic | Instructions: Mark task 1.2 as in progress [-] before starting, use log-implementation tool with artifacts (functions created with signatures, safety invariants documented), mark as complete [x]_
 
-- [ ] 1.3. Configure MainActivity.kt with System.loadLibrary() call
+- [x] 1.3. Configure MainActivity.kt with System.loadLibrary() call
   - Files: `android/app/src/main/kotlin/com/ryosukemondo/beatbox_trainer/MainActivity.kt`
   - Add init block to MainActivity that calls System.loadLibrary("beatbox_trainer")
   - Ensure library name matches Cargo.toml crate name
