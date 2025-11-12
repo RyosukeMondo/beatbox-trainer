@@ -211,7 +211,7 @@
 
 ## Phase 6: Integration and Testing
 
-- [ ] 6.1. Write Rust unit tests for DSP components
+- [x] 6.1. Write Rust unit tests for DSP components
   - Files: `rust/src/analysis/onset.rs`, `rust/src/analysis/features.rs`, `rust/src/analysis/classifier.rs`, `rust/src/analysis/quantizer.rs`
   - Add #[cfg(test)] modules with unit tests for each DSP component
   - Test OnsetDetector with synthetic percussive signals

@@ -418,10 +418,5 @@ mod tests {
         assert_eq!(result, "0.1.0");
     }
 
-    #[test]
-    fn test_add_numbers() {
-        assert_eq!(add_numbers(2, 3).unwrap(), 5);
-        assert_eq!(add_numbers(-1, 1).unwrap(), 0);
-        assert_eq!(add_numbers(100, 200).unwrap(), 300);
-    }
+    // Removed: add_numbers test (stub function removed)
 }
