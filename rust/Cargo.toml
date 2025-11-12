@@ -17,7 +17,9 @@ rustfft = "6"
 log = "0.4"
 
 # Async runtime for Dart streams
-tokio = { version = "1", features = ["sync", "rt"] }
+tokio = { version = "1", features = ["sync", "rt", "time", "macros"] }
+tokio-stream = "0.1"
+futures = "0.3"
 
 # Random number generation for metronome clicks
 rand = "0.8"

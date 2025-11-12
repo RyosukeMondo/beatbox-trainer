@@ -131,7 +131,7 @@
 
 ## Phase 4: Rust Public API (flutter_rust_bridge)
 
-- [ ] 4.1. Implement public API functions in api.rs
+- [x] 4.1. Implement public API functions in api.rs
   - Files: `rust/src/api.rs`
   - Add #[flutter_rust_bridge::frb] annotated functions: start_audio(bpm), stop_audio(), set_bpm(bpm), classification_stream()
   - Implement start_calibration(sound), finish_calibration(), calibration_stream()
