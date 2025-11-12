@@ -170,7 +170,7 @@
   - _Requirements: Req 9 (Flutter UI)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI component developer | Task: Create ClassificationIndicator widget in lib/ui/widgets/classification_indicator.dart following design.md Component 8 and requirement 9, displaying sound classification with color-coded visual feedback | Restrictions: Must be StatelessWidget (no local state), take ClassificationResult? as parameter (nullable for idle state), use Container with BoxDecoration for colored background, text should be large and readable (style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)), color mapping must match requirements (KICK → Colors.red, SNARE → Colors.blue, HI-HAT → Colors.green, UNKNOWN → Colors.grey) | Leverage: Flutter Container, BoxDecoration, Text widget, Colors class, Theme.of(context) for text style | Success: ClassificationIndicator(result: null) displays "---" in gray (idle), ClassificationIndicator(result: kick) displays "KICK" in red container, indicator updates instantly when result changes, widget is reusable across different screens | Instructions: Mark task 5.2 as in progress [-], use log-implementation tool with artifacts (StatelessWidget structure, color mapping logic, idle state handling, text styling), mark as complete [x]_
 
-- [ ] 5.3. Create TimingFeedback widget
+- [x] 5.3. Create TimingFeedback widget
   - Files: `lib/ui/widgets/timing_feedback.dart`
   - Create StatelessWidget displaying TimingClassification and error_ms
   - Color scheme: ON_TIME (green), EARLY (yellow), LATE (yellow)
