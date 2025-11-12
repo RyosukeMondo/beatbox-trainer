@@ -71,7 +71,7 @@
 
 ## Phase 3: DSP Analysis Pipeline (Rust)
 
-- [ ] 3.1. Implement OnsetDetector with spectral flux algorithm
+- [x] 3.1. Implement OnsetDetector with spectral flux algorithm
   - Files: `rust/src/analysis/mod.rs`, `rust/src/analysis/onset.rs`
   - Create OnsetDetector struct with FftPlanner (256-sample window, 75% overlap)
   - Implement spectral flux calculation: SF(t) = Σ max(0, |FFT(t)| - |FFT(t-1)|)
