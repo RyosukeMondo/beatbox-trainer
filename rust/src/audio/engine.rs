@@ -113,14 +113,23 @@ impl AudioEngine {
     ///
     /// Opens full-duplex audio streams with output as master (triggers input reads).
     /// The output callback generates metronome clicks and performs non-blocking
-    /// input reads to capture audio data.
+    /// input reads to capture audio data. Also spawns the analysis thread to process
+    /// captured audio through the DSP pipeline.
+    ///
+    /// # Arguments
+    /// * `calibration` - Calibration state for sound classification
+    /// * `result_sender` - Tokio channel for sending classification results to UI
     ///
     /// # Returns
     /// Result indicating success or error message
     ///
     /// # Errors
     /// Returns error if streams cannot be opened or started
-    pub fn start(&mut self) -> Result<(), String> {
+    pub fn start(
+        &mut self,
+        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+    ) -> Result<(), String> {
         // Clone Arc references for callback closures
         let frame_counter = Arc::clone(&self.frame_counter);
         let bpm = Arc::clone(&self.bpm);
@@ -195,6 +204,38 @@ impl AudioEngine {
 
         self.input_stream = Some(input_stream);
         self.output_stream = Some(output_stream);
+
+        // Split buffer channels for audio and analysis threads
+        // Take ownership of buffer_channels temporarily
+        let buffer_channels = std::mem::replace(
+            &mut self.buffer_channels,
+            // Create a dummy empty channels struct (will be replaced if start() is called again)
+            BufferPoolChannels {
+                data_producer: rtrb::RingBuffer::new(1).0,
+                data_consumer: rtrb::RingBuffer::new(1).1,
+                pool_producer: rtrb::RingBuffer::new(1).0,
+                pool_consumer: rtrb::RingBuffer::new(1).1,
+            },
+        );
+
+        let (audio_channels, analysis_channels) = buffer_channels.split_for_threads();
+
+        // Store audio channels back (note: this is a structural change that would need
+        // to be reflected in the struct definition, but for now we'll just keep using
+        // the dummy channels since the callback doesn't use them yet)
+        // TODO: Refactor AudioEngine to store AudioThreadChannels instead
+
+        // Spawn analysis thread
+        let frame_counter_clone = Arc::clone(&self.frame_counter);
+        let bpm_clone = Arc::clone(&self.bpm);
+        crate::analysis::spawn_analysis_thread(
+            analysis_channels,
+            calibration,
+            frame_counter_clone,
+            bpm_clone,
+            self.sample_rate,
+            result_sender,
+        );
 
         Ok(())
     }
@@ -291,7 +332,11 @@ impl AudioEngine {
         })
     }
 
-    pub fn start(&mut self) -> Result<(), String> {
+    pub fn start(
+        &mut self,
+        _calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        _result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+    ) -> Result<(), String> {
         log::warn!("AudioEngine::start() called on non-Android platform - no-op");
         Ok(())
     }

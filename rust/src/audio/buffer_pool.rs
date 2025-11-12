@@ -40,6 +40,55 @@ pub struct BufferPoolChannels {
     pub pool_consumer: Consumer<AudioBuffer>,
 }
 
+impl BufferPoolChannels {
+    /// Split channels into audio thread and analysis thread parts
+    ///
+    /// This consumes the BufferPoolChannels and returns two separate structs,
+    /// one for the audio thread and one for the analysis thread. This ensures
+    /// proper ownership separation and prevents accidental cross-thread usage.
+    ///
+    /// # Returns
+    /// Tuple of (AudioThreadChannels, AnalysisThreadChannels)
+    pub fn split_for_threads(self) -> (AudioThreadChannels, AnalysisThreadChannels) {
+        (
+            AudioThreadChannels {
+                data_producer: self.data_producer,
+                pool_consumer: self.pool_consumer,
+            },
+            AnalysisThreadChannels {
+                data_consumer: self.data_consumer,
+                pool_producer: self.pool_producer,
+            },
+        )
+    }
+}
+
+/// Channels used by the audio thread (callback)
+///
+/// The audio thread uses these channels to:
+/// - Pop empty buffers from pool
+/// - Fill buffers with audio data
+/// - Push filled buffers to analysis thread
+pub struct AudioThreadChannels {
+    /// Producer for sending filled audio buffers to analysis thread
+    pub data_producer: Producer<AudioBuffer>,
+    /// Consumer for retrieving empty buffers from pool
+    pub pool_consumer: Consumer<AudioBuffer>,
+}
+
+/// Channels used by the analysis thread
+///
+/// The analysis thread uses these channels to:
+/// - Pop filled buffers from audio thread
+/// - Process audio data
+/// - Push empty buffers back to pool
+pub struct AnalysisThreadChannels {
+    /// Consumer for receiving filled audio buffers from audio thread
+    pub data_consumer: Consumer<AudioBuffer>,
+    /// Producer for returning empty buffers to pool
+    pub pool_producer: Producer<AudioBuffer>,
+}
+
 /// Lock-free buffer pool using dual SPSC ring buffers
 ///
 /// Pre-allocates a fixed number of audio buffers and manages them through
