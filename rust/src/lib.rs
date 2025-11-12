@@ -7,19 +7,31 @@ pub mod audio;
 pub mod analysis;
 pub mod calibration;
 
+// Generated FFI bridge code (created by flutter_rust_bridge codegen)
+#[allow(
+    clippy::all,
+    non_snake_case,
+    non_camel_case_types,
+    non_upper_case_globals,
+    unused_imports,
+    unused_variables,
+    dead_code
+)]
+mod bridge_generated;
+
 // Re-exports for convenience
 pub use api::*;
-
-use log::info;
 
 /// Initialize Android logging
 #[cfg(target_os = "android")]
 fn init_logging() {
+    use log::info;
     android_logger::init_once(
         android_logger::Config::default()
             .with_max_level(log::LevelFilter::Debug)
             .with_tag("BeatboxTrainer"),
     );
+    info!("Android logger initialized");
 }
 
 #[cfg(not(target_os = "android"))]
@@ -38,6 +50,8 @@ fn init_logging() {
 #[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
+    use log::info;
+
     // Initialize Android logger
     init_logging();
 
@@ -59,8 +73,6 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_v
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_module_structure() {
         // Verify all modules are accessible

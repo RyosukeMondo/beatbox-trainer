@@ -1,0 +1,14 @@
+# flutter_rust_bridge configuration
+# This file configures automatic code generation for Flutter-Rust FFI
+
+# Rust source file with #[frb] annotated functions
+rust_input: rust/src/api.rs
+
+# Generated Dart output
+dart_output: lib/bridge/api.dart
+
+# Generated Rust FFI glue code
+rust_output: rust/src/bridge_generated.rs
+
+# Generate code for Flutter (not pure Dart)
+dart_format_line_length: 80

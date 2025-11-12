@@ -35,6 +35,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # Flutter Rust Bridge for FFI integration with Rust
+  flutter_rust_bridge: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

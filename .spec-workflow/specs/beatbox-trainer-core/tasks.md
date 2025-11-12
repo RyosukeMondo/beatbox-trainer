@@ -28,7 +28,7 @@
   - _Requirements: Req 4 (JNI Initialization)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Android Kotlin developer | Task: Modify MainActivity.kt to add System.loadLibrary() init block following requirement 4 design from design.md, ensuring native library loads before Flutter initialization | Restrictions: init block must execute before any Rust function calls, library name must exactly match Cargo.toml [package] name, do not modify existing Flutter integration code | Leverage: Kotlin init block syntax, FlutterActivity base class patterns | Success: MainActivity compiles, init block calls System.loadLibrary("beatbox_trainer") correctly, app launches without "UnsatisfiedLinkError" | Instructions: Mark task 1.3 as in progress [-], use log-implementation tool with artifacts (Kotlin code added to MainActivity with line numbers), mark as complete [x]_
 
-- [ ] 1.4. Setup flutter_rust_bridge code generation
+- [x] 1.4. Setup flutter_rust_bridge code generation
   - Files: `lib/bridge/api.dart`, `rust/src/api.rs`, `build.rs` (create), `pubspec.yaml`
   - Install flutter_rust_bridge_codegen as dev dependency
   - Create api.rs with #[flutter_rust_bridge::frb] annotated functions
