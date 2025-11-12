@@ -40,7 +40,7 @@
 
 ## Phase 2: Core Audio Engine (Rust)
 
-- [ ] 2.1. Implement BufferPool with dual SPSC queues
+- [x] 2.1. Implement BufferPool with dual SPSC queues
   - Files: `rust/src/audio/mod.rs`, `rust/src/audio/buffer_pool.rs`
   - Create BufferPool struct using rtrb::RingBuffer for DATA_QUEUE and POOL_QUEUE
   - Implement split() method that returns producers/consumers for both queues
