@@ -92,7 +92,7 @@ pub fn samples_per_beat(bpm: u32, sample_rate: u32) -> u64 {
 #[inline]
 pub fn is_on_beat(frame_counter: u64, bpm: u32, sample_rate: u32) -> bool {
     let spb = samples_per_beat(bpm, sample_rate);
-    frame_counter % spb == 0
+    frame_counter.is_multiple_of(spb)
 }
 
 #[cfg(test)]
@@ -123,7 +123,7 @@ mod tests {
         // Verify all samples are in valid range [-1.0, 1.0]
         for (i, &sample) in click.iter().enumerate() {
             assert!(
-                sample >= -1.0 && sample <= 1.0,
+                (-1.0..=1.0).contains(&sample),
                 "Sample {} at index {} is out of range [-1.0, 1.0]",
                 sample,
                 i

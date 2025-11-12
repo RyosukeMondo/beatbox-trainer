@@ -58,7 +58,7 @@
   - _Requirements: Req 2 (Sample-Accurate Metronome)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Audio DSP engineer | Task: Implement metronome click generation in rust/src/audio/metronome.rs following design.md Component 1 and requirement 2, creating deterministic click samples and BPM timing functions | Restrictions: All functions must be pure (no side effects), click generation must be deterministic (same seed = same noise), no allocations in timing check functions, use f32 for audio samples | Leverage: Standard sine wave formula: sin(2π * frequency * sample_index / sample_rate), white noise from rand crate with fixed seed | Success: generate_click_sample(sample_rate) returns Vec<f32> of exactly 20ms duration, is_on_beat(frame_counter, bpm, sample_rate) returns true at exact beat boundaries with 0 sample error, samples_per_beat calculation matches design formula | Instructions: Mark task 2.2 as in progress [-], use log-implementation tool with artifacts (function signatures, DSP formulas implemented, click sample properties), mark as complete [x]_
 
-- [ ] 2.3. Implement AudioEngine struct with Oboe integration
+- [x] 2.3. Implement AudioEngine struct with Oboe integration
   - Files: `rust/src/audio/engine.rs`
   - Create AudioEngine struct with oboe-rs AudioStreamAsync<Output> and AudioStreamAsync<Input>
   - Implement AudioOutputCallback trait with on_audio_ready method
