@@ -179,7 +179,7 @@
   - _Requirements: Req 9 (Flutter UI), Req 8 (Timing Feedback)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI developer with UX focus | Task: Create TimingFeedback widget in lib/ui/widgets/timing_feedback.dart following design.md Component 8 and requirements 8, 9, displaying timing accuracy with millisecond precision and color-coded feedback | Restrictions: Must be StatelessWidget, take ClassificationResult? parameter (nullable), extract timing field, display error_ms with sign (+ for late, - for early, no sign for on-time), color mapping: ON_TIME → Colors.green, EARLY/LATE → Colors.amber, text format: "${error}ms ${classification}" e.g. "+12ms LATE" | Leverage: Flutter Text widget, string interpolation, Colors class, conditional color selection | Success: TimingFeedback(result: null) displays "---" (idle), TimingFeedback(result: on-time) displays "0ms ON-TIME" in green, TimingFeedback(result: late +12ms) displays "+12ms LATE" in yellow, error value rounded to 1 decimal place, widget updates immediately | Instructions: Mark task 5.3 as in progress [-], use log-implementation tool with artifacts (StatelessWidget structure, error_ms formatting logic, color mapping, null handling), mark as complete [x]_
 
-- [ ] 5.4. Create BPMControl widget
+- [x] 5.4. Create BPMControl widget
   - Files: `lib/ui/widgets/bpm_control.dart`
   - Create StatefulWidget with Slider (40-240 range) and BPM preset buttons (60, 80, 100, 120, 140, 160)
   - Call onChanged(int bpm) callback when BPM changes
