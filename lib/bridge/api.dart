@@ -8,6 +8,7 @@
 // The actual implementation will be generated from rust/src/api.rs
 
 import '../models/classification_result.dart';
+import '../models/calibration_progress.dart';
 
 /// Stub API functions - will be replaced by codegen
 
@@ -48,6 +49,13 @@ Future<void> startCalibration() async {
 
 /// Finish calibration and compute thresholds
 Future<void> finishCalibration() async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Stream of calibration progress updates
+Stream<CalibrationProgress> calibrationStream() {
   throw UnimplementedError(
     'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
   );

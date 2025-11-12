@@ -188,7 +188,7 @@
   - _Requirements: Req 9 (Flutter UI), Req 2 (BPM Control)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI developer | Task: Create BPMControl widget in lib/ui/widgets/bpm_control.dart following design.md Component 8 and requirements 2, 9, providing intuitive BPM selection with slider and preset buttons | Restrictions: Must take int currentBpm and ValueChanged<int> onChanged as parameters, Slider range: min 40, max 240, divisions: 200 (1 BPM increments), preset buttons: [60, 80, 100, 120, 140, 160], tapping preset should call onChanged, display current BPM as large text above controls | Leverage: Flutter Slider widget, ElevatedButton, Row for preset buttons, Column layout, onChanged callback pattern | Success: BPMControl displays current BPM (e.g. "120 BPM") prominently, Slider allows smooth adjustment 40-240, preset buttons set exact BPM values, onChanged callback fires immediately, widget integrates cleanly with TrainingScreen | Instructions: Mark task 5.4 as in progress [-], use log-implementation tool with artifacts (StatefulWidget structure, Slider configuration, preset button array, callback implementation), mark as complete [x]_
 
-- [ ] 5.5. Create CalibrationScreen with sample collection UI
+- [x] 5.5. Create CalibrationScreen with sample collection UI
   - Files: `lib/ui/screens/calibration_screen.dart`
   - Implement StatefulWidget managing calibration workflow (KICK → SNARE → HI-HAT)
   - Display instructions: "Make KICK sound 10 times"
