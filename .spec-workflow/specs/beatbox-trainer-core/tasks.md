@@ -151,7 +151,7 @@
 
 ## Phase 5: Flutter UI Implementation
 
-- [ ] 5.1. Create TrainingScreen with StreamBuilder
+- [x] 5.1. Create TrainingScreen with StreamBuilder
   - Files: `lib/ui/screens/training_screen.dart`
   - Implement StatefulWidget with start/stop training buttons
   - Add StreamBuilder listening to classification_stream() from Rust API

@@ -7,26 +7,48 @@
 // STUB FILE: This is a temporary stub until codegen is run.
 // The actual implementation will be generated from rust/src/api.rs
 
-/// Stub API class - will be replaced by codegen
-class BeatboxTrainerApi {
-  /// Greet function stub
-  Future<String> greet({required String name}) async {
-    throw UnimplementedError(
-      'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
-    );
-  }
+import '../models/classification_result.dart';
 
-  /// Get version stub
-  Future<String> getVersion() async {
-    throw UnimplementedError(
-      'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
-    );
-  }
+/// Stub API functions - will be replaced by codegen
 
-  /// Add numbers stub
-  Future<int> addNumbers({required int a, required int b}) async {
-    throw UnimplementedError(
-      'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
-    );
-  }
+/// Start audio engine with specified BPM
+Future<void> startAudio({required int bpm}) async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Stop audio engine
+Future<void> stopAudio() async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Set BPM dynamically during audio playback
+Future<void> setBpm({required int bpm}) async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Stream of classification results
+Stream<ClassificationResult> classificationStream() {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Start calibration workflow
+Future<void> startCalibration() async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
+}
+
+/// Finish calibration and compute thresholds
+Future<void> finishCalibration() async {
+  throw UnimplementedError(
+    'This is a stub. Run flutter_rust_bridge_codegen generate to create the actual implementation.',
+  );
 }
