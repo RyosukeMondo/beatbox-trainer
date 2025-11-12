@@ -161,7 +161,7 @@
   - _Requirements: Req 9 (Flutter UI)_
   - _Prompt: Implement the task for spec beatbox-trainer-core, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI developer | Task: Create TrainingScreen in lib/ui/screens/training_screen.dart following design.md Component 8 and requirement 9, building reactive UI with StreamBuilder connected to Rust classification stream | Restrictions: Use StatefulWidget for local state management, must handle stream subscription lifecycle (dispose properly), Stream must be from api.classificationStream(), BPM slider range 40-240, must show loading state before stream data arrives, handle errors from Rust API gracefully | Leverage: Flutter Scaffold, AppBar, Column layout, StreamBuilder widget, FloatingActionButton, Slider widget, Material Design patterns | Success: TrainingScreen renders with BPM slider (40-240), Start button calls api.startAudio(bpm) and switches to Stop button, StreamBuilder<ClassificationResult> updates UI on each classification event, Stop button calls api.stopAudio() and resets UI, error dialog appears if start_audio fails, screen properly disposes stream subscription | Instructions: Mark task 5.1 as in progress [-], use log-implementation tool with artifacts (StatefulWidget structure, StreamBuilder setup, button callbacks, stream lifecycle management), mark as complete [x]_
 
-- [ ] 5.2. Create ClassificationIndicator widget
+- [x] 5.2. Create ClassificationIndicator widget
   - Files: `lib/ui/widgets/classification_indicator.dart`
   - Create StatelessWidget that displays BeatboxHit enum as colored text
   - Color scheme: KICK (red), SNARE (blue), HI-HAT (green), UNKNOWN (gray)
