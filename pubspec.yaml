@@ -38,6 +38,9 @@ dependencies:
   # Flutter Rust Bridge for FFI integration with Rust
   flutter_rust_bridge: ^2.0.0
 
+  # Permission handler for microphone access
+  permission_handler: ^11.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

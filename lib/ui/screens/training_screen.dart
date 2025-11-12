@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../bridge/api.dart';
 import '../../models/classification_result.dart';
 import '../../models/timing_feedback.dart';
@@ -44,6 +45,12 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Start audio engine and begin training session
   Future<void> _startTraining() async {
+    // Check microphone permission before starting audio
+    final hasPermission = await _requestMicrophonePermission();
+    if (!hasPermission) {
+      return; // Permission denied, cannot proceed
+    }
+
     try {
       // Call Rust API to start audio engine with current BPM
       await startAudio(bpm: _currentBpm);
@@ -100,6 +107,97 @@ class _TrainingScreenState extends State<TrainingScreen> {
         }
       }
     }
+  }
+
+  /// Request microphone permission and handle different states
+  Future<bool> _requestMicrophonePermission() async {
+    final status = await Permission.microphone.status;
+
+    // Permission already granted
+    if (status.isGranted) {
+      return true;
+    }
+
+    // Permission permanently denied - show settings dialog
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        await _showPermissionPermanentlyDeniedDialog();
+      }
+      return false;
+    }
+
+    // Request permission
+    final result = await Permission.microphone.request();
+
+    // Permission granted after request
+    if (result.isGranted) {
+      return true;
+    }
+
+    // Permission denied - show rationale dialog
+    if (result.isDenied) {
+      if (mounted) {
+        await _showPermissionDeniedDialog();
+      }
+      return false;
+    }
+
+    // Permission permanently denied after request
+    if (result.isPermanentlyDenied) {
+      if (mounted) {
+        await _showPermissionPermanentlyDeniedDialog();
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  /// Show dialog when permission is denied
+  Future<void> _showPermissionDeniedDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Microphone Permission Required'),
+        content: const Text(
+          'This app needs microphone access to detect your beatbox sounds. '
+          'Please grant permission to continue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog when permission is permanently denied
+  Future<void> _showPermissionPermanentlyDeniedDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Microphone Permission Required'),
+        content: const Text(
+          'This app needs microphone access to detect your beatbox sounds. '
+          'Please enable microphone permission in your device settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Show error dialog with message
