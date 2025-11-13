@@ -110,49 +110,43 @@ impl AudioEngine {
         })
     }
 
-    /// Start audio streams and begin processing
-    ///
-    /// Opens full-duplex audio streams with output as master (triggers input reads).
-    /// The output callback generates metronome clicks and performs non-blocking
-    /// input reads to capture audio data. Also spawns the analysis thread to process
-    /// captured audio through the DSP pipeline.
-    ///
-    /// # Arguments
-    /// * `calibration` - Calibration state for sound classification
-    /// * `result_sender` - Tokio channel for sending classification results to UI
+    /// Create and open the input audio stream
     ///
     /// # Returns
-    /// Result indicating success or error
+    /// Result containing the opened input stream or error
     ///
     /// # Errors
-    /// Returns error if streams cannot be opened or started
-    pub fn start(
-        &mut self,
-        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
-        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
-    ) -> Result<(), AudioError> {
-        // Clone Arc references for callback closures
+    /// Returns error if input stream cannot be opened
+    fn create_input_stream(&self) -> Result<AudioStreamAsync<Input>, AudioError> {
+        AudioStreamBuilder::default()
+            .set_performance_mode(PerformanceMode::LowLatency)
+            .set_sharing_mode(SharingMode::Exclusive)
+            .set_direction::<Input>()
+            .set_sample_rate(self.sample_rate as i32)
+            .set_channel_count(1) // Mono input for beatbox detection
+            .set_format::<f32>()
+            .open_stream()
+            .map_err(|e| AudioError::StreamOpenFailed {
+                reason: format!("Input stream: {:?}", e),
+            })
+    }
+
+    /// Create and open the output audio stream with metronome callback
+    ///
+    /// # Returns
+    /// Result containing the opened output stream with audio callback or error
+    ///
+    /// # Errors
+    /// Returns error if output stream cannot be opened
+    fn create_output_stream(&self) -> Result<AudioStreamAsync<Output>, AudioError> {
+        // Clone Arc references for callback closure
         let frame_counter = Arc::clone(&self.frame_counter);
         let bpm = Arc::clone(&self.bpm);
         let sample_rate = self.sample_rate;
         let click_samples = Arc::clone(&self.click_samples);
         let click_position = Arc::clone(&self.click_position);
 
-        // Build and open input stream (slave)
-        let input_stream = AudioStreamBuilder::default()
-            .set_performance_mode(PerformanceMode::LowLatency)
-            .set_sharing_mode(SharingMode::Exclusive)
-            .set_direction::<Input>()
-            .set_sample_rate(sample_rate as i32)
-            .set_channel_count(1) // Mono input for beatbox detection
-            .set_format::<f32>()
-            .open_stream()
-            .map_err(|e| AudioError::StreamOpenFailed {
-                reason: format!("Input stream: {:?}", e),
-            })?;
-
-        // Build output stream (master) with callback
-        let output_stream = AudioStreamBuilder::default()
+        AudioStreamBuilder::default()
             .set_performance_mode(PerformanceMode::LowLatency)
             .set_sharing_mode(SharingMode::Exclusive)
             .set_direction::<Output>()
@@ -197,7 +191,60 @@ impl AudioEngine {
             .open_stream()
             .map_err(|e| AudioError::StreamOpenFailed {
                 reason: format!("Output stream: {:?}", e),
-            })?;
+            })
+    }
+
+    /// Spawn the analysis thread for audio processing
+    ///
+    /// # Arguments
+    /// * `buffer_channels` - Buffer pool channels for audio data transfer
+    /// * `calibration` - Calibration state for sound classification
+    /// * `result_sender` - Tokio channel for sending classification results to UI
+    fn spawn_analysis_thread_internal(
+        &self,
+        buffer_channels: BufferPoolChannels,
+        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+    ) {
+        let (_, analysis_channels) = buffer_channels.split_for_threads();
+
+        let frame_counter_clone = Arc::clone(&self.frame_counter);
+        let bpm_clone = Arc::clone(&self.bpm);
+
+        crate::analysis::spawn_analysis_thread(
+            analysis_channels,
+            calibration,
+            frame_counter_clone,
+            bpm_clone,
+            self.sample_rate,
+            result_sender,
+        );
+    }
+
+    /// Start audio streams and begin processing
+    ///
+    /// Opens full-duplex audio streams with output as master (triggers input reads).
+    /// The output callback generates metronome clicks and performs non-blocking
+    /// input reads to capture audio data. Also spawns the analysis thread to process
+    /// captured audio through the DSP pipeline.
+    ///
+    /// # Arguments
+    /// * `calibration` - Calibration state for sound classification
+    /// * `result_sender` - Tokio channel for sending classification results to UI
+    ///
+    /// # Returns
+    /// Result indicating success or error
+    ///
+    /// # Errors
+    /// Returns error if streams cannot be opened or started
+    pub fn start(
+        &mut self,
+        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+    ) -> Result<(), AudioError> {
+        // Create and open audio streams
+        let input_stream = self.create_input_stream()?;
+        let output_stream = self.create_output_stream()?;
 
         // Start streams (input first, then output as master)
         input_stream
@@ -227,24 +274,8 @@ impl AudioEngine {
             },
         );
 
-        let (audio_channels, analysis_channels) = buffer_channels.split_for_threads();
-
-        // Store audio channels back (note: this is a structural change that would need
-        // to be reflected in the struct definition, but for now we'll just keep using
-        // the dummy channels since the callback doesn't use them yet)
-        // TODO: Refactor AudioEngine to store AudioThreadChannels instead
-
         // Spawn analysis thread
-        let frame_counter_clone = Arc::clone(&self.frame_counter);
-        let bpm_clone = Arc::clone(&self.bpm);
-        crate::analysis::spawn_analysis_thread(
-            analysis_channels,
-            calibration,
-            frame_counter_clone,
-            bpm_clone,
-            self.sample_rate,
-            result_sender,
-        );
+        self.spawn_analysis_thread_internal(buffer_channels, calibration, result_sender);
 
         Ok(())
     }
