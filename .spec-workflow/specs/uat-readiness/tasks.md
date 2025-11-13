@@ -142,7 +142,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
 
 ## Phase 5: Debug Mode System (1 week)
 
-- [-] 5.1. Add Rust Debug Streams API
+- [x] 5.1. Add Rust Debug Streams API
   - File: rust/src/api.rs, rust/src/audio/mod.rs
   - Estimate: 4 hours | Priority: High
   - Add FFI streams for audio metrics and onset events
