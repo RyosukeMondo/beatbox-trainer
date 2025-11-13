@@ -79,7 +79,7 @@
   - _Requirements: Requirement 3_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Build optimization specialist | Task: Test incremental build performance by modifying rust/src/api.rs and running flutter build apk. Verify that Gradle detects Rust source changes and triggers cargo-ndk recompilation only for modified code. Measure build time and ensure < 30 second target is met. Verify APK receives updated .so files. Reference design document Testing Strategy - Build Time Benchmark. | Restrictions: Must test with minimal code change (comment only), must verify actual recompilation occurs, must not affect runtime functionality | _Leverage: Gradle buildRustAndroid task incremental detection_ | Success: Incremental build completes in < 30 seconds, Rust recompilation triggered correctly, APK updated with new .so, no unnecessary full rebuilds | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (timing measurements, build output analysis). Then mark as completed [x] in tasks.md_
 
-- [ ] 3.3. Deploy and test on physical device (Pixel 9a)
+- [x] 3.3. Deploy and test on physical device (Pixel 9a)
   - Connect Pixel 9a via USB (device ID: 4C041JEBF15065)
   - Run `flutter run -d 4C041JEBF15065` and verify app launches
   - Check logcat for JNI_OnLoad execution and ndk_context initialization
@@ -90,7 +90,7 @@
 
 ## Phase 4: Documentation and Cleanup
 
-- [ ] 4.1. Document build setup in README
+- [x] 4.1. Document build setup in README
   - File: `README.md` (or create `docs/ANDROID_BUILD.md`)
   - Document cargo-ndk installation requirements
   - Add troubleshooting section for common build errors

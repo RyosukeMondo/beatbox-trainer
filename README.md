@@ -26,6 +26,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture docum
 - Flutter SDK (3.0+)
 - Rust toolchain (for native audio processing)
 - Android SDK (for mobile deployment)
+- Android NDK r25c+ (for Android builds)
+- cargo-ndk (for Rust cross-compilation)
 
 ### Development Setup
 
@@ -41,6 +43,23 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture docum
    cp scripts/pre-commit .git/hooks/pre-commit
    chmod +x .git/hooks/pre-commit
    ```
+
+### Building for Android
+
+For complete Android build setup, including cargo-ndk installation, troubleshooting, and deployment, see **[docs/ANDROID_BUILD.md](docs/ANDROID_BUILD.md)**.
+
+**Quick start for Android:**
+```bash
+# Install required tools
+cargo install cargo-ndk
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+
+# Build APK
+flutter build apk
+
+# Deploy to device
+flutter install -d <device-id>
+```
 
 ### Pre-Commit Quality Gates
 
