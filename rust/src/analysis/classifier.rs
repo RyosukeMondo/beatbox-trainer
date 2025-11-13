@@ -165,21 +165,29 @@ impl Classifier {
         let cal = match self.calibration.read() {
             Ok(guard) => guard,
             Err(_) => {
-                // Lock poisoned - log error and return Unknown with zero confidence
                 log::error!("Calibration state lock poisoned in classify_level2");
                 return (BeatboxHit::Unknown, 0.0);
             }
         };
 
-        // Calculate scores for all Level 2 classes
-        let kick_score = self.calculate_kick_score_level2(features, &cal);
-        let ksnare_score = self.calculate_ksnare_score_level2(features, &cal);
-        let snare_score = self.calculate_snare_score_level1(features, &cal); // Same as Level 1
-        let closed_hihat_score = self.calculate_closed_hihat_score_level2(features, &cal);
-        let open_hihat_score = self.calculate_open_hihat_score_level2(features, &cal);
-        let hihat_score = self.calculate_hihat_score_level1(features, &cal); // Generic hi-hat
+        // Calculate scores and confidence
+        let confidence = self.calculate_level2_confidence(features, &cal);
 
-        // Find max score and sum
+        // Apply decision rules
+        let classification = self.apply_level2_decision_rules(features, &cal);
+
+        (classification, confidence)
+    }
+
+    /// Calculate confidence score for Level 2 classification
+    fn calculate_level2_confidence(&self, features: &Features, cal: &CalibrationState) -> f32 {
+        let kick_score = self.calculate_kick_score_level2(features, cal);
+        let ksnare_score = self.calculate_ksnare_score_level2(features, cal);
+        let snare_score = self.calculate_snare_score_level1(features, cal);
+        let closed_hihat_score = self.calculate_closed_hihat_score_level2(features, cal);
+        let open_hihat_score = self.calculate_open_hihat_score_level2(features, cal);
+        let hihat_score = self.calculate_hihat_score_level1(features, cal);
+
         let max_score = kick_score
             .max(ksnare_score)
             .max(snare_score)
@@ -193,40 +201,52 @@ impl Classifier {
             + open_hihat_score
             + hihat_score;
 
-        // Calculate confidence
-        let confidence = if sum_scores > 0.0 {
+        if sum_scores > 0.0 {
             (max_score / sum_scores).clamp(0.0, 1.0)
         } else {
             0.0
-        };
+        }
+    }
 
-        // Apply decision rules (same logic as before)
-        let classification =
-            if features.centroid < cal.t_kick_centroid && features.zcr < cal.t_kick_zcr {
-                // Level 2 enhancement: flatness check for kick subcategories
-                if features.flatness < 0.1 {
-                    BeatboxHit::Kick
-                } else if features.flatness > 0.3 {
-                    BeatboxHit::KSnare
-                } else {
-                    BeatboxHit::Kick
-                }
-            } else if features.centroid < cal.t_snare_centroid {
-                BeatboxHit::Snare
-            } else if features.centroid >= cal.t_snare_centroid && features.zcr > cal.t_hihat_zcr {
-                // Level 2 enhancement: decay time check for hi-hat subcategories
-                if features.decay_time_ms < 50.0 {
-                    BeatboxHit::ClosedHiHat
-                } else if features.decay_time_ms > 150.0 {
-                    BeatboxHit::OpenHiHat
-                } else {
-                    BeatboxHit::HiHat
-                }
-            } else {
-                BeatboxHit::Unknown
-            };
+    /// Apply decision tree rules for Level 2 classification
+    fn apply_level2_decision_rules(
+        &self,
+        features: &Features,
+        cal: &CalibrationState,
+    ) -> BeatboxHit {
+        if features.centroid < cal.t_kick_centroid && features.zcr < cal.t_kick_zcr {
+            // Level 2 enhancement: flatness check for kick subcategories
+            self.classify_kick_subcategory(features.flatness)
+        } else if features.centroid < cal.t_snare_centroid {
+            BeatboxHit::Snare
+        } else if features.centroid >= cal.t_snare_centroid && features.zcr > cal.t_hihat_zcr {
+            // Level 2 enhancement: decay time check for hi-hat subcategories
+            self.classify_hihat_subcategory(features.decay_time_ms)
+        } else {
+            BeatboxHit::Unknown
+        }
+    }
 
-        (classification, confidence)
+    /// Classify kick subcategory based on flatness
+    fn classify_kick_subcategory(&self, flatness: f32) -> BeatboxHit {
+        if flatness < 0.1 {
+            BeatboxHit::Kick
+        } else if flatness > 0.3 {
+            BeatboxHit::KSnare
+        } else {
+            BeatboxHit::Kick
+        }
+    }
+
+    /// Classify hi-hat subcategory based on decay time
+    fn classify_hihat_subcategory(&self, decay_time_ms: f32) -> BeatboxHit {
+        if decay_time_ms < 50.0 {
+            BeatboxHit::ClosedHiHat
+        } else if decay_time_ms > 150.0 {
+            BeatboxHit::OpenHiHat
+        } else {
+            BeatboxHit::HiHat
+        }
     }
 
     /// Calculate kick score for Level 2 (tonal kick)
@@ -279,7 +299,8 @@ impl Classifier {
 
     /// Classify a sound (convenience method that chooses level based on configuration)
     ///
-    /// For now, defaults to Level 1. Future: add level selection to CalibrationState.
+    /// Dispatches to classify_level1() or classify_level2() based on the level field
+    /// in CalibrationState. Defaults to Level 1 if lock is poisoned.
     ///
     /// # Arguments
     /// * `features` - Extracted DSP features
@@ -287,9 +308,21 @@ impl Classifier {
     /// # Returns
     /// Tuple of (BeatboxHit classification result, confidence score 0.0-1.0)
     pub fn classify(&self, features: &Features) -> (BeatboxHit, f32) {
-        // Default to Level 1 for now
-        // TODO: Add level selection to CalibrationState in future
-        self.classify_level1(features)
+        // Read calibration level (thread-safe)
+        let level = match self.calibration.read() {
+            Ok(guard) => guard.level,
+            Err(_) => {
+                // Lock poisoned - log error and default to Level 1
+                log::error!("Calibration state lock poisoned in classify, defaulting to Level 1");
+                1
+            }
+        };
+
+        // Dispatch based on level
+        match level {
+            2 => self.classify_level2(features),
+            _ => self.classify_level1(features), // Default to Level 1 for any other value
+        }
     }
 }
 
@@ -526,17 +559,29 @@ mod tests {
     }
 
     #[test]
-    fn test_classify_uses_level1() {
-        let classifier = create_classifier();
-
-        // Test that classify() defaults to Level 1
+    fn test_classify_dispatches_by_level() {
+        // Test Level 1 dispatch (default)
+        let classifier_l1 = create_classifier();
         let features = create_features(1000.0, 0.05, 0.0, 0.0);
-        let classify_result = classifier.classify(&features);
-        let level1_result = classifier.classify_level1(&features);
+        let classify_result = classifier_l1.classify(&features);
+        let level1_result = classifier_l1.classify_level1(&features);
 
         assert_eq!(
             classify_result, level1_result,
-            "classify() should default to Level 1"
+            "classify() should use Level 1 when level=1"
+        );
+
+        // Test Level 2 dispatch
+        let mut cal_l2 = CalibrationState::new_default();
+        cal_l2.level = 2;
+        let classifier_l2 = Classifier::new(Arc::new(RwLock::new(cal_l2)));
+
+        let classify_result_l2 = classifier_l2.classify(&features);
+        let level2_result = classifier_l2.classify_level2(&features);
+
+        assert_eq!(
+            classify_result_l2, level2_result,
+            "classify() should use Level 2 when level=2"
         );
     }
 
