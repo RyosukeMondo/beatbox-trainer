@@ -58,7 +58,7 @@
 
 ### Task 2.1: Create AppContext Container
 
-- [ ] 2.1. Create AppContext struct with dependency injection in rust/src/context.rs
+- [x] 2.1. Create AppContext struct with dependency injection in rust/src/context.rs
   - Files: rust/src/context.rs (NEW)
   - Create AppContext struct with fields for all global state (audio_engine, calibration_procedure, calibration_state, classification_broadcast, calibration_broadcast)
   - Implement AppContext::new() constructor
@@ -71,7 +71,7 @@
 
 ### Task 2.2: Add Test Helpers for AppContext
 
-- [ ] 2.2. Add test configuration and mocking support to AppContext
+- [x] 2.2. Add test configuration and mocking support to AppContext
   - Files: rust/src/context.rs (MODIFIED)
   - Add #[cfg(test)] section with test-specific methods
   - Implement AppContext::new_test() for isolated test instances
