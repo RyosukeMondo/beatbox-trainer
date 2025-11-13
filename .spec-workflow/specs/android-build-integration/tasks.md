@@ -20,7 +20,7 @@
   - _Requirements: Requirement 2_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Android NDK developer with expertise in JNI and context initialization | Task: Fix the ndk_context::initialize_android_context() call in rust/src/lib.rs JNI_OnLoad function to provide both required parameters (JavaVM pointer and Context jobject). Use JNI to retrieve the application context from the JavaVM environment before calling initialize. Add proper error handling and logging. Reference design document Component 3. | Restrictions: Must use conditional compilation #[cfg(target_os = "android")], must handle JNI errors gracefully without panicking, must return JNI_VERSION_1_6 even on initialization failure | _Leverage: Existing JNI_OnLoad structure in rust/src/lib.rs_ | Success: Compiles for Android targets, ndk_context initializes without errors, no "android context was not initialized" crash occurs, proper error logging to logcat | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (functions modified, JNI calls added, error handling). Then mark as completed [x] in tasks.md_
 
-- [ ] 1.3. Add Android-specific error variants to error.rs
+- [x] 1.3. Add Android-specific error variants to error.rs
   - File: `rust/src/error.rs`
   - Add `JniInitFailed { reason: String }` (code 1008) to AudioError enum
   - Add `ContextNotInitialized` (code 1009) to AudioError enum

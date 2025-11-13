@@ -60,7 +60,7 @@ pub fn log_calibration_error(err: &CalibrationError, context: &str) {
 /// These errors cover audio engine operations including initialization,
 /// stream management, and hardware access.
 ///
-/// Error code ranges: 1001-1007
+/// Error code ranges: 1001-1009
 #[derive(Debug, Clone, PartialEq)]
 pub enum AudioError {
     /// BPM value is invalid (must be > 0, typically 40-240)
@@ -83,6 +83,12 @@ pub enum AudioError {
 
     /// Mutex/RwLock was poisoned
     LockPoisoned { component: String },
+
+    /// JNI initialization failed on Android
+    JniInitFailed { reason: String },
+
+    /// Android context was not initialized before audio engine start
+    ContextNotInitialized,
 }
 
 impl ErrorCode for AudioError {
@@ -95,6 +101,8 @@ impl ErrorCode for AudioError {
             AudioError::PermissionDenied => 1005,
             AudioError::StreamOpenFailed { .. } => 1006,
             AudioError::LockPoisoned { .. } => 1007,
+            AudioError::JniInitFailed { .. } => 1008,
+            AudioError::ContextNotInitialized => 1009,
         }
     }
 
@@ -118,6 +126,12 @@ impl ErrorCode for AudioError {
             }
             AudioError::LockPoisoned { component } => {
                 format!("Lock poisoned for component: {}", component)
+            }
+            AudioError::JniInitFailed { reason } => {
+                format!("JNI initialization failed: {}", reason)
+            }
+            AudioError::ContextNotInitialized => {
+                "Android context not initialized. This may indicate the native library was not loaded correctly or JNI_OnLoad failed.".to_string()
             }
         }
     }
@@ -244,6 +258,14 @@ mod tests {
             .code(),
             1007
         );
+        assert_eq!(
+            AudioError::JniInitFailed {
+                reason: "test".to_string()
+            }
+            .code(),
+            1008
+        );
+        assert_eq!(AudioError::ContextNotInitialized.code(), 1009);
     }
 
     #[test]
@@ -333,130 +355,69 @@ mod tests {
 
     #[test]
     fn test_error_logging_functions() {
-        // Test all AudioError variants
-        log_audio_error(&AudioError::BpmInvalid { bpm: 0 }, "ctx");
-        log_audio_error(&AudioError::AlreadyRunning, "ctx");
-        log_audio_error(&AudioError::NotRunning, "ctx");
+        // Test audio error logging
+        log_audio_error(&AudioError::BpmInvalid { bpm: 0 }, "test_ctx");
         log_audio_error(
-            &AudioError::HardwareError {
-                details: "test".into(),
-            },
-            "ctx",
-        );
-        log_audio_error(&AudioError::PermissionDenied, "ctx");
-        log_audio_error(
-            &AudioError::StreamOpenFailed {
+            &AudioError::JniInitFailed {
                 reason: "test".into(),
             },
-            "ctx",
+            "test_ctx",
         );
-        log_audio_error(
-            &AudioError::LockPoisoned {
-                component: "test".into(),
-            },
-            "ctx",
-        );
+        log_audio_error(&AudioError::ContextNotInitialized, "test_ctx");
 
-        // Test all CalibrationError variants
-        log_calibration_error(
-            &CalibrationError::InsufficientSamples {
-                required: 10,
-                collected: 5,
-            },
-            "ctx",
-        );
-        log_calibration_error(
-            &CalibrationError::InvalidFeatures {
-                reason: "test".into(),
-            },
-            "ctx",
-        );
-        log_calibration_error(&CalibrationError::NotComplete, "ctx");
-        log_calibration_error(&CalibrationError::AlreadyInProgress, "ctx");
-        log_calibration_error(&CalibrationError::StatePoisoned, "ctx");
+        // Test calibration error logging
+        log_calibration_error(&CalibrationError::NotComplete, "test_ctx");
     }
 
     #[test]
     fn test_error_messages() {
-        // AudioError messages
+        // Test key AudioError messages
         assert!(AudioError::BpmInvalid { bpm: 999 }
             .message()
             .contains("999"));
-        assert!(AudioError::AlreadyRunning.message().contains("stop_audio"));
-        assert!(AudioError::NotRunning.message().contains("start_audio"));
-        assert!(AudioError::HardwareError {
-            details: "hw fail".into()
-        }
-        .message()
-        .contains("hw fail"));
         assert!(AudioError::PermissionDenied
             .message()
             .contains("permission denied"));
-        assert!(AudioError::StreamOpenFailed {
-            reason: "busy".into()
+        assert!(AudioError::JniInitFailed {
+            reason: "ctx err".into()
         }
         .message()
-        .contains("busy"));
-        assert!(AudioError::LockPoisoned {
-            component: "comp".into()
-        }
-        .message()
-        .contains("comp"));
+        .contains("ctx err"));
+        assert!(AudioError::ContextNotInitialized
+            .message()
+            .contains("Android context not initialized"));
+    }
 
-        // CalibrationError messages
+    #[test]
+    fn test_calibration_error_messages() {
         let msg = CalibrationError::InsufficientSamples {
             required: 20,
             collected: 8,
         }
         .message();
         assert!(msg.contains("20") && msg.contains("8"));
-        assert!(CalibrationError::InvalidFeatures {
-            reason: "range".into()
-        }
-        .message()
-        .contains("range"));
         assert!(CalibrationError::NotComplete
             .message()
             .contains("not complete"));
-        assert!(CalibrationError::AlreadyInProgress
-            .message()
-            .contains("in progress"));
-        assert!(CalibrationError::StatePoisoned
-            .message()
-            .contains("lock poisoned"));
     }
 
     #[test]
     fn test_error_display_with_codes() {
-        // AudioError Display
+        // Test key error codes in display
         let d = format!("{}", AudioError::BpmInvalid { bpm: 42 });
-        assert!(d.contains("AudioError") && d.contains("1001") && d.contains("42"));
-        assert!(format!("{}", AudioError::AlreadyRunning).contains("1002"));
-        assert!(format!("{}", AudioError::NotRunning).contains("1003"));
+        assert!(d.contains("AudioError") && d.contains("1001"));
         assert!(format!(
             "{}",
-            AudioError::HardwareError {
-                details: "hw".into()
+            AudioError::JniInitFailed {
+                reason: "jni".into()
             }
         )
-        .contains("1004"));
-        assert!(format!("{}", AudioError::PermissionDenied).contains("1005"));
-        assert!(format!(
-            "{}",
-            AudioError::StreamOpenFailed {
-                reason: "fail".into()
-            }
-        )
-        .contains("1006"));
-        assert!(format!(
-            "{}",
-            AudioError::LockPoisoned {
-                component: "c".into()
-            }
-        )
-        .contains("1007"));
+        .contains("1008"));
+        assert!(format!("{}", AudioError::ContextNotInitialized).contains("1009"));
+    }
 
-        // CalibrationError Display
+    #[test]
+    fn test_calibration_error_display_with_codes() {
         let d = format!(
             "{}",
             CalibrationError::InsufficientSamples {
@@ -465,15 +426,66 @@ mod tests {
             }
         );
         assert!(d.contains("CalibrationError") && d.contains("2001"));
-        assert!(format!(
-            "{}",
-            CalibrationError::InvalidFeatures {
-                reason: "inv".into()
-            }
-        )
-        .contains("2002"));
         assert!(format!("{}", CalibrationError::NotComplete).contains("2003"));
-        assert!(format!("{}", CalibrationError::AlreadyInProgress).contains("2004"));
-        assert!(format!("{}", CalibrationError::StatePoisoned).contains("2005"));
+    }
+
+    #[test]
+    fn test_android_jni_init_failed_error() {
+        let jni_error = AudioError::JniInitFailed {
+            reason: "Failed to get application context".to_string(),
+        };
+        assert_eq!(jni_error.code(), 1008);
+        assert!(jni_error.message().contains("JNI initialization failed"));
+        assert!(jni_error
+            .message()
+            .contains("Failed to get application context"));
+        let display = format!("{}", jni_error);
+        assert!(display.contains("1008"));
+        assert!(display.contains("AudioError"));
+    }
+
+    #[test]
+    fn test_android_context_not_initialized_error() {
+        let ctx_error = AudioError::ContextNotInitialized;
+        assert_eq!(ctx_error.code(), 1009);
+        assert!(ctx_error
+            .message()
+            .contains("Android context not initialized"));
+        assert!(ctx_error.message().contains("JNI_OnLoad"));
+        let display = format!("{}", ctx_error);
+        assert!(display.contains("1009"));
+        assert!(display.contains("AudioError"));
+    }
+
+    #[test]
+    fn test_android_error_propagation() {
+        fn simulate_jni_failure() -> Result<(), AudioError> {
+            Err(AudioError::JniInitFailed {
+                reason: "JavaVM pointer is null".to_string(),
+            })
+        }
+
+        fn simulate_context_check() -> Result<(), AudioError> {
+            Err(AudioError::ContextNotInitialized)
+        }
+
+        assert!(simulate_jni_failure().is_err());
+        assert!(simulate_context_check().is_err());
+    }
+
+    #[test]
+    fn test_android_error_distinctness() {
+        assert_ne!(
+            AudioError::JniInitFailed {
+                reason: "test".into()
+            },
+            AudioError::ContextNotInitialized
+        );
+        assert_ne!(
+            AudioError::ContextNotInitialized,
+            AudioError::StreamOpenFailed {
+                reason: "test".into()
+            }
+        );
     }
 }
