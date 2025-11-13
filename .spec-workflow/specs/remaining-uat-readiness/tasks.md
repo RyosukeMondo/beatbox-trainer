@@ -53,7 +53,7 @@
   - _Requirements: US-1_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with expertise in FFI and async streams | Task: Implement calibration_stream() FFI method in rust/src/api.rs and subscribe_calibration() in AppContext using tokio broadcast → mpsc forwarding pattern as specified in design document | Restrictions: Must maintain lock-free audio path, do not block calibration callbacks, ensure proper stream cleanup on unsubscribe | Success: calibration_stream() returns Stream<CalibrationProgress>, stream emits progress updates for each sample collection, no memory leaks on subscription/unsubscription_
 
-- [ ] 2.4. Implement calibration stream FFI (Dart) (Estimate: 2 hours, Priority: Critical)
+- [x] 2.4. Implement calibration stream FFI (Dart) (Estimate: 2 hours, Priority: Critical)
   - File: lib/services/audio/audio_service_impl.dart
   - Implement getCalibrationStream() using StreamController.broadcast
   - Subscribe to FFI stream and forward to StreamController

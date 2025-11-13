@@ -5,6 +5,7 @@ import '../../bridge/api.dart/api.dart' as api;
 import '../../bridge/api.dart/analysis.dart' as ffi_analysis;
 import '../../bridge/api.dart/analysis/classifier.dart' as ffi_classifier;
 import '../../bridge/api.dart/analysis/quantizer.dart' as ffi_quantizer;
+import '../../bridge/api.dart/calibration/progress.dart' as ffi_calibration;
 import '../error_handler/error_handler.dart';
 import '../error_handler/exceptions.dart';
 import 'i_audio_service.dart';
@@ -192,10 +193,46 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Stream<CalibrationProgress> getCalibrationStream() {
-    // TODO(Task 5.1): Implement after adding calibrationStream FFI method
-    throw UnimplementedError(
-      'Calibration stream not yet implemented. '
-      'Requires FFI method calibrationStream() from Task 5.1',
+    try {
+      // Get stream from FFI bridge and map FFI types to model types
+      // The FFI stream uses StreamSink pattern for real-time calibration progress
+      return api
+          .calibrationStream()
+          .map(_mapFfiToModelCalibrationProgress)
+          .handleError((error) {
+            // Translate Rust errors to user-friendly exceptions
+            throw _errorHandler.createCalibrationException(error.toString());
+          });
+    } catch (e) {
+      // Handle synchronous errors during stream creation
+      throw _errorHandler.createCalibrationException(e.toString());
+    }
+  }
+
+  /// Map FFI CalibrationProgress to model CalibrationProgress
+  ///
+  /// Converts flutter_rust_bridge generated types to application model types.
+  CalibrationProgress _mapFfiToModelCalibrationProgress(
+    ffi_calibration.CalibrationProgress ffiProgress,
+  ) {
+    return CalibrationProgress(
+      currentSound: _mapFfiToModelCalibrationSound(ffiProgress.currentSound),
+      samplesCollected: ffiProgress.samplesCollected,
+      samplesNeeded: ffiProgress.samplesNeeded,
     );
+  }
+
+  /// Map FFI CalibrationSound to model CalibrationSound
+  CalibrationSound _mapFfiToModelCalibrationSound(
+    ffi_calibration.CalibrationSound ffiSound,
+  ) {
+    switch (ffiSound) {
+      case ffi_calibration.CalibrationSound.kick:
+        return CalibrationSound.kick;
+      case ffi_calibration.CalibrationSound.snare:
+        return CalibrationSound.snare;
+      case ffi_calibration.CalibrationSound.hiHat:
+        return CalibrationSound.hiHat;
+    }
   }
 }
