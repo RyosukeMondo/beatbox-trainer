@@ -219,7 +219,7 @@
 
 ### Task 4.4: Update Screens to Use Shared Components
 
-- [ ] 4.4. Refactor TrainingScreen and CalibrationScreen to use shared widgets
+- [x] 4.4. Refactor TrainingScreen and CalibrationScreen to use shared widgets
   - Files: lib/ui/screens/training_screen.dart (MODIFIED), lib/ui/screens/calibration_screen.dart (MODIFIED)
   - Replace inline error dialog code with ErrorDialog.show()
   - Replace loading indicators with LoadingOverlay widget

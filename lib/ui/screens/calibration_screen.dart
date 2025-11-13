@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../bridge/api.dart';
 import '../../models/calibration_progress.dart';
+import '../../services/audio/i_audio_service.dart';
+import '../../services/audio/audio_service_impl.dart';
+import '../../services/error_handler/exceptions.dart';
+import '../widgets/loading_overlay.dart';
+import '../widgets/status_card.dart';
 
 /// CalibrationScreen guides users through 3-step calibration workflow
 ///
@@ -12,17 +16,21 @@ import '../../models/calibration_progress.dart';
 /// After collection completes, thresholds are computed and stored
 /// for use by the classifier during training.
 ///
-/// Follows design from: design.md Component 9 (CalibrationScreen)
-/// Requirements: Req 7 (Calibration System), Req 9 (Flutter UI)
+/// This screen uses dependency injection for services, enabling
+/// testability and separation of concerns.
 class CalibrationScreen extends StatefulWidget {
-  const CalibrationScreen({super.key});
+  /// Audio service for calibration control
+  final IAudioService audioService;
+
+  CalibrationScreen({super.key, IAudioService? audioService})
+    : audioService = audioService ?? AudioServiceImpl();
 
   @override
   State<CalibrationScreen> createState() => _CalibrationScreenState();
 }
 
 class _CalibrationScreenState extends State<CalibrationScreen> {
-  /// Stream of calibration progress updates from Rust
+  /// Stream of calibration progress updates from audio service
   Stream<CalibrationProgress>? _calibrationStream;
 
   /// Current calibration progress (null when not started)
@@ -46,8 +54,8 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     // If calibration is still in progress when screen is disposed, finish it
     if (_isCalibrating && _currentProgress != null) {
       // Note: We don't await here as dispose can't be async
-      // The Rust side will clean up the procedure when the stream is dropped
-      finishCalibration().catchError((e) {
+      // The service will clean up the procedure when the stream is dropped
+      widget.audioService.finishCalibration().catchError((e) {
         // Ignore errors during cleanup
       });
     }
@@ -57,17 +65,27 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
   /// Start calibration workflow
   Future<void> _startCalibration() async {
     try {
-      // Call Rust API to start calibration procedure
-      await startCalibration();
+      // Start calibration procedure
+      await widget.audioService.startCalibration();
 
       // Subscribe to calibration progress stream
-      final stream = calibrationStream();
+      final stream = widget.audioService.getCalibrationStream();
 
       setState(() {
         _isCalibrating = true;
         _calibrationStream = stream;
         _currentProgress = null;
         _errorMessage = null;
+      });
+    } on CalibrationServiceException catch (e) {
+      setState(() {
+        _errorMessage = e.message;
+        _isCalibrating = false;
+      });
+    } on AudioServiceException catch (e) {
+      setState(() {
+        _errorMessage = e.message;
+        _isCalibrating = false;
       });
     } catch (e) {
       setState(() {
@@ -80,13 +98,18 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
   /// Finish calibration and compute thresholds
   Future<void> _finishCalibration() async {
     try {
-      // Call Rust API to finalize calibration and compute thresholds
-      await finishCalibration();
+      // Finalize calibration and compute thresholds
+      await widget.audioService.finishCalibration();
 
       // Navigate back to previous screen (typically TrainingScreen)
       if (mounted) {
         Navigator.of(context).pop();
       }
+    } on CalibrationServiceException catch (e) {
+      setState(() {
+        _errorMessage = e.message;
+        _isCalibrating = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Calibration failed: $e';
@@ -143,8 +166,8 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         child: _errorMessage != null
             ? _buildErrorDisplay()
             : _isCalibrating && _calibrationStream != null
-                ? _buildCalibrationDisplay()
-                : _buildInitialDisplay(),
+            ? _buildCalibrationDisplay()
+            : _buildInitialDisplay(),
       ),
     );
   }
@@ -155,18 +178,11 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.red,
-            size: 64,
-          ),
+          const Icon(Icons.error_outline, color: Colors.red, size: 64),
           const SizedBox(height: 24),
           Text(
             _errorMessage!,
-            style: const TextStyle(
-              fontSize: 18,
-              color: Colors.red,
-            ),
+            style: const TextStyle(fontSize: 18, color: Colors.red),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
@@ -186,19 +202,7 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
 
   /// Build initial loading display
   Widget _buildInitialDisplay() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 24),
-          Text(
-            'Initializing calibration...',
-            style: TextStyle(fontSize: 18),
-          ),
-        ],
-      ),
-    );
+    return const LoadingOverlay(message: 'Initializing calibration...');
   }
 
   /// Build calibration progress display
@@ -207,19 +211,7 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
       stream: _calibrationStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 24),
-                Text(
-                  'Starting calibration...',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ],
-            ),
-          );
+          return const LoadingOverlay(message: 'Starting calibration...');
         }
 
         if (snapshot.hasError) {
@@ -227,18 +219,11 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 64,
-                ),
+                const Icon(Icons.error_outline, color: Colors.red, size: 64),
                 const SizedBox(height: 24),
                 Text(
                   'Stream error: ${snapshot.error}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.red,
-                  ),
+                  style: const TextStyle(fontSize: 18, color: Colors.red),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -272,11 +257,7 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.mic,
-                  size: 64,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.mic, size: 64, color: Colors.grey),
                 SizedBox(height: 24),
                 Text(
                   'Waiting for calibration data...',
@@ -305,9 +286,9 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         // Overall progress indicator
         Text(
           'Step ${sound.index + 1} of ${CalibrationSound.values.length}',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
@@ -322,19 +303,15 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         const SizedBox(height: 48),
 
         // Current sound icon
-        Icon(
-          Icons.mic,
-          size: 80,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(Icons.mic, size: 80, color: Theme.of(context).colorScheme.primary),
         const SizedBox(height: 24),
 
         // Instruction text
         Text(
           _getInstructionText(sound),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -342,9 +319,9 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         // Description text
         Text(
           _getDescriptionText(sound),
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[700],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 48),
@@ -353,9 +330,9 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         Text(
           '$collected / $needed samples',
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -376,87 +353,23 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
 
         // Status message
         if (progress.isSoundComplete && !progress.isCalibrationComplete)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green, width: 2),
-              ),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${sound.displayName} samples complete!',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  if (sound.next != null)
-                    Text(
-                      'Moving to ${sound.next!.displayName}...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                ],
-              ),
-            ),
+          StatusCard(
+            color: Colors.green,
+            icon: Icons.check_circle,
+            title: '${sound.displayName} samples complete!',
+            subtitle: sound.next != null
+                ? 'Moving to ${sound.next!.displayName}...'
+                : null,
           ),
 
         // Completion message
         if (progress.isCalibrationComplete)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green, width: 2),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.celebration,
-                    color: Colors.green,
-                    size: 48,
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Calibration Complete!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Computing thresholds...',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+          const StatusCard(
+            color: Colors.green,
+            icon: Icons.celebration,
+            title: 'Calibration Complete!',
+            subtitle: 'Computing thresholds...',
+            iconSize: 48.0,
           ),
       ],
     );

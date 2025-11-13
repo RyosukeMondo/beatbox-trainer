@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
-import '../../bridge/api.dart';
 import '../../models/classification_result.dart';
-import '../../models/timing_feedback.dart';
+import '../../services/audio/i_audio_service.dart';
+import '../../services/audio/audio_service_impl.dart';
+import '../../services/permission/i_permission_service.dart';
+import '../../services/permission/permission_service_impl.dart';
+import '../../services/error_handler/exceptions.dart';
+import '../widgets/error_dialog.dart';
+import '../widgets/loading_overlay.dart';
+import '../utils/display_formatters.dart';
 
 /// TrainingScreen provides the main training UI with real-time feedback
 ///
@@ -12,10 +17,21 @@ import '../../models/timing_feedback.dart';
 /// - Real-time classification results stream
 /// - Error handling for audio engine failures
 ///
-/// This screen connects to the Rust audio engine via flutter_rust_bridge,
-/// displaying live classification results as the user makes beatbox sounds.
+/// This screen uses dependency injection for services, enabling
+/// testability and separation of concerns.
 class TrainingScreen extends StatefulWidget {
-  const TrainingScreen({super.key});
+  /// Audio service for engine control
+  final IAudioService audioService;
+
+  /// Permission service for microphone access
+  final IPermissionService permissionService;
+
+  TrainingScreen({
+    super.key,
+    IAudioService? audioService,
+    IPermissionService? permissionService,
+  }) : audioService = audioService ?? AudioServiceImpl(),
+       permissionService = permissionService ?? PermissionServiceImpl();
 
   @override
   State<TrainingScreen> createState() => _TrainingScreenState();
@@ -28,7 +44,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
   /// Whether the audio engine is currently running
   bool _isTraining = false;
 
-  /// Stream of classification results from Rust engine
+  /// Stream of classification results from audio service
   Stream<ClassificationResult>? _classificationStream;
 
   /// Current classification result (null when idle)
@@ -52,21 +68,35 @@ class _TrainingScreenState extends State<TrainingScreen> {
     }
 
     try {
-      // Call Rust API to start audio engine with current BPM
-      await startAudio(bpm: _currentBpm);
+      // Start audio engine with current BPM
+      await widget.audioService.startAudio(bpm: _currentBpm);
 
       // Subscribe to classification stream
-      final stream = classificationStream();
+      final stream = widget.audioService.getClassificationStream();
 
       setState(() {
         _isTraining = true;
         _classificationStream = stream;
         _currentResult = null;
       });
-    } catch (e) {
+    } on AudioServiceException catch (e) {
       // Show error dialog if audio engine fails to start
       if (mounted) {
-        _showErrorDialog(e.toString());
+        await ErrorDialog.show(
+          context,
+          title: 'Audio Error',
+          message: e.message,
+          onRetry: _startTraining,
+        );
+      }
+    } catch (e) {
+      // Handle unexpected errors
+      if (mounted) {
+        await ErrorDialog.show(
+          context,
+          message: 'Failed to start audio: $e',
+          onRetry: _startTraining,
+        );
       }
     }
   }
@@ -74,18 +104,27 @@ class _TrainingScreenState extends State<TrainingScreen> {
   /// Stop audio engine and end training session
   Future<void> _stopTraining() async {
     try {
-      // Call Rust API to stop audio engine
-      await stopAudio();
+      // Stop audio engine
+      await widget.audioService.stopAudio();
 
       setState(() {
         _isTraining = false;
         _classificationStream = null;
         _currentResult = null;
       });
-    } catch (e) {
+    } on AudioServiceException catch (e) {
       // Show error dialog if stop fails
       if (mounted) {
-        _showErrorDialog('Failed to stop audio: $e');
+        await ErrorDialog.show(
+          context,
+          title: 'Audio Error',
+          message: e.message,
+        );
+      }
+    } catch (e) {
+      // Handle unexpected errors
+      if (mounted) {
+        await ErrorDialog.show(context, message: 'Failed to stop audio: $e');
       }
     }
   }
@@ -99,11 +138,20 @@ class _TrainingScreenState extends State<TrainingScreen> {
     // If training is active, update BPM in real-time
     if (_isTraining) {
       try {
-        await setBpm(bpm: newBpm);
-      } catch (e) {
+        await widget.audioService.setBpm(bpm: newBpm);
+      } on AudioServiceException catch (e) {
         // Show error if BPM update fails
         if (mounted) {
-          _showErrorDialog('Failed to update BPM: $e');
+          await ErrorDialog.show(
+            context,
+            title: 'BPM Update Error',
+            message: e.message,
+          );
+        }
+      } catch (e) {
+        // Handle unexpected errors
+        if (mounted) {
+          await ErrorDialog.show(context, message: 'Failed to update BPM: $e');
         }
       }
     }
@@ -111,15 +159,15 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Request microphone permission and handle different states
   Future<bool> _requestMicrophonePermission() async {
-    final status = await Permission.microphone.status;
+    final status = await widget.permissionService.checkMicrophonePermission();
 
     // Permission already granted
-    if (status.isGranted) {
+    if (status == PermissionStatus.granted) {
       return true;
     }
 
     // Permission permanently denied - show settings dialog
-    if (status.isPermanentlyDenied) {
+    if (status == PermissionStatus.permanentlyDenied) {
       if (mounted) {
         await _showPermissionPermanentlyDeniedDialog();
       }
@@ -127,15 +175,15 @@ class _TrainingScreenState extends State<TrainingScreen> {
     }
 
     // Request permission
-    final result = await Permission.microphone.request();
+    final result = await widget.permissionService.requestMicrophonePermission();
 
     // Permission granted after request
-    if (result.isGranted) {
+    if (result == PermissionStatus.granted) {
       return true;
     }
 
     // Permission denied - show rationale dialog
-    if (result.isDenied) {
+    if (result == PermissionStatus.denied) {
       if (mounted) {
         await _showPermissionDeniedDialog();
       }
@@ -143,7 +191,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
     }
 
     // Permission permanently denied after request
-    if (result.isPermanentlyDenied) {
+    if (result == PermissionStatus.permanentlyDenied) {
       if (mounted) {
         await _showPermissionPermanentlyDeniedDialog();
       }
@@ -155,21 +203,12 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Show dialog when permission is denied
   Future<void> _showPermissionDeniedDialog() async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Microphone Permission Required'),
-        content: const Text(
+    return ErrorDialog.show(
+      context,
+      title: 'Microphone Permission Required',
+      message:
           'This app needs microphone access to detect your beatbox sounds. '
           'Please grant permission to continue.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -191,26 +230,9 @@ class _TrainingScreenState extends State<TrainingScreen> {
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await openAppSettings();
+              await widget.permissionService.openAppSettings();
             },
             child: const Text('Open Settings'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Show error dialog with message
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
           ),
         ],
       ),
@@ -232,10 +254,10 @@ class _TrainingScreenState extends State<TrainingScreen> {
           children: [
             // BPM Control Section
             Text(
-              '$_currentBpm BPM',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              DisplayFormatters.formatBpm(_currentBpm),
+              style: Theme.of(
+                context,
+              ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -246,7 +268,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
               min: 40,
               max: 240,
               divisions: 200,
-              label: '$_currentBpm BPM',
+              label: DisplayFormatters.formatBpm(_currentBpm),
               onChanged: _isTraining
                   ? (value) => _updateBpm(value.round())
                   : (value) {
@@ -265,15 +287,8 @@ class _TrainingScreenState extends State<TrainingScreen> {
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('Starting audio engine...'),
-                              ],
-                            ),
+                          return const LoadingOverlay(
+                            message: 'Starting audio engine...',
                           );
                         }
 
@@ -308,11 +323,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.mic,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
+                              Icon(Icons.mic, size: 64, color: Colors.grey),
                               SizedBox(height: 16),
                               Text(
                                 'Make a beatbox sound!',
@@ -338,10 +349,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
                           SizedBox(height: 16),
                           Text(
                             'Press Start to begin training',
-                            style: TextStyle(
-                              fontSize: 24,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 24, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -361,49 +369,21 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Build classification result display widget
   Widget _buildClassificationDisplay(ClassificationResult result) {
-    // Get color based on sound type
-    Color soundColor;
-    switch (result.sound) {
-      case BeatboxHit.kick:
-        soundColor = Colors.red;
-        break;
-      case BeatboxHit.snare:
-        soundColor = Colors.blue;
-        break;
-      case BeatboxHit.hiHat:
-      case BeatboxHit.closedHiHat:
-      case BeatboxHit.openHiHat:
-        soundColor = Colors.green;
-        break;
-      case BeatboxHit.kSnare:
-        soundColor = Colors.purple;
-        break;
-      case BeatboxHit.unknown:
-        soundColor = Colors.grey;
-        break;
-    }
-
-    // Get color based on timing
-    Color timingColor;
-    switch (result.timing.classification) {
-      case TimingClassification.onTime:
-        timingColor = Colors.green;
-        break;
-      case TimingClassification.early:
-      case TimingClassification.late:
-        timingColor = Colors.amber;
-        break;
-    }
+    // Get colors using display formatters
+    final soundColor = DisplayFormatters.getSoundColor(result.sound);
+    final timingColor = DisplayFormatters.getTimingColor(
+      result.timing.classification,
+    );
 
     // Format timing error with sign
     String timingText;
     final errorMs = result.timing.errorMs;
     if (errorMs > 0) {
-      timingText = '+${errorMs.toStringAsFixed(1)}ms LATE';
+      timingText = '${DisplayFormatters.formatTimingError(errorMs)} LATE';
     } else if (errorMs < 0) {
-      timingText = '${errorMs.toStringAsFixed(1)}ms EARLY';
+      timingText = '${DisplayFormatters.formatTimingError(errorMs)} EARLY';
     } else {
-      timingText = '0ms ON-TIME';
+      timingText = '${DisplayFormatters.formatTimingError(errorMs)} ON-TIME';
     }
 
     return Center(
