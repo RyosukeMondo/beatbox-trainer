@@ -194,7 +194,7 @@
 
 ### Task 4.2: Extract Shared Loading and Status Widgets
 
-- [ ] 4.2. Create LoadingOverlay and StatusCard widgets
+- [x] 4.2. Create LoadingOverlay and StatusCard widgets
   - Files: lib/ui/widgets/loading_overlay.dart (NEW), lib/ui/widgets/status_card.dart (NEW)
   - Extract LoadingOverlay widget with optional message parameter
   - Extract StatusCard widget with configurable colors, icon, title, and subtitle
