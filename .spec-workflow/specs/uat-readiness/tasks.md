@@ -214,7 +214,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: rust/src/calibration/state.rs, rust/src/analysis/classifier.rs (classify_level1 pattern), Design document section 5 (design.md lines 653-686)_
   - _Prompt: Role: Rust Audio/Classification Developer | Task: Add classifier level support to Rust backend. Changes: 1. Add `level: u8` to CalibrationState struct 2. Add level 2 thresholds (closed_hihat, open_hihat, ksnare) 3. Implement classify_level2() method: 6 categories: Kick, Snare, ClosedHiHat, OpenHiHat, KSnare, Silence, Use additional spectral features for subcategories 4. Update classify() to dispatch based on level | Restrictions: Do NOT break existing level 1 logic, Level defaults to 1 if not specified, Add proper serde derives, Level 2 logic can be simplified for UAT (refinement later) | Leverage: rust/src/calibration/state.rs, rust/src/analysis/classifier.rs (classify_level1 pattern), Design document section 5 (design.md lines 653-686) | Requirements: US-4 (advanced mode) | Success: CalibrationState has level field, classify() dispatches based on level, classify_level2() implemented (even if simple), Rust compiles, tests pass, FFI bridge regenerates_
 
-- [ ] 7.2. Update Settings Screen with Level Selection
+- [x] 7.2. Update Settings Screen with Level Selection
   - File: lib/ui/screens/settings_screen.dart
   - Estimate: 2 hours | Priority: Medium
   - Add classifier level toggle with recalibration warning
