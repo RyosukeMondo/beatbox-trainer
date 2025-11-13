@@ -32,7 +32,7 @@
 
 ## Phase 2: Android Build System Integration
 
-- [ ] 2.1. Create Gradle task for cargo-ndk invocation
+- [x] 2.1. Create Gradle task for cargo-ndk invocation
   - File: `android/app/build.gradle.kts`
   - Add custom Gradle task `buildRustAndroid` that runs cargo-ndk for each architecture
   - Configure task to execute before `preBuild` task
