@@ -148,6 +148,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -297,6 +298,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -331,6 +333,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -365,6 +368,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -404,6 +408,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -483,6 +488,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -528,6 +534,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -573,6 +580,7 @@ void main() {
                   errorMs: 0,
                 ),
                 timestampMs: 1000,
+              confidence: 0.95,
               ),
             ),
           );
@@ -622,6 +630,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -664,6 +673,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -699,6 +709,7 @@ void main() {
                 errorMs: -25,
               ),
               timestampMs: 2000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -734,6 +745,7 @@ void main() {
                 errorMs: 50,
               ),
               timestampMs: 3000,
+              confidence: 0.95,
             ),
           ),
         );
@@ -802,6 +814,7 @@ void main() {
                 errorMs: 0,
               ),
               timestampMs: 1000,
+              confidence: 0.95,
             ),
           ),
         );

@@ -54,7 +54,7 @@ class TrainingScreen extends StatefulWidget {
   State<TrainingScreen> createState() => _TrainingScreenState();
 }
 
-class _TrainingScreenState extends State<TrainingScreen> {
+class _TrainingScreenState extends State<TrainingScreen> with SingleTickerProviderStateMixin {
   /// Current BPM value (beats per minute)
   int _currentBpm = 120;
 
@@ -73,10 +73,30 @@ class _TrainingScreenState extends State<TrainingScreen> {
   /// Whether debug overlay is currently visible
   bool _debugOverlayVisible = false;
 
+  /// Animation controller for fade-out effect of classification feedback
+  late AnimationController _fadeAnimationController;
+
+  /// Fade animation for classification feedback (1.0 = fully visible, 0.0 = invisible)
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
     _loadDebugSettings();
+
+    // Initialize fade animation controller (500ms fade-out)
+    _fadeAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    // Create fade animation (linear fade from 1.0 to 0.0)
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _fadeAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   /// Load debug mode setting from settings service
@@ -102,6 +122,8 @@ class _TrainingScreenState extends State<TrainingScreen> {
     if (_isTraining) {
       _stopTraining();
     }
+    // Dispose animation controller
+    _fadeAnimationController.dispose();
     super.dispose();
   }
 
@@ -387,6 +409,8 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
                         if (snapshot.hasData) {
                           _currentResult = snapshot.data;
+                          // Restart fade animation on each new result
+                          _fadeAnimationController.forward(from: 0.0);
                           return _buildClassificationDisplay(_currentResult!);
                         }
 
@@ -450,16 +474,21 @@ class _TrainingScreenState extends State<TrainingScreen> {
     return scaffold;
   }
 
-  /// Build classification result display widget
+  /// Build classification result display widget with fade animation
   Widget _buildClassificationDisplay(ClassificationResult result) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildSoundTypeDisplay(result),
-          const SizedBox(height: 32),
-          _buildTimingFeedbackDisplay(result),
-        ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildSoundTypeDisplay(result),
+            const SizedBox(height: 32),
+            _buildTimingFeedbackDisplay(result),
+            const SizedBox(height: 24),
+            _buildConfidenceMeter(result),
+          ],
+        ),
       ),
     );
   }
@@ -516,6 +545,71 @@ class _TrainingScreenState extends State<TrainingScreen> {
           fontWeight: FontWeight.bold,
           color: timingColor,
         ),
+      ),
+    );
+  }
+
+  /// Build confidence meter with color-coded progress bar
+  ///
+  /// Color coding:
+  /// - Green: >80% confidence
+  /// - Orange: 50-80% confidence
+  /// - Red: <50% confidence
+  Widget _buildConfidenceMeter(ClassificationResult result) {
+    final confidencePercentage = (result.confidence * 100).round();
+
+    // Determine color based on confidence level
+    Color confidenceColor;
+    if (result.confidence > 0.8) {
+      confidenceColor = Colors.green;
+    } else if (result.confidence >= 0.5) {
+      confidenceColor = Colors.orange;
+    } else {
+      confidenceColor = Colors.red;
+    }
+
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Confidence',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                '$confidencePercentage%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: confidenceColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: result.confidence,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(confidenceColor),
+              minHeight: 20,
+            ),
+          ),
+        ],
       ),
     );
   }

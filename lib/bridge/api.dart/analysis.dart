@@ -22,14 +22,18 @@ class ClassificationResult {
   /// Timestamp in milliseconds since engine start
   final BigInt timestampMs;
 
+  /// Classification confidence score (0.0-1.0)
+  final double confidence;
+
   const ClassificationResult({
     required this.sound,
     required this.timing,
     required this.timestampMs,
+    required this.confidence,
   });
 
   @override
-  int get hashCode => sound.hashCode ^ timing.hashCode ^ timestampMs.hashCode;
+  int get hashCode => sound.hashCode ^ timing.hashCode ^ timestampMs.hashCode ^ confidence.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -38,5 +42,6 @@ class ClassificationResult {
           runtimeType == other.runtimeType &&
           sound == other.sound &&
           timing == other.timing &&
-          timestampMs == other.timestampMs;
+          timestampMs == other.timestampMs &&
+          confidence == other.confidence;
 }

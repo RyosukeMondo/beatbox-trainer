@@ -17,15 +17,20 @@ class ClassificationResult {
   /// Timestamp in milliseconds since engine start
   final int timestampMs;
 
+  /// Classification confidence score (0.0-1.0)
+  /// Calculated as max_score / sum_of_all_scores
+  final double confidence;
+
   const ClassificationResult({
     required this.sound,
     required this.timing,
     required this.timestampMs,
+    required this.confidence,
   });
 
   @override
   String toString() =>
-      'ClassificationResult(sound: $sound, timing: $timing, timestampMs: $timestampMs)';
+      'ClassificationResult(sound: $sound, timing: $timing, timestampMs: $timestampMs, confidence: $confidence)';
 }
 
 /// BeatboxHit represents classified beatbox sounds

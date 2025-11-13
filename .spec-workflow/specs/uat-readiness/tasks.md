@@ -194,7 +194,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: rust/src/analysis/classifier.rs (existing classification), rust/src/analysis/mod.rs (ClassificationResult struct), Design document section 2.2 (design.md lines 440-474)_
   - _Prompt: Role: Rust Audio/ML Developer | Task: Add confidence score calculation to Classifier. Changes: 1. Add `confidence: f32` field to ClassificationResult struct 2. In classify_level1(), compute confidence as: max_score / (sum of all scores), Clamp to 0.0-1.0 3. Similarly for classify_level2() | Restrictions: Do NOT change classification logic, Confidence must be normalized 0.0-1.0, Handle edge cases (all zeros = 0.0 confidence) | Leverage: rust/src/analysis/classifier.rs (existing classification), rust/src/analysis/mod.rs (ClassificationResult struct), Design document section 2.2 (design.md lines 440-474) | Requirements: US-2 (confidence display) | Success: ClassificationResult has confidence field, Confidence calculated in both level 1 and 2, Values between 0.0 and 1.0, Rust compiles, FFI regenerates, Existing tests still pass_
 
-- [ ] 6.2. Enhance Classification Display with Confidence
+- [x] 6.2. Enhance Classification Display with Confidence
   - File: lib/ui/screens/training_screen.dart
   - Estimate: 3 hours | Priority: Medium
   - Add confidence meter and fade animation to classification feedback
