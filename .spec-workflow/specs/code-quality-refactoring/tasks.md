@@ -233,7 +233,7 @@
 
 ### Task 4.5: Add Widget Tests for Screens
 
-- [ ] 4.5. Create widget tests for refactored screens with mocked services
+- [x] 4.5. Create widget tests for refactored screens with mocked services
   - Files: test/ui/screens/training_screen_test.dart (NEW), test/ui/screens/calibration_screen_test.dart (NEW)
   - Test TrainingScreen with mocked AudioService and PermissionService
   - Test error dialog display on audio start failure
