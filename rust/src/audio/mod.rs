@@ -1,6 +1,8 @@
 // Audio module - low-latency audio I/O and metronome generation
 
 pub mod buffer_pool;
+#[cfg(target_os = "android")]
+pub mod callback;
 pub mod engine;
 pub mod metronome;
 

@@ -29,7 +29,9 @@ use super::buffer_pool::BufferPoolChannels;
 use crate::error::AudioError;
 
 #[cfg(target_os = "android")]
-use super::metronome::{generate_click_sample, is_on_beat};
+use super::callback::OutputCallback;
+#[cfg(target_os = "android")]
+use super::metronome::generate_click_sample;
 
 #[cfg(test)]
 use super::buffer_pool::DEFAULT_BUFFER_SIZE;
@@ -136,55 +138,23 @@ impl AudioEngine {
     /// # Errors
     /// Returns error if output stream cannot be opened
     fn create_output_stream(&self) -> Result<AudioStreamAsync<Output>, AudioError> {
-        // Clone Arc references for callback closure
-        let frame_counter = Arc::clone(&self.frame_counter);
-        let bpm = Arc::clone(&self.bpm);
-        let sample_rate = self.sample_rate;
-        let click_samples = Arc::clone(&self.click_samples);
-        let click_position = Arc::clone(&self.click_position);
+        // Create OutputCallback struct with cloned Arc references
+        let callback = OutputCallback::new(
+            Arc::clone(&self.frame_counter),
+            Arc::clone(&self.bpm),
+            self.sample_rate,
+            Arc::clone(&self.click_samples),
+            Arc::clone(&self.click_position),
+        );
 
         AudioStreamBuilder::default()
             .set_performance_mode(PerformanceMode::LowLatency)
             .set_sharing_mode(SharingMode::Exclusive)
             .set_direction::<Output>()
-            .set_sample_rate(sample_rate as i32)
+            .set_sample_rate(self.sample_rate as i32)
             .set_channel_count(1) // Mono output for metronome
             .set_format::<f32>()
-            .set_callback(move |_, output: &mut [f32], _| {
-                // Real-time audio callback - NO ALLOCATIONS, LOCKS, OR BLOCKING!
-
-                // Load current state (atomic operations are lock-free)
-                let current_frame = frame_counter.load(Ordering::Relaxed);
-                let current_bpm = bpm.load(Ordering::Relaxed);
-                let mut click_pos = click_position.load(Ordering::Relaxed) as usize;
-
-                // Process each output frame
-                for (i, sample) in output.iter_mut().enumerate() {
-                    // Calculate current frame index for this sample
-                    let frame = current_frame + i as u64;
-
-                    if is_on_beat(frame, current_bpm, sample_rate) {
-                        // Start playing click sample
-                        click_pos = 0;
-                    }
-
-                    // Generate metronome click if we're within click duration
-                    if click_pos < click_samples.len() {
-                        *sample = click_samples[click_pos];
-                        click_pos += 1;
-                    } else {
-                        *sample = 0.0; // Silence between clicks
-                    }
-                }
-
-                // Update click position for next callback
-                click_position.store(click_pos as u64, Ordering::Relaxed);
-
-                // Update frame counter
-                frame_counter.fetch_add(output.len() as u64, Ordering::Relaxed);
-
-                DataCallbackResult::Continue
-            })
+            .set_callback(callback)
             .open_stream()
             .map_err(|e| AudioError::StreamOpenFailed {
                 reason: format!("Output stream: {:?}", e),

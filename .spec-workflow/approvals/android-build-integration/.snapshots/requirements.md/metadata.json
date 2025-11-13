@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/android-build-integration/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-13T07:00:35.979Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763017235976_b3aso8cqj",
+      "approvalTitle": "Android Build Integration - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-13T07:02:00.612Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763017235976_b3aso8cqj",
+      "approvalTitle": "Android Build Integration - Requirements"
+    }
+  ]
+}

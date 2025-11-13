@@ -332,185 +332,148 @@ mod tests {
     }
 
     #[test]
-    fn test_log_audio_error() {
-        // Test that log_audio_error doesn't panic
-        let err = AudioError::BpmInvalid { bpm: 0 };
-        log_audio_error(&err, "test_context");
+    fn test_error_logging_functions() {
+        // Test all AudioError variants
+        log_audio_error(&AudioError::BpmInvalid { bpm: 0 }, "ctx");
+        log_audio_error(&AudioError::AlreadyRunning, "ctx");
+        log_audio_error(&AudioError::NotRunning, "ctx");
+        log_audio_error(
+            &AudioError::HardwareError {
+                details: "test".into(),
+            },
+            "ctx",
+        );
+        log_audio_error(&AudioError::PermissionDenied, "ctx");
+        log_audio_error(
+            &AudioError::StreamOpenFailed {
+                reason: "test".into(),
+            },
+            "ctx",
+        );
+        log_audio_error(
+            &AudioError::LockPoisoned {
+                component: "test".into(),
+            },
+            "ctx",
+        );
 
-        let err = AudioError::AlreadyRunning;
-        log_audio_error(&err, "test_context");
-
-        let err = AudioError::NotRunning;
-        log_audio_error(&err, "test_context");
-
-        let err = AudioError::HardwareError {
-            details: "test".to_string(),
-        };
-        log_audio_error(&err, "test_context");
-
-        let err = AudioError::PermissionDenied;
-        log_audio_error(&err, "test_context");
-
-        let err = AudioError::StreamOpenFailed {
-            reason: "test".to_string(),
-        };
-        log_audio_error(&err, "test_context");
-
-        let err = AudioError::LockPoisoned {
-            component: "test".to_string(),
-        };
-        log_audio_error(&err, "test_context");
+        // Test all CalibrationError variants
+        log_calibration_error(
+            &CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: 5,
+            },
+            "ctx",
+        );
+        log_calibration_error(
+            &CalibrationError::InvalidFeatures {
+                reason: "test".into(),
+            },
+            "ctx",
+        );
+        log_calibration_error(&CalibrationError::NotComplete, "ctx");
+        log_calibration_error(&CalibrationError::AlreadyInProgress, "ctx");
+        log_calibration_error(&CalibrationError::StatePoisoned, "ctx");
     }
 
     #[test]
-    fn test_log_calibration_error() {
-        // Test that log_calibration_error doesn't panic
-        let err = CalibrationError::InsufficientSamples {
-            required: 10,
-            collected: 5,
-        };
-        log_calibration_error(&err, "test_context");
+    fn test_error_messages() {
+        // AudioError messages
+        assert!(AudioError::BpmInvalid { bpm: 999 }
+            .message()
+            .contains("999"));
+        assert!(AudioError::AlreadyRunning.message().contains("stop_audio"));
+        assert!(AudioError::NotRunning.message().contains("start_audio"));
+        assert!(AudioError::HardwareError {
+            details: "hw fail".into()
+        }
+        .message()
+        .contains("hw fail"));
+        assert!(AudioError::PermissionDenied
+            .message()
+            .contains("permission denied"));
+        assert!(AudioError::StreamOpenFailed {
+            reason: "busy".into()
+        }
+        .message()
+        .contains("busy"));
+        assert!(AudioError::LockPoisoned {
+            component: "comp".into()
+        }
+        .message()
+        .contains("comp"));
 
-        let err = CalibrationError::InvalidFeatures {
-            reason: "test".to_string(),
-        };
-        log_calibration_error(&err, "test_context");
-
-        let err = CalibrationError::NotComplete;
-        log_calibration_error(&err, "test_context");
-
-        let err = CalibrationError::AlreadyInProgress;
-        log_calibration_error(&err, "test_context");
-
-        let err = CalibrationError::StatePoisoned;
-        log_calibration_error(&err, "test_context");
-    }
-
-    #[test]
-    fn test_all_audio_error_messages() {
-        // Test all AudioError message() variants
-        let err = AudioError::BpmInvalid { bpm: 999 };
-        assert!(err.message().contains("999"));
-
-        let err = AudioError::AlreadyRunning;
-        assert!(err.message().contains("stop_audio"));
-
-        let err = AudioError::NotRunning;
-        assert!(err.message().contains("start_audio"));
-
-        let err = AudioError::HardwareError {
-            details: "hardware failure".to_string(),
-        };
-        assert!(err.message().contains("hardware failure"));
-
-        let err = AudioError::PermissionDenied;
-        assert!(err.message().contains("permission denied"));
-
-        let err = AudioError::StreamOpenFailed {
-            reason: "device busy".to_string(),
-        };
-        assert!(err.message().contains("device busy"));
-
-        let err = AudioError::LockPoisoned {
-            component: "my_component".to_string(),
-        };
-        assert!(err.message().contains("my_component"));
-    }
-
-    #[test]
-    fn test_all_calibration_error_messages() {
-        // Test all CalibrationError message() variants
-        let err = CalibrationError::InsufficientSamples {
+        // CalibrationError messages
+        let msg = CalibrationError::InsufficientSamples {
             required: 20,
             collected: 8,
-        };
-        assert!(err.message().contains("20"));
-        assert!(err.message().contains("8"));
-
-        let err = CalibrationError::InvalidFeatures {
-            reason: "out of range".to_string(),
-        };
-        assert!(err.message().contains("out of range"));
-
-        let err = CalibrationError::NotComplete;
-        assert!(err.message().contains("not complete"));
-
-        let err = CalibrationError::AlreadyInProgress;
-        assert!(err.message().contains("in progress"));
-
-        let err = CalibrationError::StatePoisoned;
-        assert!(err.message().contains("lock poisoned"));
+        }
+        .message();
+        assert!(msg.contains("20") && msg.contains("8"));
+        assert!(CalibrationError::InvalidFeatures {
+            reason: "range".into()
+        }
+        .message()
+        .contains("range"));
+        assert!(CalibrationError::NotComplete
+            .message()
+            .contains("not complete"));
+        assert!(CalibrationError::AlreadyInProgress
+            .message()
+            .contains("in progress"));
+        assert!(CalibrationError::StatePoisoned
+            .message()
+            .contains("lock poisoned"));
     }
 
     #[test]
-    fn test_audio_error_display_trait() {
-        // Test Display trait implementation for AudioError
-        let err = AudioError::BpmInvalid { bpm: 42 };
-        let display = format!("{}", err);
-        assert!(display.contains("AudioError"));
-        assert!(display.contains("1001"));
-        assert!(display.contains("42"));
+    fn test_error_display_with_codes() {
+        // AudioError Display
+        let d = format!("{}", AudioError::BpmInvalid { bpm: 42 });
+        assert!(d.contains("AudioError") && d.contains("1001") && d.contains("42"));
+        assert!(format!("{}", AudioError::AlreadyRunning).contains("1002"));
+        assert!(format!("{}", AudioError::NotRunning).contains("1003"));
+        assert!(format!(
+            "{}",
+            AudioError::HardwareError {
+                details: "hw".into()
+            }
+        )
+        .contains("1004"));
+        assert!(format!("{}", AudioError::PermissionDenied).contains("1005"));
+        assert!(format!(
+            "{}",
+            AudioError::StreamOpenFailed {
+                reason: "fail".into()
+            }
+        )
+        .contains("1006"));
+        assert!(format!(
+            "{}",
+            AudioError::LockPoisoned {
+                component: "c".into()
+            }
+        )
+        .contains("1007"));
 
-        let err = AudioError::AlreadyRunning;
-        let display = format!("{}", err);
-        assert!(display.contains("AudioError"));
-        assert!(display.contains("1002"));
-
-        let err = AudioError::NotRunning;
-        let display = format!("{}", err);
-        assert!(display.contains("AudioError"));
-        assert!(display.contains("1003"));
-
-        let err = AudioError::HardwareError {
-            details: "hw error".to_string(),
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("1004"));
-
-        let err = AudioError::PermissionDenied;
-        let display = format!("{}", err);
-        assert!(display.contains("1005"));
-
-        let err = AudioError::StreamOpenFailed {
-            reason: "failed".to_string(),
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("1006"));
-
-        let err = AudioError::LockPoisoned {
-            component: "comp".to_string(),
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("1007"));
-    }
-
-    #[test]
-    fn test_calibration_error_display_trait() {
-        // Test Display trait implementation for CalibrationError
-        let err = CalibrationError::InsufficientSamples {
-            required: 15,
-            collected: 7,
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("CalibrationError"));
-        assert!(display.contains("2001"));
-
-        let err = CalibrationError::InvalidFeatures {
-            reason: "invalid".to_string(),
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("2002"));
-
-        let err = CalibrationError::NotComplete;
-        let display = format!("{}", err);
-        assert!(display.contains("2003"));
-
-        let err = CalibrationError::AlreadyInProgress;
-        let display = format!("{}", err);
-        assert!(display.contains("2004"));
-
-        let err = CalibrationError::StatePoisoned;
-        let display = format!("{}", err);
-        assert!(display.contains("2005"));
+        // CalibrationError Display
+        let d = format!(
+            "{}",
+            CalibrationError::InsufficientSamples {
+                required: 15,
+                collected: 7
+            }
+        );
+        assert!(d.contains("CalibrationError") && d.contains("2001"));
+        assert!(format!(
+            "{}",
+            CalibrationError::InvalidFeatures {
+                reason: "inv".into()
+            }
+        )
+        .contains("2002"));
+        assert!(format!("{}", CalibrationError::NotComplete).contains("2003"));
+        assert!(format!("{}", CalibrationError::AlreadyInProgress).contains("2004"));
+        assert!(format!("{}", CalibrationError::StatePoisoned).contains("2005"));
     }
 }
