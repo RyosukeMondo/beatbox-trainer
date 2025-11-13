@@ -70,7 +70,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
 
 ## Phase 3: Navigation & Onboarding (1 week)
 
-- [-] 3.1. Configure go_router Navigation
+- [x] 3.1. Configure go_router Navigation
   - File: lib/main.dart
   - Estimate: 2 hours | Priority: Critical
   - Replace MaterialApp with MaterialApp.router and define routes
