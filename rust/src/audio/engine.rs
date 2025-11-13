@@ -19,13 +19,14 @@
 
 #[cfg(target_os = "android")]
 use oboe::{
-    AudioStreamAsync, AudioStreamBuilder, DataCallbackResult, Input, Output,
-    PerformanceMode, SharingMode,
+    AudioStreamAsync, AudioStreamBuilder, DataCallbackResult, Input, Output, PerformanceMode,
+    SharingMode,
 };
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use super::buffer_pool::BufferPoolChannels;
+use crate::error::AudioError;
 
 #[cfg(target_os = "android")]
 use super::metronome::{generate_click_sample, is_on_beat};
@@ -85,7 +86,7 @@ impl AudioEngine {
     /// * `buffer_channels` - Pre-initialized buffer pool channels
     ///
     /// # Returns
-    /// Result containing AudioEngine or error message
+    /// Result containing AudioEngine or error
     ///
     /// # Errors
     /// Returns error if audio streams cannot be initialized
@@ -93,7 +94,7 @@ impl AudioEngine {
         bpm: u32,
         sample_rate: u32,
         buffer_channels: BufferPoolChannels,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, AudioError> {
         // Pre-generate metronome click samples (20ms white noise)
         let click_samples = generate_click_sample(sample_rate);
 
@@ -121,7 +122,7 @@ impl AudioEngine {
     /// * `result_sender` - Tokio channel for sending classification results to UI
     ///
     /// # Returns
-    /// Result indicating success or error message
+    /// Result indicating success or error
     ///
     /// # Errors
     /// Returns error if streams cannot be opened or started
@@ -129,7 +130,7 @@ impl AudioEngine {
         &mut self,
         calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
         result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
-    ) -> Result<(), String> {
+    ) -> Result<(), AudioError> {
         // Clone Arc references for callback closures
         let frame_counter = Arc::clone(&self.frame_counter);
         let bpm = Arc::clone(&self.bpm);
@@ -146,7 +147,9 @@ impl AudioEngine {
             .set_channel_count(1) // Mono input for beatbox detection
             .set_format::<f32>()
             .open_stream()
-            .map_err(|e| format!("Failed to open input stream: {:?}", e))?;
+            .map_err(|e| AudioError::StreamOpenFailed {
+                reason: format!("Input stream: {:?}", e),
+            })?;
 
         // Build output stream (master) with callback
         let output_stream = AudioStreamBuilder::default()
@@ -192,15 +195,21 @@ impl AudioEngine {
                 DataCallbackResult::Continue
             })
             .open_stream()
-            .map_err(|e| format!("Failed to open output stream: {:?}", e))?;
+            .map_err(|e| AudioError::StreamOpenFailed {
+                reason: format!("Output stream: {:?}", e),
+            })?;
 
         // Start streams (input first, then output as master)
         input_stream
             .start()
-            .map_err(|e| format!("Failed to start input stream: {:?}", e))?;
+            .map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to start input stream: {:?}", e),
+            })?;
         output_stream
             .start()
-            .map_err(|e| format!("Failed to start output stream: {:?}", e))?;
+            .map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to start output stream: {:?}", e),
+            })?;
 
         self.input_stream = Some(input_stream);
         self.output_stream = Some(output_stream);
@@ -246,20 +255,20 @@ impl AudioEngine {
     /// the engine can be restarted with start().
     ///
     /// # Returns
-    /// Result indicating success or error message
-    pub fn stop(&mut self) -> Result<(), String> {
+    /// Result indicating success or error
+    pub fn stop(&mut self) -> Result<(), AudioError> {
         // Stop output stream first (master)
         if let Some(stream) = self.output_stream.take() {
-            stream
-                .stop()
-                .map_err(|e| format!("Failed to stop output stream: {:?}", e))?;
+            stream.stop().map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to stop output stream: {:?}", e),
+            })?;
         }
 
         // Then stop input stream (slave)
         if let Some(stream) = self.input_stream.take() {
-            stream
-                .stop()
-                .map_err(|e| format!("Failed to stop input stream: {:?}", e))?;
+            stream.stop().map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to stop input stream: {:?}", e),
+            })?;
         }
 
         Ok(())
@@ -324,7 +333,7 @@ impl AudioEngine {
         bpm: u32,
         sample_rate: u32,
         _buffer_channels: BufferPoolChannels,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, AudioError> {
         Ok(AudioEngine {
             frame_counter: Arc::new(AtomicU64::new(0)),
             bpm: Arc::new(AtomicU32::new(bpm)),
@@ -334,14 +343,16 @@ impl AudioEngine {
 
     pub fn start(
         &mut self,
-        _calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        _calibration: std::sync::Arc<
+            std::sync::RwLock<crate::calibration::state::CalibrationState>,
+        >,
         _result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
-    ) -> Result<(), String> {
+    ) -> Result<(), AudioError> {
         log::warn!("AudioEngine::start() called on non-Android platform - no-op");
         Ok(())
     }
 
-    pub fn stop(&mut self) -> Result<(), String> {
+    pub fn stop(&mut self) -> Result<(), AudioError> {
         log::warn!("AudioEngine::stop() called on non-Android platform - no-op");
         Ok(())
     }
@@ -380,7 +391,11 @@ mod tests {
 
         let engine = engine.unwrap();
         assert_eq!(engine.get_bpm(), 120, "Initial BPM should be 120");
-        assert_eq!(engine.get_frame_counter(), 0, "Frame counter should start at 0");
+        assert_eq!(
+            engine.get_frame_counter(),
+            0,
+            "Frame counter should start at 0"
+        );
     }
 
     #[test]

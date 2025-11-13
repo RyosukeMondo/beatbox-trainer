@@ -9,14 +9,14 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
+use crate::analysis::ClassificationResult;
 #[cfg(target_os = "android")]
 use crate::audio::{buffer_pool::BufferPool, engine::AudioEngine};
-use crate::analysis::ClassificationResult;
 use crate::calibration::{
     procedure::{CalibrationProcedure, CalibrationProgress},
     state::CalibrationState,
 };
-use crate::error::{AudioError, CalibrationError};
+use crate::error::{log_audio_error, log_calibration_error, AudioError, CalibrationError};
 
 /// Global AudioEngine instance with lifecycle management
 ///
@@ -36,12 +36,14 @@ static CALIBRATION_STATE: Lazy<Arc<RwLock<CalibrationState>>> =
 
 /// Classification result broadcast channel (for classification_stream)
 /// Using broadcast to allow multiple subscribers
-static CLASSIFICATION_BROADCAST: Lazy<Arc<Mutex<Option<tokio::sync::broadcast::Sender<ClassificationResult>>>>> =
-    Lazy::new(|| Arc::new(Mutex::new(None)));
+static CLASSIFICATION_BROADCAST: Lazy<
+    Arc<Mutex<Option<tokio::sync::broadcast::Sender<ClassificationResult>>>>,
+> = Lazy::new(|| Arc::new(Mutex::new(None)));
 
 /// Calibration progress broadcast channel (for calibration_stream)
-static CALIBRATION_BROADCAST: Lazy<Arc<Mutex<Option<tokio::sync::broadcast::Sender<CalibrationProgress>>>>> =
-    Lazy::new(|| Arc::new(Mutex::new(None)));
+static CALIBRATION_BROADCAST: Lazy<
+    Arc<Mutex<Option<tokio::sync::broadcast::Sender<CalibrationProgress>>>>,
+> = Lazy::new(|| Arc::new(Mutex::new(None)));
 
 /// AudioEngine state container for lifecycle management
 struct AudioEngineState {
@@ -96,9 +98,11 @@ pub fn get_version() -> Result<String> {
 pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
     #[cfg(not(target_os = "android"))]
     {
-        return Err(AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string()
-        });
+        let err = AudioError::HardwareError {
+            details: "Audio engine only supported on Android".to_string(),
+        };
+        log_audio_error(&err, "start_audio");
+        return Err(err);
     }
 
     #[cfg(target_os = "android")]
@@ -107,16 +111,23 @@ pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
     #[cfg(target_os = "android")]
     {
         if bpm == 0 {
-            return Err(AudioError::BpmInvalid { bpm });
+            let err = AudioError::BpmInvalid { bpm };
+            log_audio_error(&err, "start_audio");
+            return Err(err);
         }
 
-        let mut engine_guard = AUDIO_ENGINE.lock()
-            .map_err(|_| AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string()
-            })?;
+        let mut engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
+            let err = AudioError::LockPoisoned {
+                component: "AUDIO_ENGINE".to_string(),
+            };
+            log_audio_error(&err, "start_audio");
+            err
+        })?;
 
         if engine_guard.is_some() {
-            return Err(AudioError::AlreadyRunning);
+            let err = AudioError::AlreadyRunning;
+            log_audio_error(&err, "start_audio");
+            return Err(err);
         }
 
         // Create classification result channels
@@ -127,10 +138,13 @@ pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
 
         // Store broadcast sender for classification_stream
         {
-            let mut sender_guard = CLASSIFICATION_BROADCAST.lock()
-                .map_err(|_| AudioError::LockPoisoned {
-                    component: "CLASSIFICATION_BROADCAST".to_string()
-                })?;
+            let mut sender_guard = CLASSIFICATION_BROADCAST.lock().map_err(|_| {
+                let err = AudioError::LockPoisoned {
+                    component: "CLASSIFICATION_BROADCAST".to_string(),
+                };
+                log_audio_error(&err, "start_audio");
+                err
+            })?;
             *sender_guard = Some(broadcast_tx.clone());
         }
 
@@ -149,18 +163,24 @@ pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
 
         // Create AudioEngine (takes ownership of buffer_channels)
         let sample_rate = 48000; // Standard sample rate for Android
-        let mut engine = AudioEngine::new(bpm, sample_rate, buffer_channels)?;
+        let mut engine = AudioEngine::new(bpm, sample_rate, buffer_channels).map_err(|err| {
+            log_audio_error(&err, "start_audio");
+            err
+        })?;
 
         // Get calibration state for AudioEngine::start()
         let calibration = Arc::clone(&CALIBRATION_STATE);
 
         // Start audio streams (AudioEngine::start spawns analysis thread internally)
-        engine.start(calibration, classification_tx)?;
+        engine
+            .start(calibration, classification_tx)
+            .map_err(|err| {
+                log_audio_error(&err, "start_audio");
+                err
+            })?;
 
         // Store engine state
-        *engine_guard = Some(AudioEngineState {
-            engine,
-        });
+        *engine_guard = Some(AudioEngineState { engine });
 
         Ok(())
     }
@@ -178,28 +198,39 @@ pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
 pub fn stop_audio() -> Result<(), AudioError> {
     #[cfg(not(target_os = "android"))]
     {
-        return Err(AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string()
-        });
+        let err = AudioError::HardwareError {
+            details: "Audio engine only supported on Android".to_string(),
+        };
+        log_audio_error(&err, "stop_audio");
+        return Err(err);
     }
 
     #[cfg(target_os = "android")]
     {
-        let mut engine_guard = AUDIO_ENGINE.lock()
-            .map_err(|_| AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string()
-            })?;
+        let mut engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
+            let err = AudioError::LockPoisoned {
+                component: "AUDIO_ENGINE".to_string(),
+            };
+            log_audio_error(&err, "stop_audio");
+            err
+        })?;
 
         if let Some(mut state) = engine_guard.take() {
             // Stop audio streams (AudioEngine manages analysis thread cleanup)
-            state.engine.stop()?;
+            state.engine.stop().map_err(|err| {
+                log_audio_error(&err, "stop_audio");
+                err
+            })?;
 
             // Clear classification broadcast sender to signal stream end
             {
-                let mut sender_guard = CLASSIFICATION_BROADCAST.lock()
-                    .map_err(|_| AudioError::LockPoisoned {
-                        component: "CLASSIFICATION_BROADCAST".to_string()
-                    })?;
+                let mut sender_guard = CLASSIFICATION_BROADCAST.lock().map_err(|_| {
+                    let err = AudioError::LockPoisoned {
+                        component: "CLASSIFICATION_BROADCAST".to_string(),
+                    };
+                    log_audio_error(&err, "stop_audio");
+                    err
+                })?;
                 *sender_guard = None;
             }
         }
@@ -227,9 +258,11 @@ pub fn stop_audio() -> Result<(), AudioError> {
 pub fn set_bpm(_bpm: u32) -> Result<(), AudioError> {
     #[cfg(not(target_os = "android"))]
     {
-        return Err(AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string()
-        });
+        let err = AudioError::HardwareError {
+            details: "Audio engine only supported on Android".to_string(),
+        };
+        log_audio_error(&err, "set_bpm");
+        return Err(err);
     }
 
     #[cfg(target_os = "android")]
@@ -238,19 +271,26 @@ pub fn set_bpm(_bpm: u32) -> Result<(), AudioError> {
     #[cfg(target_os = "android")]
     {
         if bpm == 0 {
-            return Err(AudioError::BpmInvalid { bpm });
+            let err = AudioError::BpmInvalid { bpm };
+            log_audio_error(&err, "set_bpm");
+            return Err(err);
         }
 
-        let engine_guard = AUDIO_ENGINE.lock()
-            .map_err(|_| AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string()
-            })?;
+        let engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
+            let err = AudioError::LockPoisoned {
+                component: "AUDIO_ENGINE".to_string(),
+            };
+            log_audio_error(&err, "set_bpm");
+            err
+        })?;
 
         if let Some(state) = engine_guard.as_ref() {
             state.engine.set_bpm(bpm);
             Ok(())
         } else {
-            Err(AudioError::NotRunning)
+            let err = AudioError::NotRunning;
+            log_audio_error(&err, "set_bpm");
+            Err(err)
         }
     }
 }
@@ -323,11 +363,16 @@ pub async fn classification_stream() -> impl futures::Stream<Item = Classificati
 /// - Calibration already in progress
 #[flutter_rust_bridge::frb]
 pub fn start_calibration() -> Result<(), CalibrationError> {
-    let mut procedure_guard = CALIBRATION_PROCEDURE.lock()
-        .map_err(|_| CalibrationError::StatePoisoned)?;
+    let mut procedure_guard = CALIBRATION_PROCEDURE.lock().map_err(|_| {
+        let err = CalibrationError::StatePoisoned;
+        log_calibration_error(&err, "start_calibration");
+        err
+    })?;
 
     if procedure_guard.is_some() {
-        return Err(CalibrationError::AlreadyInProgress);
+        let err = CalibrationError::AlreadyInProgress;
+        log_calibration_error(&err, "start_calibration");
+        return Err(err);
     }
 
     // Create new calibration procedure (starts with KICK by default)
@@ -352,21 +397,32 @@ pub fn start_calibration() -> Result<(), CalibrationError> {
 /// - Sample validation failed (out of range features)
 #[flutter_rust_bridge::frb]
 pub fn finish_calibration() -> Result<(), CalibrationError> {
-    let mut procedure_guard = CALIBRATION_PROCEDURE.lock()
-        .map_err(|_| CalibrationError::StatePoisoned)?;
+    let mut procedure_guard = CALIBRATION_PROCEDURE.lock().map_err(|_| {
+        let err = CalibrationError::StatePoisoned;
+        log_calibration_error(&err, "finish_calibration");
+        err
+    })?;
 
     if let Some(procedure) = procedure_guard.take() {
         // Compute calibrated state from collected samples
-        let new_state = procedure.finalize()?;
+        let new_state = procedure.finalize().map_err(|err| {
+            log_calibration_error(&err, "finish_calibration");
+            err
+        })?;
 
         // Update global calibration state
-        let mut state_guard = CALIBRATION_STATE.write()
-            .map_err(|_| CalibrationError::StatePoisoned)?;
+        let mut state_guard = CALIBRATION_STATE.write().map_err(|_| {
+            let err = CalibrationError::StatePoisoned;
+            log_calibration_error(&err, "finish_calibration");
+            err
+        })?;
         *state_guard = new_state;
 
         Ok(())
     } else {
-        Err(CalibrationError::NotComplete)
+        let err = CalibrationError::NotComplete;
+        log_calibration_error(&err, "finish_calibration");
+        Err(err)
     }
 }
 

@@ -81,11 +81,7 @@ pub fn spawn_analysis_thread(
         let mut onset_detector = OnsetDetector::new(sample_rate);
         let feature_extractor = FeatureExtractor::new(sample_rate);
         let classifier = Classifier::new(Arc::clone(&calibration));
-        let quantizer = Quantizer::new(
-            Arc::clone(&frame_counter),
-            Arc::clone(&bpm),
-            sample_rate,
-        );
+        let quantizer = Quantizer::new(Arc::clone(&frame_counter), Arc::clone(&bpm), sample_rate);
 
         // Main analysis loop - runs until sender is dropped (audio engine stops)
         loop {
@@ -131,7 +127,8 @@ pub fn spawn_analysis_thread(
                     };
 
                     // Convert timestamp to milliseconds
-                    let timestamp_ms = (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
+                    let timestamp_ms =
+                        (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
 
                     // Create result and send to Dart UI
                     let result = ClassificationResult {

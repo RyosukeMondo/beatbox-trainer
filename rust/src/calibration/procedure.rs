@@ -10,6 +10,7 @@
 
 use crate::analysis::features::Features;
 use crate::calibration::state::CalibrationState;
+use crate::error::CalibrationError;
 
 /// Sound type being calibrated
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,11 +108,11 @@ impl CalibrationProcedure {
     ///
     /// # Returns
     /// * `Ok(())` - Sample accepted
-    /// * `Err(String)` - Sample rejected (validation error)
+    /// * `Err(CalibrationError)` - Sample rejected (validation error)
     ///
     /// # Note
     /// Automatically advances to next sound when current sound is complete
-    pub fn add_sample(&mut self, features: Features) -> Result<(), String> {
+    pub fn add_sample(&mut self, features: Features) -> Result<(), CalibrationError> {
         // Validate the sample
         Self::validate_sample(&features)?;
 
@@ -119,19 +120,28 @@ impl CalibrationProcedure {
         match self.current_sound {
             CalibrationSound::Kick => {
                 if self.kick_samples.len() >= self.samples_needed as usize {
-                    return Err("Kick samples already complete".to_string());
+                    return Err(CalibrationError::InsufficientSamples {
+                        required: self.samples_needed as usize,
+                        collected: self.kick_samples.len(),
+                    });
                 }
                 self.kick_samples.push(features);
             }
             CalibrationSound::Snare => {
                 if self.snare_samples.len() >= self.samples_needed as usize {
-                    return Err("Snare samples already complete".to_string());
+                    return Err(CalibrationError::InsufficientSamples {
+                        required: self.samples_needed as usize,
+                        collected: self.snare_samples.len(),
+                    });
                 }
                 self.snare_samples.push(features);
             }
             CalibrationSound::HiHat => {
                 if self.hihat_samples.len() >= self.samples_needed as usize {
-                    return Err("Hi-hat samples already complete".to_string());
+                    return Err(CalibrationError::InsufficientSamples {
+                        required: self.samples_needed as usize,
+                        collected: self.hihat_samples.len(),
+                    });
                 }
                 self.hihat_samples.push(features);
             }
@@ -154,22 +164,20 @@ impl CalibrationProcedure {
     ///
     /// # Returns
     /// * `Ok(())` - Sample valid
-    /// * `Err(String)` - Validation error with details
-    fn validate_sample(features: &Features) -> Result<(), String> {
+    /// * `Err(CalibrationError)` - Validation error with details
+    fn validate_sample(features: &Features) -> Result<(), CalibrationError> {
         // Validate centroid range [50 Hz, 20000 Hz]
         if features.centroid < 50.0 || features.centroid > 20000.0 {
-            return Err(format!(
-                "Invalid sample: centroid {} Hz out of range [50, 20000]. Try again.",
-                features.centroid
-            ));
+            return Err(CalibrationError::InvalidFeatures {
+                reason: format!("Centroid {} Hz out of range [50, 20000]", features.centroid),
+            });
         }
 
         // Validate ZCR range [0.0, 1.0]
         if features.zcr < 0.0 || features.zcr > 1.0 {
-            return Err(format!(
-                "Invalid sample: ZCR {} out of range [0.0, 1.0]. Try again.",
-                features.zcr
-            ));
+            return Err(CalibrationError::InvalidFeatures {
+                reason: format!("ZCR {} out of range [0.0, 1.0]", features.zcr),
+            });
         }
 
         Ok(())
@@ -211,25 +219,18 @@ impl CalibrationProcedure {
     ///
     /// # Returns
     /// * `Ok(CalibrationState)` - Successfully calibrated state
-    /// * `Err(String)` - Calibration incomplete or invalid
-    pub fn finalize(&self) -> Result<CalibrationState, String> {
+    /// * `Err(CalibrationError)` - Calibration incomplete or invalid
+    pub fn finalize(&self) -> Result<CalibrationState, CalibrationError> {
         if !self.is_complete() {
-            return Err(format!(
-                "Calibration incomplete: kick={}/{}, snare={}/{}, hihat={}/{}",
-                self.kick_samples.len(),
-                self.samples_needed,
-                self.snare_samples.len(),
-                self.samples_needed,
-                self.hihat_samples.len(),
-                self.samples_needed
-            ));
+            return Err(CalibrationError::InsufficientSamples {
+                required: self.samples_needed as usize * 3, // Total for all sounds
+                collected: self.kick_samples.len()
+                    + self.snare_samples.len()
+                    + self.hihat_samples.len(),
+            });
         }
 
-        CalibrationState::from_samples(
-            &self.kick_samples,
-            &self.snare_samples,
-            &self.hihat_samples,
-        )
+        CalibrationState::from_samples(&self.kick_samples, &self.snare_samples, &self.hihat_samples)
     }
 
     /// Reset the calibration procedure
@@ -344,7 +345,12 @@ mod tests {
 
         let result = procedure.add_sample(features);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("centroid 30 Hz"));
+        match result.unwrap_err() {
+            CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("Centroid") && reason.contains("30"));
+            }
+            _ => panic!("Expected InvalidFeatures error"),
+        }
     }
 
     #[test]
@@ -354,7 +360,12 @@ mod tests {
 
         let result = procedure.add_sample(features);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("centroid 25000 Hz"));
+        match result.unwrap_err() {
+            CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("Centroid") && reason.contains("25000"));
+            }
+            _ => panic!("Expected InvalidFeatures error"),
+        }
     }
 
     #[test]
@@ -364,7 +375,12 @@ mod tests {
 
         let result = procedure.add_sample(features);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("ZCR -0.1"));
+        match result.unwrap_err() {
+            CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("ZCR") && reason.contains("-0.1"));
+            }
+            _ => panic!("Expected InvalidFeatures error"),
+        }
     }
 
     #[test]
@@ -374,7 +390,12 @@ mod tests {
 
         let result = procedure.add_sample(features);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("ZCR 1.5"));
+        match result.unwrap_err() {
+            CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("ZCR") && reason.contains("1.5"));
+            }
+            _ => panic!("Expected InvalidFeatures error"),
+        }
     }
 
     #[test]
@@ -442,7 +463,10 @@ mod tests {
         // Try to add another kick sample - should fail
         let result = procedure.add_sample(features);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("already complete"));
+        assert!(matches!(
+            result.unwrap_err(),
+            CalibrationError::InsufficientSamples { .. }
+        ));
     }
 
     #[test]
@@ -538,7 +562,10 @@ mod tests {
 
         let result = procedure.finalize();
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Calibration incomplete"));
+        assert!(matches!(
+            result.unwrap_err(),
+            CalibrationError::InsufficientSamples { .. }
+        ));
     }
 
     #[test]
@@ -578,4 +605,3 @@ mod tests {
         assert_eq!(progress.samples_needed, 5);
     }
 }
-

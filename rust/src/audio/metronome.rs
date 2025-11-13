@@ -7,8 +7,8 @@
 //! - Pure functions (no side effects, deterministic output)
 //! - Zero allocations in timing check functions
 
-use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 /// Duration of metronome click in milliseconds
 const CLICK_DURATION_MS: f32 = 20.0;
@@ -177,9 +177,21 @@ mod tests {
 
         // Test exact beat boundaries
         assert!(is_on_beat(0, bpm, sample_rate), "Frame 0 should be on beat");
-        assert!(is_on_beat(spb, bpm, sample_rate), "Frame {} should be on beat", spb);
-        assert!(is_on_beat(spb * 2, bpm, sample_rate), "Frame {} should be on beat", spb * 2);
-        assert!(is_on_beat(spb * 10, bpm, sample_rate), "Frame {} should be on beat", spb * 10);
+        assert!(
+            is_on_beat(spb, bpm, sample_rate),
+            "Frame {} should be on beat",
+            spb
+        );
+        assert!(
+            is_on_beat(spb * 2, bpm, sample_rate),
+            "Frame {} should be on beat",
+            spb * 2
+        );
+        assert!(
+            is_on_beat(spb * 10, bpm, sample_rate),
+            "Frame {} should be on beat",
+            spb * 10
+        );
     }
 
     #[test]
@@ -189,10 +201,25 @@ mod tests {
         let spb = samples_per_beat(bpm, sample_rate); // 24000
 
         // Test frames that are NOT on beat boundaries
-        assert!(!is_on_beat(1, bpm, sample_rate), "Frame 1 should NOT be on beat");
-        assert!(!is_on_beat(spb - 1, bpm, sample_rate), "Frame {} should NOT be on beat", spb - 1);
-        assert!(!is_on_beat(spb + 1, bpm, sample_rate), "Frame {} should NOT be on beat", spb + 1);
-        assert!(!is_on_beat(spb / 2, bpm, sample_rate), "Frame {} should NOT be on beat", spb / 2);
+        assert!(
+            !is_on_beat(1, bpm, sample_rate),
+            "Frame 1 should NOT be on beat"
+        );
+        assert!(
+            !is_on_beat(spb - 1, bpm, sample_rate),
+            "Frame {} should NOT be on beat",
+            spb - 1
+        );
+        assert!(
+            !is_on_beat(spb + 1, bpm, sample_rate),
+            "Frame {} should NOT be on beat",
+            spb + 1
+        );
+        assert!(
+            !is_on_beat(spb / 2, bpm, sample_rate),
+            "Frame {} should NOT be on beat",
+            spb / 2
+        );
     }
 
     #[test]
@@ -201,9 +228,9 @@ mod tests {
 
         // Test various BPM values
         let test_cases = vec![
-            (60, vec![0, 48000, 96000]),         // 60 BPM: beat every 48000 samples
-            (80, vec![0, 36000, 72000]),         // 80 BPM: beat every 36000 samples
-            (140, vec![0, 20571, 41142]),        // 140 BPM: beat every ~20571 samples
+            (60, vec![0, 48000, 96000]),  // 60 BPM: beat every 48000 samples
+            (80, vec![0, 36000, 72000]),  // 80 BPM: beat every 36000 samples
+            (140, vec![0, 20571, 41142]), // 140 BPM: beat every ~20571 samples
         ];
 
         for (bpm, beat_frames) in test_cases {

@@ -8,6 +8,7 @@
 // This provides a balance between accuracy and robustness.
 
 use crate::analysis::features::Features;
+use crate::error::CalibrationError;
 
 /// CalibrationState stores thresholds for sound classification
 #[derive(Debug, Clone)]
@@ -54,7 +55,7 @@ impl CalibrationState {
     ///
     /// # Returns
     /// * `Ok(CalibrationState)` - Successfully calibrated state
-    /// * `Err(String)` - Validation error (wrong sample count or out-of-range features)
+    /// * `Err(CalibrationError)` - Validation error (wrong sample count or out-of-range features)
     ///
     /// # Validation
     /// - Requires exactly 10 samples per sound type
@@ -64,25 +65,25 @@ impl CalibrationState {
         kick_samples: &[Features],
         snare_samples: &[Features],
         hihat_samples: &[Features],
-    ) -> Result<Self, String> {
+    ) -> Result<Self, CalibrationError> {
         // Validate sample counts
         if kick_samples.len() != 10 {
-            return Err(format!(
-                "Expected exactly 10 kick samples, got {}",
-                kick_samples.len()
-            ));
+            return Err(CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: kick_samples.len(),
+            });
         }
         if snare_samples.len() != 10 {
-            return Err(format!(
-                "Expected exactly 10 snare samples, got {}",
-                snare_samples.len()
-            ));
+            return Err(CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: snare_samples.len(),
+            });
         }
         if hihat_samples.len() != 10 {
-            return Err(format!(
-                "Expected exactly 10 hi-hat samples, got {}",
-                hihat_samples.len()
-            ));
+            return Err(CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: hihat_samples.len(),
+            });
         }
 
         // Validate and compute kick thresholds
@@ -117,23 +118,27 @@ impl CalibrationState {
     ///
     /// # Returns
     /// * `Ok(())` - All samples valid
-    /// * `Err(String)` - Validation error with details
-    fn validate_samples(samples: &[Features], sound_name: &str) -> Result<(), String> {
+    /// * `Err(CalibrationError)` - Validation error with details
+    fn validate_samples(samples: &[Features], sound_name: &str) -> Result<(), CalibrationError> {
         for (i, features) in samples.iter().enumerate() {
             // Validate centroid range [50 Hz, 20000 Hz]
             if features.centroid < 50.0 || features.centroid > 20000.0 {
-                return Err(format!(
-                    "{} sample {}: centroid {} Hz out of valid range [50, 20000]",
-                    sound_name, i, features.centroid
-                ));
+                return Err(CalibrationError::InvalidFeatures {
+                    reason: format!(
+                        "{} sample {}: centroid {} Hz out of range [50, 20000]",
+                        sound_name, i, features.centroid
+                    ),
+                });
             }
 
             // Validate ZCR range [0.0, 1.0]
             if features.zcr < 0.0 || features.zcr > 1.0 {
-                return Err(format!(
-                    "{} sample {}: ZCR {} out of valid range [0.0, 1.0]",
-                    sound_name, i, features.zcr
-                ));
+                return Err(CalibrationError::InvalidFeatures {
+                    reason: format!(
+                        "{} sample {}: ZCR {} out of range [0.0, 1.0]",
+                        sound_name, i, features.zcr
+                    ),
+                });
             }
         }
         Ok(())
@@ -351,4 +356,3 @@ mod tests {
         assert!(result.is_ok());
     }
 }
-

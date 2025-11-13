@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/code-quality-refactoring/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-12T23:38:49.294Z",
+      "trigger": "initial",
+      "approvalId": "approval_1762990729291_hfa45apsu",
+      "approvalTitle": "Tasks: Code Quality Refactoring"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-12T23:50:04.384Z",
+      "trigger": "approved",
+      "approvalId": "approval_1762990729291_hfa45apsu",
+      "approvalTitle": "Tasks: Code Quality Refactoring"
+    }
+  ]
+}

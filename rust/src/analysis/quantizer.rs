@@ -88,11 +88,7 @@ impl Quantizer {
     ///
     /// # Returns
     /// A new Quantizer instance ready for timing analysis
-    pub fn new(
-        frame_counter: Arc<AtomicU64>,
-        bpm: Arc<AtomicU32>,
-        sample_rate: u32,
-    ) -> Self {
+    pub fn new(frame_counter: Arc<AtomicU64>, bpm: Arc<AtomicU32>, sample_rate: u32) -> Self {
         Self {
             frame_counter,
             bpm,

@@ -9,8 +9,8 @@
 // 2. Collect 10 samples each for kick, snare, and hi-hat
 // 3. Finalize to create CalibrationState with computed thresholds
 
-pub mod state;
 pub mod procedure;
+pub mod state;
 
+pub use procedure::{CalibrationProcedure, CalibrationProgress, CalibrationSound};
 pub use state::CalibrationState;
-pub use procedure::{CalibrationProcedure, CalibrationSound, CalibrationProgress};

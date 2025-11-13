@@ -3,6 +3,7 @@
 // This module defines custom error types for audio and calibration operations,
 // providing structured error handling with error codes suitable for FFI communication.
 
+use log::error;
 use std::fmt;
 
 /// Error codes for structured error reporting
@@ -16,6 +17,42 @@ pub trait ErrorCode {
 
     /// Get the human-readable error message
     fn message(&self) -> String;
+}
+
+/// Log an audio error with structured context
+///
+/// This function logs audio errors with structured fields including:
+/// - error_code: Numeric error code for programmatic handling
+/// - component: The component where the error occurred
+/// - message: Human-readable error message
+/// - context: Additional contextual information
+///
+/// The logging is non-blocking and will not panic on failure.
+pub fn log_audio_error(err: &AudioError, context: &str) {
+    error!(
+        "Audio error in {}: code={}, component=AudioEngine, message={}",
+        context,
+        err.code(),
+        err.message()
+    );
+}
+
+/// Log a calibration error with structured context
+///
+/// This function logs calibration errors with structured fields including:
+/// - error_code: Numeric error code for programmatic handling
+/// - component: The component where the error occurred
+/// - message: Human-readable error message
+/// - context: Additional contextual information
+///
+/// The logging is non-blocking and will not panic on failure.
+pub fn log_calibration_error(err: &CalibrationError, context: &str) {
+    error!(
+        "Calibration error in {}: code={}, component=CalibrationProcedure, message={}",
+        context,
+        err.code(),
+        err.message()
+    );
 }
 
 /// Audio-related errors
@@ -75,9 +112,7 @@ impl ErrorCode for AudioError {
             AudioError::HardwareError { details } => {
                 format!("Hardware error: {}", details)
             }
-            AudioError::PermissionDenied => {
-                "Microphone permission denied".to_string()
-            }
+            AudioError::PermissionDenied => "Microphone permission denied".to_string(),
             AudioError::StreamOpenFailed { reason } => {
                 format!("Failed to open audio stream: {}", reason)
             }
@@ -90,7 +125,13 @@ impl ErrorCode for AudioError {
 
 impl fmt::Display for AudioError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AudioError::{:?} (code {}): {}", self, self.code(), self.message())
+        write!(
+            f,
+            "AudioError::{:?} (code {}): {}",
+            self,
+            self.code(),
+            self.message()
+        )
     }
 }
 
@@ -142,28 +183,31 @@ impl ErrorCode for CalibrationError {
 
     fn message(&self) -> String {
         match self {
-            CalibrationError::InsufficientSamples { required, collected } => {
+            CalibrationError::InsufficientSamples {
+                required,
+                collected,
+            } => {
                 format!("Insufficient samples: need {}, got {}", required, collected)
             }
             CalibrationError::InvalidFeatures { reason } => {
                 format!("Invalid features: {}", reason)
             }
-            CalibrationError::NotComplete => {
-                "Calibration not complete".to_string()
-            }
-            CalibrationError::AlreadyInProgress => {
-                "Calibration already in progress".to_string()
-            }
-            CalibrationError::StatePoisoned => {
-                "Calibration state lock poisoned".to_string()
-            }
+            CalibrationError::NotComplete => "Calibration not complete".to_string(),
+            CalibrationError::AlreadyInProgress => "Calibration already in progress".to_string(),
+            CalibrationError::StatePoisoned => "Calibration state lock poisoned".to_string(),
         }
     }
 }
 
 impl fmt::Display for CalibrationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CalibrationError::{:?} (code {}): {}", self, self.code(), self.message())
+        write!(
+            f,
+            "CalibrationError::{:?} (code {}): {}",
+            self,
+            self.code(),
+            self.message()
+        )
     }
 }
 
@@ -178,16 +222,47 @@ mod tests {
         assert_eq!(AudioError::BpmInvalid { bpm: 0 }.code(), 1001);
         assert_eq!(AudioError::AlreadyRunning.code(), 1002);
         assert_eq!(AudioError::NotRunning.code(), 1003);
-        assert_eq!(AudioError::HardwareError { details: "test".to_string() }.code(), 1004);
+        assert_eq!(
+            AudioError::HardwareError {
+                details: "test".to_string()
+            }
+            .code(),
+            1004
+        );
         assert_eq!(AudioError::PermissionDenied.code(), 1005);
-        assert_eq!(AudioError::StreamOpenFailed { reason: "test".to_string() }.code(), 1006);
-        assert_eq!(AudioError::LockPoisoned { component: "test".to_string() }.code(), 1007);
+        assert_eq!(
+            AudioError::StreamOpenFailed {
+                reason: "test".to_string()
+            }
+            .code(),
+            1006
+        );
+        assert_eq!(
+            AudioError::LockPoisoned {
+                component: "test".to_string()
+            }
+            .code(),
+            1007
+        );
     }
 
     #[test]
     fn test_calibration_error_codes() {
-        assert_eq!(CalibrationError::InsufficientSamples { required: 10, collected: 5 }.code(), 2001);
-        assert_eq!(CalibrationError::InvalidFeatures { reason: "test".to_string() }.code(), 2002);
+        assert_eq!(
+            CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: 5
+            }
+            .code(),
+            2001
+        );
+        assert_eq!(
+            CalibrationError::InvalidFeatures {
+                reason: "test".to_string()
+            }
+            .code(),
+            2002
+        );
         assert_eq!(CalibrationError::NotComplete.code(), 2003);
         assert_eq!(CalibrationError::AlreadyInProgress.code(), 2004);
         assert_eq!(CalibrationError::StatePoisoned.code(), 2005);
@@ -201,13 +276,18 @@ mod tests {
         let err = AudioError::AlreadyRunning;
         assert!(err.message().contains("already running"));
 
-        let err = AudioError::LockPoisoned { component: "AudioEngine".to_string() };
+        let err = AudioError::LockPoisoned {
+            component: "AudioEngine".to_string(),
+        };
         assert!(err.message().contains("AudioEngine"));
     }
 
     #[test]
     fn test_calibration_error_display() {
-        let err = CalibrationError::InsufficientSamples { required: 10, collected: 5 };
+        let err = CalibrationError::InsufficientSamples {
+            required: 10,
+            collected: 5,
+        };
         assert!(err.message().contains("need 10"));
         assert!(err.message().contains("got 5"));
 

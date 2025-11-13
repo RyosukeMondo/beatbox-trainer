@@ -15,7 +15,7 @@
 // - Peeters, G. (2004). A large set of audio features for sound description
 // - Lerch, A. (2012). An Introduction to Audio Content Analysis
 
-use rustfft::{FftPlanner, num_complex::Complex};
+use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::{Arc, Mutex};
 
 /// FFT window size for feature extraction (higher resolution than onset detection)
@@ -59,7 +59,8 @@ impl FeatureExtractor {
         // Pre-compute Hann window to reduce spectral leakage
         let window = (0..fft_size)
             .map(|i| {
-                0.5 * (1.0 - ((2.0 * std::f32::consts::PI * i as f32) / (fft_size as f32 - 1.0)).cos())
+                0.5 * (1.0
+                    - ((2.0 * std::f32::consts::PI * i as f32) / (fft_size as f32 - 1.0)).cos())
             })
             .collect();
 
@@ -234,7 +235,8 @@ impl FeatureExtractor {
         let geometric_mean = (log_sum / non_zero_spectrum.len() as f32).exp();
 
         // Arithmetic mean
-        let arithmetic_mean: f32 = non_zero_spectrum.iter().sum::<f32>() / non_zero_spectrum.len() as f32;
+        let arithmetic_mean: f32 =
+            non_zero_spectrum.iter().sum::<f32>() / non_zero_spectrum.len() as f32;
 
         if arithmetic_mean > 1e-10 {
             (geometric_mean / arithmetic_mean).min(1.0)
@@ -348,7 +350,11 @@ mod tests {
     }
 
     /// Generate exponentially decaying envelope for testing
-    fn generate_decaying_signal(sample_rate: u32, duration_samples: usize, decay_time_ms: f32) -> Vec<f32> {
+    fn generate_decaying_signal(
+        sample_rate: u32,
+        duration_samples: usize,
+        decay_time_ms: f32,
+    ) -> Vec<f32> {
         let decay_time_samples = (decay_time_ms / 1000.0) * sample_rate as f32;
         (0..duration_samples)
             .map(|i| {

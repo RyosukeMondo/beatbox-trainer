@@ -173,10 +173,7 @@ mod tests {
         while channels.pool_consumer.pop().is_ok() {
             available_buffers += 1;
         }
-        assert_eq!(
-            available_buffers, 16,
-            "Expected 16 buffers in pool queue"
-        );
+        assert_eq!(available_buffers, 16, "Expected 16 buffers in pool queue");
 
         // Data queue should be empty
         assert!(
@@ -194,11 +191,7 @@ mod tests {
             .pool_consumer
             .pop()
             .expect("Should have one buffer in pool");
-        assert_eq!(
-            buffer.len(),
-            buffer_size,
-            "Buffer should have correct size"
-        );
+        assert_eq!(buffer.len(), buffer_size, "Buffer should have correct size");
         assert_eq!(buffer.capacity(), buffer_size, "Buffer capacity mismatch");
     }
 

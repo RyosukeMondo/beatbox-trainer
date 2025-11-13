@@ -2,9 +2,9 @@
 // Real-time audio processing with lock-free DSP pipeline
 
 // Module declarations
+pub mod analysis;
 pub mod api;
 pub mod audio;
-pub mod analysis;
 pub mod calibration;
 pub mod error;
 
@@ -50,7 +50,10 @@ fn init_logging() {
 /// to prevent "android context was not initialized" panics.
 #[cfg(target_os = "android")]
 #[no_mangle]
-pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
+pub extern "system" fn JNI_OnLoad(
+    vm: jni::JavaVM,
+    _reserved: *mut std::ffi::c_void,
+) -> jni::sys::jint {
     use log::info;
 
     // Initialize Android logger

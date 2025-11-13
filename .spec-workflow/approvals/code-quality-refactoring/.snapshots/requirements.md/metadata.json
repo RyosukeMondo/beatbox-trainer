@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/code-quality-refactoring/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-12T23:03:18.167Z",
+      "trigger": "initial",
+      "approvalId": "approval_1762988598165_leb6vwzwl",
+      "approvalTitle": "Requirements: Code Quality Refactoring"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-12T23:04:51.993Z",
+      "trigger": "approved",
+      "approvalId": "approval_1762988598165_leb6vwzwl",
+      "approvalTitle": "Requirements: Code Quality Refactoring"
+    }
+  ]
+}

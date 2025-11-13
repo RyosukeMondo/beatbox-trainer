@@ -12,7 +12,7 @@
 // 5. Apply adaptive threshold: threshold_t = median(flux[t-50:t+50]) + offset
 // 6. Peak pick: Find local maxima where flux_t > threshold_t
 
-use rustfft::{FftPlanner, num_complex::Complex};
+use rustfft::{num_complex::Complex, FftPlanner};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
@@ -52,7 +52,8 @@ impl OnsetDetector {
         // Pre-compute Hann window to reduce spectral leakage
         let window = (0..window_size)
             .map(|i| {
-                0.5 * (1.0 - ((2.0 * std::f32::consts::PI * i as f32) / (window_size as f32 - 1.0)).cos())
+                0.5 * (1.0
+                    - ((2.0 * std::f32::consts::PI * i as f32) / (window_size as f32 - 1.0)).cos())
             })
             .collect();
 
@@ -194,10 +195,7 @@ impl OnsetDetector {
         }
 
         // Extract window and compute median
-        let mut window: Vec<f32> = self.flux_signal
-            .range(start..end)
-            .copied()
-            .collect();
+        let mut window: Vec<f32> = self.flux_signal.range(start..end).copied().collect();
 
         if window.is_empty() {
             return THRESHOLD_OFFSET;
@@ -206,7 +204,7 @@ impl OnsetDetector {
         // Sort to find median
         window.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        let median = if window.len() % 2 == 0 {
+        let median = if window.len().is_multiple_of(2) {
             let mid = window.len() / 2;
             (window[mid - 1] + window[mid]) / 2.0
         } else {
