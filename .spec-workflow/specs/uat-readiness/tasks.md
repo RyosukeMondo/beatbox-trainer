@@ -86,7 +86,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/ui/screens/training_screen.dart (StatefulWidget pattern), Task 2.2 StorageService implementation, Design document section 1.2 (design.md lines 204-232)_
   - _Prompt: Role: Flutter UI Developer | Task: Create SplashScreen with calibration check logic. Flow: 1. Show app logo/loading indicator 2. Initialize StorageService 3. Check hasCalibration() 4. If true: load calibration into Rust, navigate to /training 5. If false: navigate to /onboarding | Restrictions: Use StatefulWidget with initState for checks, Handle errors gracefully (show error dialog), Inject IStorageService for testability, Show loading indicator while checking | Leverage: lib/ui/screens/training_screen.dart (StatefulWidget pattern), Task 2.2 StorageService implementation, Design document section 1.2 (design.md lines 204-232) | Requirements: US-1 (first-time user detection) | Success: File created at lib/ui/screens/splash_screen.dart, Checks calibration on mount, Routes to correct screen based on state, Shows loading indicator, Handles errors with ErrorDialog_
 
-- [ ] 3.3. Implement Onboarding Screen
+- [x] 3.3. Implement Onboarding Screen
   - File: lib/ui/screens/onboarding_screen.dart
   - Estimate: 4 hours | Priority: High
   - Create friendly onboarding screen explaining calibration
