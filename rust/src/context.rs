@@ -338,6 +338,48 @@ impl AppContext {
     // BUSINESS LOGIC METHODS - CALIBRATION
     // ========================================================================
 
+    /// Load calibration state from deserialized data
+    ///
+    /// Restores a previously saved calibration state. This allows users to skip
+    /// calibration on subsequent app launches.
+    ///
+    /// # Arguments
+    /// * `state` - Previously serialized CalibrationState to restore
+    ///
+    /// # Returns
+    /// * `Ok(())` - Calibration state loaded successfully
+    /// * `Err(CalibrationError)` - Error if lock poisoning occurs
+    ///
+    /// # Errors
+    /// - Lock poisoning on calibration state
+    pub fn load_calibration(&self, state: CalibrationState) -> Result<(), CalibrationError> {
+        let mut state_guard = self.write_calibration().inspect_err(|err| {
+            log_calibration_error(err, "load_calibration");
+        })?;
+
+        *state_guard = state;
+        Ok(())
+    }
+
+    /// Get current calibration state for serialization
+    ///
+    /// Retrieves the current calibration state to be serialized and saved
+    /// to persistent storage.
+    ///
+    /// # Returns
+    /// * `Ok(CalibrationState)` - Clone of current calibration state
+    /// * `Err(CalibrationError)` - Error if lock poisoning occurs
+    ///
+    /// # Errors
+    /// - Lock poisoning on calibration state
+    pub fn get_calibration_state(&self) -> Result<CalibrationState, CalibrationError> {
+        let state_guard = self.read_calibration().inspect_err(|err| {
+            log_calibration_error(err, "get_calibration_state");
+        })?;
+
+        Ok(state_guard.clone())
+    }
+
     /// Start calibration workflow
     ///
     /// Begins collecting samples for calibration. The system will detect onsets

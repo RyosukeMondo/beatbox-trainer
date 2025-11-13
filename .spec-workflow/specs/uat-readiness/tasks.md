@@ -58,7 +58,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: test/services/audio_service_test.dart (test pattern), Design document section 6.3 (design.md lines 568-606), Task 2.2 implementation_
   - _Prompt: Role: Test Engineer | Task: Write comprehensive unit tests for StorageServiceImpl. Test cases: 1. hasCalibration returns false when no data 2. saveCalibration and loadCalibration round-trip 3. clearCalibration removes data 4. JSON parsing error handling 5. Null handling for missing data. Use SharedPreferences.setMockInitialValues({}) for testing | Restrictions: Do NOT use real file system, Use MockInitialValues pattern for SharedPreferences, Follow existing test patterns (mocktail), Aim for 100% code coverage of storage service | Leverage: test/services/audio_service_test.dart (test pattern), Design document section 6.3 (design.md lines 568-606), Task 2.2 implementation | Requirements: US-5 (80%+ test coverage) | Success: File created at test/services/storage_service_test.dart, All 5+ test cases pass, Coverage of storage_service_impl.dart is 100%, Tests run in <3 seconds_
 
-- [ ] 2.4. Add Rust Calibration Persistence API
+- [x] 2.4. Add Rust Calibration Persistence API
   - File: rust/src/api.rs, rust/src/context.rs
   - Estimate: 3 hours | Priority: Critical
   - Add FFI methods to load/save calibration state from JSON

@@ -184,6 +184,81 @@ pub async fn calibration_stream() -> impl futures::Stream<Item = CalibrationProg
     APP_CONTEXT.calibration_stream().await
 }
 
+/// Load calibration state from JSON
+///
+/// Restores a previously saved calibration state from JSON string.
+/// This allows users to skip calibration on subsequent app launches.
+///
+/// # Arguments
+/// * `json` - JSON string containing serialized CalibrationState
+///
+/// # Returns
+/// * `Ok(())` - Calibration state loaded successfully
+/// * `Err(CalibrationError)` - Error if deserialization fails or lock poisoning
+///
+/// # Errors
+/// - JSON deserialization error (invalid format)
+/// - Lock poisoning on calibration state
+///
+/// # Usage
+/// ```dart
+/// try {
+///   await loadCalibrationState(jsonString);
+///   print('Calibration loaded successfully');
+/// } catch (e) {
+///   print('Failed to load calibration: $e');
+/// }
+/// ```
+#[flutter_rust_bridge::frb]
+pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
+    use crate::calibration::CalibrationState;
+
+    // Deserialize JSON to CalibrationState
+    let state: CalibrationState =
+        serde_json::from_str(&json).map_err(|e| CalibrationError::InvalidFeatures {
+            reason: format!("Failed to deserialize calibration JSON: {}", e),
+        })?;
+
+    // Load state into AppContext
+    APP_CONTEXT.load_calibration(state)?;
+
+    Ok(())
+}
+
+/// Get current calibration state as JSON
+///
+/// Retrieves the current calibration state serialized to JSON string.
+/// This JSON can be saved to persistent storage and restored later using
+/// `load_calibration_state`.
+///
+/// # Returns
+/// * `Ok(String)` - JSON string containing serialized CalibrationState
+/// * `Err(CalibrationError)` - Error if serialization fails or lock poisoning
+///
+/// # Errors
+/// - JSON serialization error (should be rare)
+/// - Lock poisoning on calibration state
+///
+/// # Usage
+/// ```dart
+/// try {
+///   final jsonString = await getCalibrationState();
+///   // Save jsonString to SharedPreferences
+/// } catch (e) {
+///   print('Failed to get calibration state: $e');
+/// }
+/// ```
+#[flutter_rust_bridge::frb]
+pub fn get_calibration_state() -> Result<String, CalibrationError> {
+    // Get calibration state from AppContext
+    let state = APP_CONTEXT.get_calibration_state()?;
+
+    // Serialize to JSON
+    serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {
+        reason: format!("Failed to serialize calibration state to JSON: {}", e),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

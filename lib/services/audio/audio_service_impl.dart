@@ -1,6 +1,6 @@
 import '../../models/classification_result.dart';
 import '../../models/calibration_progress.dart';
-import '../../bridge/api.dart' as api;
+import '../../bridge/api.dart/api.dart' as api;
 import '../error_handler/error_handler.dart';
 import '../error_handler/exceptions.dart';
 import 'i_audio_service.dart';

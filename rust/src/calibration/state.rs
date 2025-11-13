@@ -11,8 +11,12 @@ use crate::analysis::features::Features;
 use crate::error::CalibrationError;
 
 /// CalibrationState stores thresholds for sound classification
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CalibrationState {
+    /// Classifier level (1 = beginner with 3 categories, 2 = advanced with 6 categories)
+    /// Defaults to 1 for backward compatibility
+    #[serde(default = "default_level")]
+    pub level: u8,
     /// Threshold for kick drum centroid (Hz)
     pub t_kick_centroid: f32,
     /// Threshold for kick drum ZCR
@@ -25,16 +29,23 @@ pub struct CalibrationState {
     pub is_calibrated: bool,
 }
 
+/// Default level value for serde deserialization
+fn default_level() -> u8 {
+    1
+}
+
 impl CalibrationState {
     /// Create default calibration state with hardcoded thresholds
     ///
     /// Default values from design.md:
+    /// - level = 1 (beginner mode)
     /// - t_kick_centroid = 1500 Hz
     /// - t_kick_zcr = 0.1
     /// - t_snare_centroid = 4000 Hz
     /// - t_hihat_zcr = 0.3
     pub fn new_default() -> Self {
         Self {
+            level: 1,
             t_kick_centroid: 1500.0,
             t_kick_zcr: 0.1,
             t_snare_centroid: 4000.0,
@@ -102,6 +113,7 @@ impl CalibrationState {
         // Apply 20% margin to thresholds
         // Thresholds are positioned between the sound types
         Ok(Self {
+            level: 1, // Default to level 1 for calibration
             t_kick_centroid: kick_centroid_mean * 1.2,
             t_kick_zcr: kick_zcr_mean * 1.2,
             t_snare_centroid: snare_centroid_mean * 1.2,

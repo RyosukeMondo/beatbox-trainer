@@ -178,6 +178,8 @@ dependencies = [
  "rand",
  "rtrb",
  "rustfft",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-stream",
 ]
