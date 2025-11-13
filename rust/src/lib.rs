@@ -1,6 +1,9 @@
 // Beatbox Trainer Core - Rust Audio Engine
 // Real-time audio processing with lock-free DSP pipeline
 
+// Allow flutter_rust_bridge cfg warnings (expected from macro expansion)
+#![allow(unexpected_cfgs)]
+
 // Module declarations
 pub mod analysis;
 pub mod api;

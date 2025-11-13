@@ -322,7 +322,7 @@
 
 ### Task 6.2: Configure Test Coverage Reporting
 
-- [ ] 6.2. Set up test coverage reporting for Rust and Dart
+- [x] 6.2. Set up test coverage reporting for Rust and Dart
   - Files: Cargo.toml (MODIFIED), .github/workflows/test-coverage.yml (NEW if using CI), scripts/coverage.sh (NEW)
   - Configure cargo-tarpaulin or cargo-llvm-cov for Rust coverage
   - Configure flutter test --coverage for Dart coverage

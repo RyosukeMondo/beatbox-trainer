@@ -153,7 +153,7 @@ impl AppContext {
                 details: "Audio engine only supported on Android".to_string(),
             };
             log_audio_error(&err, "start_audio");
-            return Err(err);
+            Err(err)
         }
 
         #[cfg(target_os = "android")]
@@ -247,7 +247,7 @@ impl AppContext {
                 details: "Audio engine only supported on Android".to_string(),
             };
             log_audio_error(&err, "stop_audio");
-            return Err(err);
+            Err(err)
         }
 
         #[cfg(target_os = "android")]
@@ -302,7 +302,7 @@ impl AppContext {
                 details: "Audio engine only supported on Android".to_string(),
             };
             log_audio_error(&err, "set_bpm");
-            return Err(err);
+            Err(err)
         }
 
         #[cfg(target_os = "android")]
@@ -348,9 +348,8 @@ impl AppContext {
     /// - Calibration already in progress
     /// - Lock poisoning on calibration procedure state
     pub fn start_calibration(&self) -> Result<(), CalibrationError> {
-        let mut procedure_guard = self.lock_calibration_procedure().map_err(|err| {
-            log_calibration_error(&err, "start_calibration");
-            err
+        let mut procedure_guard = self.lock_calibration_procedure().inspect_err(|err| {
+            log_calibration_error(err, "start_calibration");
         })?;
 
         if procedure_guard.is_some() {
@@ -381,22 +380,19 @@ impl AppContext {
     /// - Sample validation failed (out of range features)
     /// - Lock poisoning on calibration state
     pub fn finish_calibration(&self) -> Result<(), CalibrationError> {
-        let mut procedure_guard = self.lock_calibration_procedure().map_err(|err| {
-            log_calibration_error(&err, "finish_calibration");
-            err
+        let mut procedure_guard = self.lock_calibration_procedure().inspect_err(|err| {
+            log_calibration_error(err, "finish_calibration");
         })?;
 
         if let Some(procedure) = procedure_guard.take() {
             // Compute calibrated state from collected samples
-            let new_state = procedure.finalize().map_err(|err| {
-                log_calibration_error(&err, "finish_calibration");
-                err
+            let new_state = procedure.finalize().inspect_err(|err| {
+                log_calibration_error(err, "finish_calibration");
             })?;
 
             // Update global calibration state
-            let mut state_guard = self.write_calibration().map_err(|err| {
-                log_calibration_error(&err, "finish_calibration");
-                err
+            let mut state_guard = self.write_calibration().inspect_err(|err| {
+                log_calibration_error(err, "finish_calibration");
             })?;
             *state_guard = new_state;
 
@@ -426,13 +422,9 @@ impl AppContext {
         // Subscribe to broadcast channel
         let receiver = {
             match self.classification_broadcast.lock() {
-                Ok(sender_guard) => {
-                    if let Some(broadcast_sender) = sender_guard.as_ref() {
-                        Some(broadcast_sender.subscribe())
-                    } else {
-                        None
-                    }
-                }
+                Ok(sender_guard) => sender_guard
+                    .as_ref()
+                    .map(|broadcast_sender| broadcast_sender.subscribe()),
                 Err(_) => {
                     // Lock poisoned - return None to produce empty stream
                     log::error!("Classification broadcast lock poisoned");

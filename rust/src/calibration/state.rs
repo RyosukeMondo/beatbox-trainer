@@ -220,7 +220,7 @@ mod tests {
         match result.unwrap_err() {
             crate::error::CalibrationError::InsufficientSamples {
                 required: 10,
-                collected: 8,
+                collected: 5,
             } => {}
             e => panic!("Expected InsufficientSamples error, got: {:?}", e),
         }

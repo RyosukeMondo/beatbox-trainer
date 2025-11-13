@@ -52,6 +52,51 @@ flutter test
 cd rust && cargo test
 ```
 
+### Test Coverage
+
+The project uses comprehensive test coverage reporting for both Rust and Dart code.
+
+**Quick Start:**
+
+```bash
+# Run all coverage (Rust + Dart)
+./scripts/coverage.sh
+
+# Rust coverage only
+./scripts/coverage.sh --rust-only
+
+# Dart coverage only
+./scripts/coverage.sh --dart-only
+
+# Generate reports without threshold enforcement
+./scripts/coverage.sh --no-threshold
+
+# Open HTML reports in browser
+./scripts/coverage.sh --open
+```
+
+**Coverage Thresholds:**
+- Overall coverage: 80% minimum
+- Critical paths: 90% minimum (AppContext, ErrorHandler, AudioService)
+
+**Requirements:**
+- `cargo-llvm-cov` for Rust: `cargo install cargo-llvm-cov`
+- `lcov` for Dart HTML reports (optional but recommended):
+  - Linux: `sudo apt install lcov`
+  - macOS: `brew install lcov`
+
+**Reports:**
+- Rust HTML Report: `coverage/rust/index.html`
+- Dart HTML Report: `coverage/dart/index.html`
+- Unified Report: `coverage/COVERAGE_REPORT.md`
+
+The coverage script automatically:
+- Runs all tests with instrumentation
+- Generates HTML and text reports
+- Enforces coverage thresholds
+- Identifies files below threshold
+- Provides actionable improvement suggestions
+
 ### Code Quality Metrics
 
 The project enforces the following quality standards:
