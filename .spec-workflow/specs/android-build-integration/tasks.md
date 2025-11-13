@@ -50,7 +50,7 @@
   - _Requirements: Requirement 4_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Android build configuration specialist | Task: Configure jniLibs source directory in android/app/build.gradle.kts to ensure the APK packaging system includes native libraries from android/app/src/main/jniLibs/. Add android.sourceSets configuration and ndk.abiFilters for arm64-v8a, armeabi-v7a, x86_64. Verify configuration by building APK and checking contents with unzip. Reference design document Data Models section. | Restrictions: Must not break existing resource packaging, must preserve Flutter's default jniLibs handling, must support multiple architectures correctly | _Leverage: Existing android block structure_ | Success: APK contains libbeatbox_trainer.so for all 3 architectures, files are in correct lib/{arch}/ paths, APK size increases by < 15MB | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (Gradle configurations added, APK verification results). Then mark as completed [x] in tasks.md_
 
-- [ ] 2.3. Update MainActivity.kt to load native library
+- [x] 2.3. Update MainActivity.kt to load native library
   - File: `android/app/src/main/kotlin/com/ryosukemondo/beatbox_trainer/MainActivity.kt`
   - Add `companion object` with `init` block calling `System.loadLibrary("beatbox_trainer")`
   - Add try-catch for `UnsatisfiedLinkError` with user-friendly error logging
