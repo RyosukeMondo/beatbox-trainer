@@ -11,7 +11,7 @@
   - _Requirements: Requirement 1_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust systems programmer with expertise in audio programming and trait bounds | Task: Refactor the oboe audio callback in rust/src/audio/engine.rs from a closure to a named struct implementing the AudioOutputCallback trait (lines 146-192). The struct must satisfy oboe-rs v0.6.x trait bounds with FrameType = (f32, oboe::Mono). Preserve all existing metronome generation logic, atomic operations, and real-time safety guarantees (no allocations, no locks). Reference design document Component 2. | Restrictions: Must not change audio callback logic, must maintain zero-allocation guarantee, must preserve frame counter and BPM atomic operations, do not introduce any locks or blocking operations | _Leverage: rust/src/audio/metronome.rs for click generation patterns_ | Success: Compiles successfully for aarch64-linux-android target without trait bound errors, audio callback struct satisfies AudioOutputCallback trait, all existing tests pass | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (structs created, methods implemented, file locations). Then mark as completed [x] in tasks.md_
 
-- [ ] 1.2. Fix ndk-context initialization with both required parameters
+- [x] 1.2. Fix ndk-context initialization with both required parameters
   - File: `rust/src/lib.rs`
   - Modify `JNI_OnLoad` function to obtain application context from JavaVM
   - Call `ndk_context::initialize_android_context(vm_ptr, context_ptr)` with both parameters
