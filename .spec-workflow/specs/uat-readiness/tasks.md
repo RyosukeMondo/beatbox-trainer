@@ -158,7 +158,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: Task 2.1 IStorageService (interface pattern), Task 5.1 Rust structs, Design document section 3.1 (design.md lines 345-375)_
   - _Prompt: Role: Flutter Service Layer Developer | Task: Create IDebugService interface. Methods: abstract class IDebugService { Stream<AudioMetrics> getAudioMetricsStream(); Stream<OnsetEvent> getOnsetEventsStream(); Future<String> exportLogs(); }. Also define Dart classes matching Rust structs (AudioMetrics, OnsetEvent) | Restrictions: Follow existing interface patterns, Match Rust struct fields exactly, Document all methods | Leverage: Task 2.1 IStorageService (interface pattern), Task 5.1 Rust structs, Design document section 3.1 (design.md lines 345-375) | Requirements: US-3 (debug data access) | Success: File created at lib/services/debug/i_debug_service.dart, Interface defines 3 methods, Dart classes match Rust structs, No syntax errors_
 
-- [ ] 5.3. Implement Debug Service
+- [x] 5.3. Implement Debug Service
   - File: lib/services/debug/debug_service_impl.dart
   - Estimate: 2 hours | Priority: High
   - Implement debug service wrapping FFI debug streams
@@ -166,7 +166,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: Task 5.1 Rust FFI methods, Task 5.2 IDebugService interface, lib/services/audio/audio_service_impl.dart (FFI call pattern), Design document section 3.1_
   - _Prompt: Role: Flutter Service Implementation Developer | Task: Implement DebugServiceImpl. Implementation: getAudioMetricsStream(): call api.audioMetricsStream(), getOnsetEventsStream(): call api.onsetEventsStream(), exportLogs(): serialize recent events to JSON file | Restrictions: Follow existing service patterns, Handle stream errors gracefully, Limit log buffer size (last 1000 events) | Leverage: Task 5.1 Rust FFI methods, Task 5.2 IDebugService interface, lib/services/audio/audio_service_impl.dart (FFI call pattern), Design document section 3.1 | Requirements: US-3 (debug functionality) | Success: File created at lib/services/debug/debug_service_impl.dart, Implements IDebugService, Streams forward FFI data, exportLogs creates JSON file, No errors_
 
-- [ ] 5.4. Create Debug Overlay Widget
+- [x] 5.4. Create Debug Overlay Widget
   - File: lib/ui/widgets/debug_overlay.dart
   - Estimate: 6 hours | Priority: High
   - Build debug overlay UI with real-time metrics
