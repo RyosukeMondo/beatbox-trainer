@@ -464,6 +464,50 @@ impl AppContext {
     // STREAM METHODS
     // ========================================================================
 
+    /// Subscribe to classification result broadcast channel
+    ///
+    /// Creates an mpsc channel that receives classification results from the audio engine.
+    /// This pattern (tokio broadcast → mpsc forwarding) is required for flutter_rust_bridge
+    /// stream compatibility.
+    ///
+    /// # Returns
+    /// * `mpsc::UnboundedReceiver<ClassificationResult>` - Receiver for classification stream
+    ///
+    /// # Notes
+    /// - Returns empty stream if broadcast channel not initialized
+    /// - Stream ends when audio engine stops or channel is closed
+    pub fn subscribe_classification(&self) -> mpsc::UnboundedReceiver<ClassificationResult> {
+        let (tx, rx) = mpsc::unbounded_channel();
+
+        // Subscribe to broadcast channel
+        let broadcast_rx = {
+            match self.classification_broadcast.lock() {
+                Ok(sender_guard) => sender_guard
+                    .as_ref()
+                    .map(|broadcast_sender| broadcast_sender.subscribe()),
+                Err(_) => {
+                    log::error!("Classification broadcast lock poisoned");
+                    None
+                }
+            }
+        };
+
+        if let Some(mut broadcast_rx) = broadcast_rx {
+            // Forward broadcast → mpsc for Flutter consumption
+            tokio::spawn(async move {
+                while let Ok(result) = broadcast_rx.recv().await {
+                    if tx.send(result).is_err() {
+                        break; // Receiver dropped
+                    }
+                }
+            });
+        }
+        // If broadcast not initialized, return the mpsc receiver anyway
+        // (it will just never receive any messages)
+
+        rx
+    }
+
     /// Stream of classification results
     ///
     /// Returns a stream that yields ClassificationResult on each detected onset.

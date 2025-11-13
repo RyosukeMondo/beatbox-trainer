@@ -13,3 +13,6 @@ rust_output: rust/src/bridge_generated.rs
 
 # Generate code for Flutter (not pure Dart)
 dart_format_line_length: 80
+
+# Enable error details during generation
+stop_on_error: false

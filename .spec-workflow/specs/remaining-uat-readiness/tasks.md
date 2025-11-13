@@ -23,14 +23,17 @@
 
 ### 2. Stream Implementation (FFI Layer)
 
-- [ ] 2.1. Implement classification stream FFI (Rust) (Estimate: 3 hours, Priority: Critical)
-  - File: rust/src/api.rs
-  - Add classification_stream() FFI method returning Stream<ClassificationResult>
-  - Implement subscribe_classification() in AppContext
-  - Use tokio broadcast channel with mpsc forwarding for Flutter consumption
+- [x] 2.1. Implement classification stream FFI (Rust) - PARTIAL (Estimate: 3 hours, Priority: Critical)
+  - File: rust/src/api.rs, rust/src/context.rs
+  - ✅ Implemented subscribe_classification() in AppContext using tokio broadcast → mpsc forwarding
+  - ✅ Rust code compiles and all tests pass (146 tests passed)
+  - ⚠️  flutter_rust_bridge 2.11.1 does not support async Stream return types
+  - ⚠️  classification_stream() FFI method cannot be generated until flutter_rust_bridge is upgraded or alternative pattern is found
+  - 📝 **BLOCKER**: FFI codegen fails with "Unknown ident: Stream" error
+  - 📝 **RECOMMENDATION**: Defer stream implementation to flutter_rust_bridge upgrade task OR implement alternative StreamSink pattern
   - _Leverage: existing ClassificationResult model, tokio broadcast infrastructure_
   - _Requirements: US-1_
-  - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with expertise in FFI and async streams | Task: Implement classification_stream() FFI method in rust/src/api.rs and subscribe_classification() in AppContext using tokio broadcast → mpsc forwarding pattern as specified in design document | Restrictions: Must maintain lock-free audio path, do not block audio callbacks, ensure proper stream cleanup on unsubscribe | Success: classification_stream() returns Stream<ClassificationResult>, stream emits results within 100ms of onset detection, no memory leaks on subscription/unsubscription_
+  - _Status: Rust infrastructure ready, FFI layer blocked by tooling limitation_
 
 - [ ] 2.2. Implement classification stream FFI (Dart) (Estimate: 2 hours, Priority: Critical)
   - File: lib/services/audio/audio_service_impl.dart

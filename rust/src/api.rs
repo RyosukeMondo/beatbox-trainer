@@ -153,7 +153,7 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 /// and timing feedback (ON_TIME/EARLY/LATE with error in milliseconds).
 ///
 /// # Returns
-/// Stream<ClassificationResult> that yields results until audio engine stops
+/// `Stream<ClassificationResult>` that yields results until audio engine stops
 ///
 /// # Usage
 /// ```dart
@@ -162,7 +162,12 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 ///   print('Sound: ${result.sound}, Timing: ${result.timing}');
 /// }
 /// ```
-#[flutter_rust_bridge::frb]
+///
+/// # Note
+/// This method currently has codegen issues with flutter_rust_bridge 2.11.1.
+/// The subscribe_classification() method in AppContext is implemented and ready
+/// to use once flutter_rust_bridge stream support is working properly.
+#[flutter_rust_bridge::frb(ignore)]
 pub async fn classification_stream() -> impl futures::Stream<Item = ClassificationResult> {
     APP_CONTEXT.classification_stream().await
 }
@@ -221,7 +226,7 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 ///   print('${progress.currentSound}: ${progress.samplesCollected}/10');
 /// }
 /// ```
-#[flutter_rust_bridge::frb]
+#[flutter_rust_bridge::frb(ignore)]
 pub async fn calibration_stream() -> impl futures::Stream<Item = CalibrationProgress> {
     APP_CONTEXT.calibration_stream().await
 }
@@ -322,7 +327,7 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
 ///   print('RMS: ${metrics.rms}, Centroid: ${metrics.spectralCentroid} Hz');
 /// }
 /// ```
-#[flutter_rust_bridge::frb]
+#[flutter_rust_bridge::frb(ignore)]
 pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics> {
     APP_CONTEXT.audio_metrics_stream().await
 }
@@ -347,7 +352,7 @@ pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics>
 ///   print('Onset at ${event.timestamp}ms: ${event.classification?.sound}');
 /// }
 /// ```
-#[flutter_rust_bridge::frb]
+#[flutter_rust_bridge::frb(ignore)]
 pub async fn onset_events_stream() -> impl futures::Stream<Item = OnsetEvent> {
     APP_CONTEXT.onset_events_stream().await
 }
