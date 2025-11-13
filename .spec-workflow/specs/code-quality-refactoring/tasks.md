@@ -84,7 +84,7 @@
 
 ### Task 2.3: Refactor FFI Bridge to Use AppContext
 
-- [ ] 2.3. Refactor rust/src/api.rs to delegate to AppContext
+- [x] 2.3. Refactor rust/src/api.rs to delegate to AppContext
   - Files: rust/src/api.rs (MODIFIED)
   - Replace 5 global Lazy statics with single `static APP_CONTEXT: Lazy<AppContext>`
   - Update start_audio() to call APP_CONTEXT.start_audio()

@@ -5,53 +5,23 @@
 
 use anyhow::Result;
 use once_cell::sync::Lazy;
-use std::sync::{Arc, Mutex, RwLock};
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::analysis::ClassificationResult;
-#[cfg(target_os = "android")]
-use crate::audio::{buffer_pool::BufferPool, engine::AudioEngine};
-use crate::calibration::{
-    procedure::{CalibrationProcedure, CalibrationProgress},
-    state::CalibrationState,
-};
-use crate::error::{log_audio_error, log_calibration_error, AudioError, CalibrationError};
+use crate::calibration::procedure::CalibrationProgress;
+use crate::context::AppContext;
+use crate::error::{AudioError, CalibrationError};
 
-/// Global AudioEngine instance with lifecycle management
+/// Global AppContext instance - Single dependency injection container
 ///
-/// Uses Lazy initialization to defer creation until first use.
-/// Mutex ensures thread-safe access across FFI boundary.
-/// Option allows for None state when audio engine is not running.
-static AUDIO_ENGINE: Lazy<Arc<Mutex<Option<AudioEngineState>>>> =
-    Lazy::new(|| Arc::new(Mutex::new(None)));
-
-/// Global CalibrationProcedure instance for calibration workflow
-static CALIBRATION_PROCEDURE: Lazy<Arc<Mutex<Option<CalibrationProcedure>>>> =
-    Lazy::new(|| Arc::new(Mutex::new(None)));
-
-/// Global CalibrationState shared between calibration and classification
-static CALIBRATION_STATE: Lazy<Arc<RwLock<CalibrationState>>> =
-    Lazy::new(|| Arc::new(RwLock::new(CalibrationState::new_default())));
-
-/// Classification result broadcast channel (for classification_stream)
-/// Using broadcast to allow multiple subscribers
-static CLASSIFICATION_BROADCAST: Lazy<
-    Arc<Mutex<Option<tokio::sync::broadcast::Sender<ClassificationResult>>>>,
-> = Lazy::new(|| Arc::new(Mutex::new(None)));
-
-/// Calibration progress broadcast channel (for calibration_stream)
-static CALIBRATION_BROADCAST: Lazy<
-    Arc<Mutex<Option<tokio::sync::broadcast::Sender<CalibrationProgress>>>>,
-> = Lazy::new(|| Arc::new(Mutex::new(None)));
-
-/// AudioEngine state container for lifecycle management
-struct AudioEngineState {
-    #[cfg(target_os = "android")]
-    engine: AudioEngine,
-    #[cfg(not(target_os = "android"))]
-    _dummy: (),
-}
+/// Consolidates all application state (audio engine, calibration, broadcast channels)
+/// into a single, testable context. This replaces 5 separate global statics.
+///
+/// Benefits:
+/// - Single point of truth for application state
+/// - Testable with mock dependencies
+/// - Graceful error handling (no unwrap/expect)
+/// - Clear ownership and lifecycle management
+static APP_CONTEXT: Lazy<AppContext> = Lazy::new(AppContext::new);
 
 /// Initialize and greet from Rust
 ///
@@ -94,96 +64,10 @@ pub fn get_version() -> Result<String> {
 /// - Audio streams cannot be opened (device busy, permissions denied)
 /// - Audio engine already running (call stop_audio first)
 /// - Invalid BPM value (must be > 0)
+/// - Lock poisoning on shared state
 #[flutter_rust_bridge::frb]
-pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
-    #[cfg(not(target_os = "android"))]
-    {
-        let err = AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string(),
-        };
-        log_audio_error(&err, "start_audio");
-        return Err(err);
-    }
-
-    #[cfg(target_os = "android")]
-    let bpm = _bpm;
-
-    #[cfg(target_os = "android")]
-    {
-        if bpm == 0 {
-            let err = AudioError::BpmInvalid { bpm };
-            log_audio_error(&err, "start_audio");
-            return Err(err);
-        }
-
-        let mut engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
-            let err = AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string(),
-            };
-            log_audio_error(&err, "start_audio");
-            err
-        })?;
-
-        if engine_guard.is_some() {
-            let err = AudioError::AlreadyRunning;
-            log_audio_error(&err, "start_audio");
-            return Err(err);
-        }
-
-        // Create classification result channels
-        // - mpsc channel for analysis thread to send results
-        // - broadcast channel for multiple UI subscribers
-        let (classification_tx, mut classification_rx) = mpsc::unbounded_channel();
-        let (broadcast_tx, _broadcast_rx) = tokio::sync::broadcast::channel(100);
-
-        // Store broadcast sender for classification_stream
-        {
-            let mut sender_guard = CLASSIFICATION_BROADCAST.lock().map_err(|_| {
-                let err = AudioError::LockPoisoned {
-                    component: "CLASSIFICATION_BROADCAST".to_string(),
-                };
-                log_audio_error(&err, "start_audio");
-                err
-            })?;
-            *sender_guard = Some(broadcast_tx.clone());
-        }
-
-        // Spawn forwarder task: mpsc → broadcast
-        let broadcast_tx_clone = broadcast_tx.clone();
-        tokio::spawn(async move {
-            while let Some(result) = classification_rx.recv().await {
-                // Broadcast to all subscribers (ignore if no subscribers)
-                let _ = broadcast_tx_clone.send(result);
-            }
-        });
-
-        // Initialize buffer pool (16 buffers of 2048 samples)
-        let buffer_pool = BufferPool::new(16, 2048);
-        let buffer_channels = buffer_pool;
-
-        // Create AudioEngine (takes ownership of buffer_channels)
-        let sample_rate = 48000; // Standard sample rate for Android
-        let mut engine = AudioEngine::new(bpm, sample_rate, buffer_channels).map_err(|err| {
-            log_audio_error(&err, "start_audio");
-            err
-        })?;
-
-        // Get calibration state for AudioEngine::start()
-        let calibration = Arc::clone(&CALIBRATION_STATE);
-
-        // Start audio streams (AudioEngine::start spawns analysis thread internally)
-        engine
-            .start(calibration, classification_tx)
-            .map_err(|err| {
-                log_audio_error(&err, "start_audio");
-                err
-            })?;
-
-        // Store engine state
-        *engine_guard = Some(AudioEngineState { engine });
-
-        Ok(())
-    }
+pub fn start_audio(bpm: u32) -> Result<(), AudioError> {
+    APP_CONTEXT.start_audio(bpm)
 }
 
 /// Stop the audio engine
@@ -193,50 +77,10 @@ pub fn start_audio(_bpm: u32) -> Result<(), AudioError> {
 ///
 /// # Returns
 /// * `Ok(())` - Audio engine stopped successfully or was not running
-/// * `Err(AudioError)` - Error if shutdown fails
+/// * `Err(AudioError)` - Error if shutdown fails or lock poisoning
 #[flutter_rust_bridge::frb]
 pub fn stop_audio() -> Result<(), AudioError> {
-    #[cfg(not(target_os = "android"))]
-    {
-        let err = AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string(),
-        };
-        log_audio_error(&err, "stop_audio");
-        return Err(err);
-    }
-
-    #[cfg(target_os = "android")]
-    {
-        let mut engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
-            let err = AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string(),
-            };
-            log_audio_error(&err, "stop_audio");
-            err
-        })?;
-
-        if let Some(mut state) = engine_guard.take() {
-            // Stop audio streams (AudioEngine manages analysis thread cleanup)
-            state.engine.stop().map_err(|err| {
-                log_audio_error(&err, "stop_audio");
-                err
-            })?;
-
-            // Clear classification broadcast sender to signal stream end
-            {
-                let mut sender_guard = CLASSIFICATION_BROADCAST.lock().map_err(|_| {
-                    let err = AudioError::LockPoisoned {
-                        component: "CLASSIFICATION_BROADCAST".to_string(),
-                    };
-                    log_audio_error(&err, "stop_audio");
-                    err
-                })?;
-                *sender_guard = None;
-            }
-        }
-
-        Ok(())
-    }
+    APP_CONTEXT.stop_audio()
 }
 
 /// Set BPM dynamically during audio playback
@@ -254,45 +98,10 @@ pub fn stop_audio() -> Result<(), AudioError> {
 /// # Errors
 /// - Audio engine not running
 /// - Invalid BPM value (must be > 0)
+/// - Lock poisoning on audio engine state
 #[flutter_rust_bridge::frb]
-pub fn set_bpm(_bpm: u32) -> Result<(), AudioError> {
-    #[cfg(not(target_os = "android"))]
-    {
-        let err = AudioError::HardwareError {
-            details: "Audio engine only supported on Android".to_string(),
-        };
-        log_audio_error(&err, "set_bpm");
-        return Err(err);
-    }
-
-    #[cfg(target_os = "android")]
-    let bpm = _bpm;
-
-    #[cfg(target_os = "android")]
-    {
-        if bpm == 0 {
-            let err = AudioError::BpmInvalid { bpm };
-            log_audio_error(&err, "set_bpm");
-            return Err(err);
-        }
-
-        let engine_guard = AUDIO_ENGINE.lock().map_err(|_| {
-            let err = AudioError::LockPoisoned {
-                component: "AUDIO_ENGINE".to_string(),
-            };
-            log_audio_error(&err, "set_bpm");
-            err
-        })?;
-
-        if let Some(state) = engine_guard.as_ref() {
-            state.engine.set_bpm(bpm);
-            Ok(())
-        } else {
-            let err = AudioError::NotRunning;
-            log_audio_error(&err, "set_bpm");
-            Err(err)
-        }
-    }
+pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
+    APP_CONTEXT.set_bpm(bpm)
 }
 
 /// Stream of classification results
@@ -313,39 +122,7 @@ pub fn set_bpm(_bpm: u32) -> Result<(), AudioError> {
 /// ```
 #[flutter_rust_bridge::frb(stream)]
 pub async fn classification_stream() -> impl futures::Stream<Item = ClassificationResult> {
-    use futures::stream::StreamExt;
-
-    // Subscribe to broadcast channel
-    let receiver = {
-        match CLASSIFICATION_BROADCAST.lock() {
-            Ok(sender_guard) => {
-                if let Some(broadcast_sender) = sender_guard.as_ref() {
-                    Some(broadcast_sender.subscribe())
-                } else {
-                    None
-                }
-            }
-            Err(_) => {
-                // Lock poisoned - return None to produce empty stream
-                log::error!("Classification broadcast lock poisoned");
-                None
-            }
-        }
-    };
-
-    if let Some(rx) = receiver {
-        // Create stream from broadcast receiver
-        futures::stream::unfold(rx, |mut rx| async move {
-            match rx.recv().await {
-                Ok(result) => Some((result, rx)),
-                Err(_) => None, // Channel closed or lagged
-            }
-        })
-        .boxed()
-    } else {
-        // Return empty stream if broadcast not initialized
-        futures::stream::empty().boxed()
-    }
+    APP_CONTEXT.classification_stream().await
 }
 
 /// Start calibration workflow
@@ -361,25 +138,10 @@ pub async fn classification_stream() -> impl futures::Stream<Item = Classificati
 ///
 /// # Errors
 /// - Calibration already in progress
+/// - Lock poisoning on calibration procedure state
 #[flutter_rust_bridge::frb]
 pub fn start_calibration() -> Result<(), CalibrationError> {
-    let mut procedure_guard = CALIBRATION_PROCEDURE.lock().map_err(|_| {
-        let err = CalibrationError::StatePoisoned;
-        log_calibration_error(&err, "start_calibration");
-        err
-    })?;
-
-    if procedure_guard.is_some() {
-        let err = CalibrationError::AlreadyInProgress;
-        log_calibration_error(&err, "start_calibration");
-        return Err(err);
-    }
-
-    // Create new calibration procedure (starts with KICK by default)
-    let procedure = CalibrationProcedure::new_default();
-    *procedure_guard = Some(procedure);
-
-    Ok(())
+    APP_CONTEXT.start_calibration()
 }
 
 /// Finish calibration and compute thresholds
@@ -395,35 +157,10 @@ pub fn start_calibration() -> Result<(), CalibrationError> {
 /// - Calibration not in progress
 /// - Insufficient samples collected (need 10 per sound type)
 /// - Sample validation failed (out of range features)
+/// - Lock poisoning on calibration state
 #[flutter_rust_bridge::frb]
 pub fn finish_calibration() -> Result<(), CalibrationError> {
-    let mut procedure_guard = CALIBRATION_PROCEDURE.lock().map_err(|_| {
-        let err = CalibrationError::StatePoisoned;
-        log_calibration_error(&err, "finish_calibration");
-        err
-    })?;
-
-    if let Some(procedure) = procedure_guard.take() {
-        // Compute calibrated state from collected samples
-        let new_state = procedure.finalize().map_err(|err| {
-            log_calibration_error(&err, "finish_calibration");
-            err
-        })?;
-
-        // Update global calibration state
-        let mut state_guard = CALIBRATION_STATE.write().map_err(|_| {
-            let err = CalibrationError::StatePoisoned;
-            log_calibration_error(&err, "finish_calibration");
-            err
-        })?;
-        *state_guard = new_state;
-
-        Ok(())
-    } else {
-        let err = CalibrationError::NotComplete;
-        log_calibration_error(&err, "finish_calibration");
-        Err(err)
-    }
+    APP_CONTEXT.finish_calibration()
 }
 
 /// Stream of calibration progress updates
@@ -444,56 +181,7 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 /// ```
 #[flutter_rust_bridge::frb(stream)]
 pub async fn calibration_stream() -> impl futures::Stream<Item = CalibrationProgress> {
-    let (tx, rx) = mpsc::unbounded_channel();
-
-    // Spawn task to poll calibration progress and broadcast updates
-    tokio::spawn(async move {
-        let mut last_progress: Option<CalibrationProgress> = None;
-
-        loop {
-            let progress = {
-                match CALIBRATION_PROCEDURE.lock() {
-                    Ok(procedure_guard) => {
-                        if let Some(procedure) = procedure_guard.as_ref() {
-                            Some(procedure.get_progress())
-                        } else {
-                            None
-                        }
-                    }
-                    Err(_) => {
-                        // Lock poisoned - log error and break to end the polling loop
-                        log::error!("Calibration procedure lock poisoned");
-                        break;
-                    }
-                }
-            };
-
-            // Only send if progress changed or this is the first update
-            if let Some(current_progress) = progress {
-                let should_send = match &last_progress {
-                    None => true,
-                    Some(last) => {
-                        last.current_sound != current_progress.current_sound
-                            || last.samples_collected != current_progress.samples_collected
-                    }
-                };
-
-                if should_send {
-                    if tx.send(current_progress.clone()).is_err() {
-                        break; // Stream closed
-                    }
-                    last_progress = Some(current_progress);
-                }
-            } else if last_progress.is_some() {
-                // Calibration procedure ended
-                break;
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        }
-    });
-
-    UnboundedReceiverStream::new(rx)
+    APP_CONTEXT.calibration_stream().await
 }
 
 #[cfg(test)]
