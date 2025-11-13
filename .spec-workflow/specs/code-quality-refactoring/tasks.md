@@ -250,7 +250,7 @@
 
 ### Task 5.1: Split calibration/procedure.rs into Modules
 
-- [ ] 5.1. Split calibration/procedure.rs (581 lines) into separate modules
+- [x] 5.1. Split calibration/procedure.rs (581 lines) into separate modules
   - Files: rust/src/calibration/procedure.rs (MODIFIED), rust/src/calibration/validation.rs (NEW), rust/src/calibration/progress.rs (NEW), rust/src/calibration/mod.rs (MODIFIED)
   - Extract SampleValidator struct and validate_sample() logic to validation.rs (~150 lines)
   - Extract CalibrationProgress struct and progress tracking to progress.rs (~150 lines)

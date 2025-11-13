@@ -8,10 +8,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use crate::analysis::ClassificationResult;
 #[cfg(target_os = "android")]
 use crate::audio::{buffer_pool::BufferPool, engine::AudioEngine};
-use crate::calibration::{
-    procedure::{CalibrationProcedure, CalibrationProgress},
-    state::CalibrationState,
-};
+use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
 use crate::error::{log_audio_error, log_calibration_error, AudioError, CalibrationError};
 
 /// AudioEngine state container for lifecycle management

@@ -7,7 +7,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 
 use crate::analysis::ClassificationResult;
-use crate::calibration::procedure::CalibrationProgress;
+use crate::calibration::CalibrationProgress;
 use crate::context::AppContext;
 use crate::error::{AudioError, CalibrationError};
 

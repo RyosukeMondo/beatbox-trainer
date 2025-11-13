@@ -9,63 +9,10 @@
 // Each sample is validated before acceptance to ensure quality calibration.
 
 use crate::analysis::features::Features;
+use crate::calibration::progress::{CalibrationProgress, CalibrationSound};
 use crate::calibration::state::CalibrationState;
+use crate::calibration::validation::SampleValidator;
 use crate::error::CalibrationError;
-
-/// Sound type being calibrated
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CalibrationSound {
-    Kick,
-    Snare,
-    HiHat,
-}
-
-impl CalibrationSound {
-    /// Get the next sound in the calibration sequence
-    ///
-    /// # Returns
-    /// * `Some(CalibrationSound)` - Next sound to calibrate
-    /// * `None` - Calibration sequence complete
-    pub fn next(&self) -> Option<CalibrationSound> {
-        match self {
-            CalibrationSound::Kick => Some(CalibrationSound::Snare),
-            CalibrationSound::Snare => Some(CalibrationSound::HiHat),
-            CalibrationSound::HiHat => None,
-        }
-    }
-
-    /// Get human-readable name for display
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            CalibrationSound::Kick => "KICK",
-            CalibrationSound::Snare => "SNARE",
-            CalibrationSound::HiHat => "HI-HAT",
-        }
-    }
-}
-
-/// Progress information for the current calibration step
-#[derive(Debug, Clone)]
-pub struct CalibrationProgress {
-    /// Current sound being calibrated
-    pub current_sound: CalibrationSound,
-    /// Number of samples collected for current sound (0-10)
-    pub samples_collected: u8,
-    /// Total samples needed per sound
-    pub samples_needed: u8,
-}
-
-impl CalibrationProgress {
-    /// Check if current sound is complete
-    pub fn is_sound_complete(&self) -> bool {
-        self.samples_collected >= self.samples_needed
-    }
-
-    /// Check if entire calibration is complete
-    pub fn is_calibration_complete(&self) -> bool {
-        self.is_sound_complete() && self.current_sound == CalibrationSound::HiHat
-    }
-}
 
 /// CalibrationProcedure manages the sample collection workflow
 pub struct CalibrationProcedure {
@@ -114,36 +61,18 @@ impl CalibrationProcedure {
     /// Automatically advances to next sound when current sound is complete
     pub fn add_sample(&mut self, features: Features) -> Result<(), CalibrationError> {
         // Validate the sample
-        Self::validate_sample(&features)?;
+        SampleValidator::validate(&features)?;
 
         // Add to current sound collection
         match self.current_sound {
             CalibrationSound::Kick => {
-                if self.kick_samples.len() >= self.samples_needed as usize {
-                    return Err(CalibrationError::InsufficientSamples {
-                        required: self.samples_needed as usize,
-                        collected: self.kick_samples.len(),
-                    });
-                }
-                self.kick_samples.push(features);
+                Self::add_to_collection(&mut self.kick_samples, features, self.samples_needed)?;
             }
             CalibrationSound::Snare => {
-                if self.snare_samples.len() >= self.samples_needed as usize {
-                    return Err(CalibrationError::InsufficientSamples {
-                        required: self.samples_needed as usize,
-                        collected: self.snare_samples.len(),
-                    });
-                }
-                self.snare_samples.push(features);
+                Self::add_to_collection(&mut self.snare_samples, features, self.samples_needed)?;
             }
             CalibrationSound::HiHat => {
-                if self.hihat_samples.len() >= self.samples_needed as usize {
-                    return Err(CalibrationError::InsufficientSamples {
-                        required: self.samples_needed as usize,
-                        collected: self.hihat_samples.len(),
-                    });
-                }
-                self.hihat_samples.push(features);
+                Self::add_to_collection(&mut self.hihat_samples, features, self.samples_needed)?;
             }
         }
 
@@ -157,55 +86,45 @@ impl CalibrationProcedure {
         Ok(())
     }
 
-    /// Validate a single sample
-    ///
-    /// # Arguments
-    /// * `features` - Features to validate
-    ///
-    /// # Returns
-    /// * `Ok(())` - Sample valid
-    /// * `Err(CalibrationError)` - Validation error with details
-    fn validate_sample(features: &Features) -> Result<(), CalibrationError> {
-        // Validate centroid range [50 Hz, 20000 Hz]
-        if features.centroid < 50.0 || features.centroid > 20000.0 {
-            return Err(CalibrationError::InvalidFeatures {
-                reason: format!("Centroid {} Hz out of range [50, 20000]", features.centroid),
+    /// Add a feature to the given collection with capacity check
+    fn add_to_collection(
+        collection: &mut Vec<Features>,
+        features: Features,
+        samples_needed: u8,
+    ) -> Result<(), CalibrationError> {
+        if collection.len() >= samples_needed as usize {
+            return Err(CalibrationError::InsufficientSamples {
+                required: samples_needed as usize,
+                collected: collection.len(),
             });
         }
-
-        // Validate ZCR range [0.0, 1.0]
-        if features.zcr < 0.0 || features.zcr > 1.0 {
-            return Err(CalibrationError::InvalidFeatures {
-                reason: format!("ZCR {} out of range [0.0, 1.0]", features.zcr),
-            });
-        }
-
+        collection.push(features);
         Ok(())
     }
 
     /// Get current calibration progress
     pub fn get_progress(&self) -> CalibrationProgress {
-        let samples_collected = match self.current_sound {
-            CalibrationSound::Kick => self.kick_samples.len() as u8,
-            CalibrationSound::Snare => self.snare_samples.len() as u8,
-            CalibrationSound::HiHat => self.hihat_samples.len() as u8,
-        };
+        let samples_collected = self.get_current_sound_count();
 
-        CalibrationProgress {
-            current_sound: self.current_sound,
-            samples_collected,
-            samples_needed: self.samples_needed,
+        CalibrationProgress::new(
+            self.current_sound,
+            samples_collected as u8,
+            self.samples_needed,
+        )
+    }
+
+    /// Get the count of samples for the current sound
+    fn get_current_sound_count(&self) -> usize {
+        match self.current_sound {
+            CalibrationSound::Kick => self.kick_samples.len(),
+            CalibrationSound::Snare => self.snare_samples.len(),
+            CalibrationSound::HiHat => self.hihat_samples.len(),
         }
     }
 
     /// Check if current sound collection is complete
     fn is_current_sound_complete(&self) -> bool {
-        let collected = match self.current_sound {
-            CalibrationSound::Kick => self.kick_samples.len(),
-            CalibrationSound::Snare => self.snare_samples.len(),
-            CalibrationSound::HiHat => self.hihat_samples.len(),
-        };
-        collected >= self.samples_needed as usize
+        self.get_current_sound_count() >= self.samples_needed as usize
     }
 
     /// Check if entire calibration is complete
@@ -260,64 +179,6 @@ mod tests {
             rolloff: 5000.0,
             decay_time_ms: 50.0,
         }
-    }
-
-    #[test]
-    fn test_calibration_sound_next() {
-        assert_eq!(CalibrationSound::Kick.next(), Some(CalibrationSound::Snare));
-        assert_eq!(
-            CalibrationSound::Snare.next(),
-            Some(CalibrationSound::HiHat)
-        );
-        assert_eq!(CalibrationSound::HiHat.next(), None);
-    }
-
-    #[test]
-    fn test_calibration_sound_display_name() {
-        assert_eq!(CalibrationSound::Kick.display_name(), "KICK");
-        assert_eq!(CalibrationSound::Snare.display_name(), "SNARE");
-        assert_eq!(CalibrationSound::HiHat.display_name(), "HI-HAT");
-    }
-
-    #[test]
-    fn test_calibration_progress_is_sound_complete() {
-        let progress = CalibrationProgress {
-            current_sound: CalibrationSound::Kick,
-            samples_collected: 10,
-            samples_needed: 10,
-        };
-        assert!(progress.is_sound_complete());
-
-        let progress = CalibrationProgress {
-            current_sound: CalibrationSound::Kick,
-            samples_collected: 5,
-            samples_needed: 10,
-        };
-        assert!(!progress.is_sound_complete());
-    }
-
-    #[test]
-    fn test_calibration_progress_is_calibration_complete() {
-        let progress = CalibrationProgress {
-            current_sound: CalibrationSound::HiHat,
-            samples_collected: 10,
-            samples_needed: 10,
-        };
-        assert!(progress.is_calibration_complete());
-
-        let progress = CalibrationProgress {
-            current_sound: CalibrationSound::Snare,
-            samples_collected: 10,
-            samples_needed: 10,
-        };
-        assert!(!progress.is_calibration_complete());
-
-        let progress = CalibrationProgress {
-            current_sound: CalibrationSound::HiHat,
-            samples_collected: 5,
-            samples_needed: 10,
-        };
-        assert!(!progress.is_calibration_complete());
     }
 
     #[test]
