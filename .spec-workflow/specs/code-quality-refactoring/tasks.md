@@ -290,7 +290,7 @@
 
 ### Task 5.4: Break Down Widget Builder Methods in Dart
 
-- [ ] 5.4. Refactor _buildProgressContent() (169 lines) and _buildClassificationDisplay() (90 lines) into sub-methods
+- [x] 5.4. Refactor _buildProgressContent() (169 lines) and _buildClassificationDisplay() (90 lines) into sub-methods
   - Files: lib/ui/screens/calibration_screen.dart (MODIFIED), lib/ui/screens/training_screen.dart (MODIFIED)
   - Extract _buildOverallProgressHeader() from _buildProgressContent() (~30 lines)
   - Extract _buildCurrentSoundInstructions() (~50 lines)

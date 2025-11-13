@@ -273,17 +273,28 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
 
   /// Build progress content widget
   Widget _buildProgressContent(CalibrationProgress progress) {
-    final sound = progress.currentSound;
-    final collected = progress.samplesCollected;
-    final needed = progress.samplesNeeded;
-    final progressFraction = progress.progressFraction;
-    final overallProgress = progress.overallProgressFraction;
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Overall progress indicator
+        _buildOverallProgressHeader(progress),
+        const SizedBox(height: 48),
+        _buildCurrentSoundInstructions(progress),
+        const SizedBox(height: 48),
+        _buildProgressIndicator(progress),
+        const SizedBox(height: 48),
+        _buildStatusMessage(progress),
+      ],
+    );
+  }
+
+  /// Build overall progress header with step indicator
+  Widget _buildOverallProgressHeader(CalibrationProgress progress) {
+    final sound = progress.currentSound;
+    final overallProgress = progress.overallProgressFraction;
+
+    return Column(
+      children: [
         Text(
           'Step ${sound.index + 1} of ${CalibrationSound.values.length}',
           style: Theme.of(
@@ -300,13 +311,18 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
             Theme.of(context).colorScheme.primary,
           ),
         ),
-        const SizedBox(height: 48),
+      ],
+    );
+  }
 
-        // Current sound icon
+  /// Build current sound instructions with icon and text
+  Widget _buildCurrentSoundInstructions(CalibrationProgress progress) {
+    final sound = progress.currentSound;
+
+    return Column(
+      children: [
         Icon(Icons.mic, size: 80, color: Theme.of(context).colorScheme.primary),
         const SizedBox(height: 24),
-
-        // Instruction text
         Text(
           _getInstructionText(sound),
           style: Theme.of(
@@ -315,8 +331,6 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
-
-        // Description text
         Text(
           _getDescriptionText(sound),
           style: Theme.of(
@@ -324,9 +338,18 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
           ).textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 48),
+      ],
+    );
+  }
 
-        // Progress counter
+  /// Build progress indicator for current sound
+  Widget _buildProgressIndicator(CalibrationProgress progress) {
+    final collected = progress.samplesCollected;
+    final needed = progress.samplesNeeded;
+    final progressFraction = progress.progressFraction;
+
+    return Column(
+      children: [
         Text(
           '$collected / $needed samples',
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -336,8 +359,6 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
-
-        // Current sound progress bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
           child: LinearProgressIndicator(
@@ -349,29 +370,35 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 48),
-
-        // Status message
-        if (progress.isSoundComplete && !progress.isCalibrationComplete)
-          StatusCard(
-            color: Colors.green,
-            icon: Icons.check_circle,
-            title: '${sound.displayName} samples complete!',
-            subtitle: sound.next != null
-                ? 'Moving to ${sound.next!.displayName}...'
-                : null,
-          ),
-
-        // Completion message
-        if (progress.isCalibrationComplete)
-          const StatusCard(
-            color: Colors.green,
-            icon: Icons.celebration,
-            title: 'Calibration Complete!',
-            subtitle: 'Computing thresholds...',
-            iconSize: 48.0,
-          ),
       ],
     );
+  }
+
+  /// Build status message for sound completion and calibration completion
+  Widget _buildStatusMessage(CalibrationProgress progress) {
+    final sound = progress.currentSound;
+
+    if (progress.isCalibrationComplete) {
+      return const StatusCard(
+        color: Colors.green,
+        icon: Icons.celebration,
+        title: 'Calibration Complete!',
+        subtitle: 'Computing thresholds...',
+        iconSize: 48.0,
+      );
+    }
+
+    if (progress.isSoundComplete) {
+      return StatusCard(
+        color: Colors.green,
+        icon: Icons.check_circle,
+        title: '${sound.displayName} samples complete!',
+        subtitle: sound.next != null
+            ? 'Moving to ${sound.next!.displayName}...'
+            : null,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }

@@ -369,15 +369,48 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Build classification result display widget
   Widget _buildClassificationDisplay(ClassificationResult result) {
-    // Get colors using display formatters
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildSoundTypeDisplay(result),
+          const SizedBox(height: 32),
+          _buildTimingFeedbackDisplay(result),
+        ],
+      ),
+    );
+  }
+
+  /// Build sound type display with colored container
+  Widget _buildSoundTypeDisplay(ClassificationResult result) {
     final soundColor = DisplayFormatters.getSoundColor(result.sound);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      decoration: BoxDecoration(
+        color: soundColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        result.sound.displayName,
+        style: const TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// Build timing feedback display with formatted error
+  Widget _buildTimingFeedbackDisplay(ClassificationResult result) {
     final timingColor = DisplayFormatters.getTimingColor(
       result.timing.classification,
     );
 
     // Format timing error with sign
-    String timingText;
     final errorMs = result.timing.errorMs;
+    String timingText;
     if (errorMs > 0) {
       timingText = '${DisplayFormatters.formatTimingError(errorMs)} LATE';
     } else if (errorMs < 0) {
@@ -386,46 +419,20 @@ class _TrainingScreenState extends State<TrainingScreen> {
       timingText = '${DisplayFormatters.formatTimingError(errorMs)} ON-TIME';
     }
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Sound type display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            decoration: BoxDecoration(
-              color: soundColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              result.sound.displayName,
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Timing feedback display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              color: timingColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: timingColor, width: 2),
-            ),
-            child: Text(
-              timingText,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: timingColor,
-              ),
-            ),
-          ),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      decoration: BoxDecoration(
+        color: timingColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: timingColor, width: 2),
+      ),
+      child: Text(
+        timingText,
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: timingColor,
+        ),
       ),
     );
   }
