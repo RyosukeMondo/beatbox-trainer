@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/uat-readiness/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-13T12:29:04.149Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763036944145_ennovkb9o",
+      "approvalTitle": "UAT Readiness Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-13T12:33:09.455Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763036944145_ennovkb9o",
+      "approvalTitle": "UAT Readiness Design Document"
+    }
+  ]
+}

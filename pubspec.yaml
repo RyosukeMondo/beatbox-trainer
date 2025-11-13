@@ -40,9 +40,19 @@ dependencies:
 
   # Permission handler for microphone access
   permission_handler: ^11.3.0
+  freezed_annotation: ^3.1.0
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Local storage for settings and calibration
+  shared_preferences: ^2.3.4
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -54,6 +64,8 @@ dev_dependencies:
 
   # Mocking library for unit tests
   mocktail: ^1.0.0
+  freezed: ^3.2.3
+  build_runner: ^2.10.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
