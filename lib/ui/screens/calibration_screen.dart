@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../bridge/api.dart/api.dart' as api;
 import '../../models/calibration_progress.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/audio/audio_service_impl.dart';
 import '../../services/error_handler/exceptions.dart';
+import '../../services/storage/i_storage_service.dart';
+import '../../services/storage/storage_service_impl.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/status_card.dart';
 
@@ -22,8 +27,15 @@ class CalibrationScreen extends StatefulWidget {
   /// Audio service for calibration control
   final IAudioService audioService;
 
-  CalibrationScreen({super.key, IAudioService? audioService})
-    : audioService = audioService ?? AudioServiceImpl();
+  /// Storage service for persisting calibration data
+  final IStorageService storageService;
+
+  CalibrationScreen({
+    super.key,
+    IAudioService? audioService,
+    IStorageService? storageService,
+  }) : audioService = audioService ?? AudioServiceImpl(),
+       storageService = storageService ?? StorageServiceImpl();
 
   @override
   State<CalibrationScreen> createState() => _CalibrationScreenState();
@@ -45,8 +57,23 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
   @override
   void initState() {
     super.initState();
-    // Start calibration automatically when screen loads
-    _startCalibration();
+    // Initialize storage service and start calibration
+    _initializeAndStart();
+  }
+
+  /// Initialize storage service and start calibration
+  Future<void> _initializeAndStart() async {
+    try {
+      // Initialize storage service before any operations
+      await widget.storageService.init();
+      // Start calibration automatically when screen loads
+      await _startCalibration();
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize: $e';
+        _isCalibrating = false;
+      });
+    }
   }
 
   @override
@@ -101,13 +128,34 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
       // Finalize calibration and compute thresholds
       await widget.audioService.finishCalibration();
 
-      // Navigate back to previous screen (typically TrainingScreen)
+      // Get calibration state from Rust backend
+      final calibrationStateJson = await api.getCalibrationState();
+
+      // Deserialize JSON to CalibrationData
+      final calibrationJson =
+          jsonDecode(calibrationStateJson) as Map<String, dynamic>;
+      final calibrationData = CalibrationData.fromJson(calibrationJson);
+
+      // Save calibration data to storage
+      await widget.storageService.saveCalibration(calibrationData);
+
+      // Show success dialog
       if (mounted) {
-        Navigator.of(context).pop();
+        await _showSuccessDialog();
+      }
+
+      // Navigate to training screen
+      if (mounted) {
+        context.go('/training');
       }
     } on CalibrationServiceException catch (e) {
       setState(() {
         _errorMessage = e.message;
+        _isCalibrating = false;
+      });
+    } on StorageException catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to save calibration: ${e.message}';
         _isCalibrating = false;
       });
     } catch (e) {
@@ -127,6 +175,32 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     });
 
     await _startCalibration();
+  }
+
+  /// Show success dialog after calibration completion
+  Future<void> _showSuccessDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // User must tap button to dismiss
+      builder: (BuildContext context) {
+        return AlertDialog(
+          icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+          title: const Text('Calibration Complete!'),
+          content: const Text(
+            'Your calibration has been saved successfully. '
+            'You can now start training.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Start Training'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// Get instruction text for current calibration sound

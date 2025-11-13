@@ -94,7 +94,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/ui/screens/training_screen.dart (UI patterns), Design document section 1.2 (design.md lines 234-291)_
   - _Prompt: Role: Flutter UI/UX Developer | Task: Create OnboardingScreen with welcoming design. UI elements: App logo/icon (large), Welcome message, Explanation of calibration purpose, 3-step visual guide (KICK → SNARE → HI-HAT), "Start Calibration" button | Restrictions: Use Material Design 3 components, Follow existing color scheme (deepPurple), Make text readable and friendly, Button navigates to /calibration | Leverage: lib/ui/screens/training_screen.dart (UI patterns), Design document section 1.2 (design.md lines 234-291) | Requirements: US-1 (onboarding experience) | Success: File created at lib/ui/screens/onboarding_screen.dart, Clear explanation of calibration, Visual step indicators, Button navigates to calibration, Matches design mockup_
 
-- [ ] 3.4. Enhance Calibration Screen with Persistence
+- [x] 3.4. Enhance Calibration Screen with Persistence
   - File: lib/ui/screens/calibration_screen.dart
   - Estimate: 3 hours | Priority: Critical
   - Modify existing calibration screen to save data on completion
