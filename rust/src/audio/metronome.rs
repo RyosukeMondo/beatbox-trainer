@@ -26,6 +26,7 @@ const CLICK_DURATION_MS: f32 = 20.0;
 ///
 /// # Examples
 /// ```
+/// use beatbox_trainer::audio::metronome::generate_click_sample;
 /// let sample_rate = 48000;
 /// let click = generate_click_sample(sample_rate);
 /// assert_eq!(click.len(), (sample_rate as f32 * 0.02) as usize);
@@ -60,6 +61,7 @@ pub fn generate_click_sample(sample_rate: u32) -> Vec<f32> {
 ///
 /// # Examples
 /// ```
+/// use beatbox_trainer::audio::metronome::samples_per_beat;
 /// let samples = samples_per_beat(120, 48000);
 /// assert_eq!(samples, 24000); // At 120 BPM: 48000 * 60 / 120 = 24000 samples per beat
 /// ```
@@ -83,6 +85,7 @@ pub fn samples_per_beat(bpm: u32, sample_rate: u32) -> u64 {
 ///
 /// # Examples
 /// ```
+/// use beatbox_trainer::audio::metronome::is_on_beat;
 /// // At 120 BPM, 48kHz: beat every 24000 samples
 /// assert!(is_on_beat(0, 120, 48000));      // First beat
 /// assert!(is_on_beat(24000, 120, 48000));  // Second beat
