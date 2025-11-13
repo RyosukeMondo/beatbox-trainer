@@ -237,14 +237,31 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 ///
 /// # Usage
 /// ```dart
-/// final stream = await calibrationStream();
+/// final stream = calibrationStream();
 /// await for (final progress in stream) {
 ///   print('${progress.currentSound}: ${progress.samplesCollected}/10');
 /// }
 /// ```
-#[flutter_rust_bridge::frb(ignore)]
-pub async fn calibration_stream() -> impl futures::Stream<Item = CalibrationProgress> {
-    APP_CONTEXT.calibration_stream().await
+///
+/// # Implementation
+/// Uses the StreamSink pattern supported by flutter_rust_bridge:
+/// - Rust function accepts `StreamSink<T>` parameter
+/// - Dart receives `Stream<T>` return type
+/// - Function can hold sink and emit results asynchronously
+#[allow(unused_must_use)] // frb macro generates code that triggers this lint
+#[flutter_rust_bridge::frb]
+pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
+    // Subscribe to the calibration broadcast channel
+    let mut receiver = APP_CONTEXT.subscribe_calibration();
+
+    // Spawn task to forward calibration progress to the stream sink
+    tokio::spawn(async move {
+        while let Some(progress) = receiver.recv().await {
+            // Forward progress to Dart via StreamSink
+            sink.add(progress);
+        }
+        // Stream ends when receiver channel closes (calibration finished)
+    });
 }
 
 /// Load calibration state from JSON

@@ -7,6 +7,9 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Progress information for the current calibration step
+///
+/// This struct is sent to the Dart UI via flutter_rust_bridge Stream
+/// for real-time display of calibration progress.
 class CalibrationProgress {
   /// Current sound being calibrated
   final CalibrationSound currentSound;

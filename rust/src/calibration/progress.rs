@@ -4,7 +4,7 @@
 // the calibration sample collection workflow.
 
 /// Sound type being calibrated
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CalibrationSound {
     Kick,
     Snare,
@@ -36,7 +36,10 @@ impl CalibrationSound {
 }
 
 /// Progress information for the current calibration step
-#[derive(Debug, Clone)]
+///
+/// This struct is sent to the Dart UI via flutter_rust_bridge Stream
+/// for real-time display of calibration progress.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CalibrationProgress {
     /// Current sound being calibrated
     pub current_sound: CalibrationSound,

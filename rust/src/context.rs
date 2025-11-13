@@ -414,6 +414,20 @@ impl AppContext {
             return Err(err);
         }
 
+        // Initialize calibration broadcast channel for progress updates
+        // - broadcast channel for multiple UI subscribers
+        let (broadcast_tx, _broadcast_rx) = broadcast::channel(100);
+
+        // Store broadcast sender for calibration_stream
+        {
+            let mut sender_guard = self.calibration_broadcast.lock().map_err(|_| {
+                let err = CalibrationError::StatePoisoned;
+                log_calibration_error(&err, "start_calibration");
+                err
+            })?;
+            *sender_guard = Some(broadcast_tx);
+        }
+
         // Create new calibration procedure (starts with KICK by default)
         let procedure = CalibrationProcedure::new_default();
         *procedure_guard = Some(procedure);
@@ -502,6 +516,51 @@ impl AppContext {
                 }
             });
         }
+        // If broadcast not initialized, return the mpsc receiver anyway
+        // (it will just never receive any messages)
+
+        rx
+    }
+
+    /// Subscribe to calibration progress updates broadcast channel
+    ///
+    /// Returns an mpsc::UnboundedReceiver that receives CalibrationProgress
+    /// updates forwarded from the tokio broadcast channel. Each subscriber
+    /// receives independent progress updates for calibration sample collection.
+    ///
+    /// # Returns
+    /// mpsc::UnboundedReceiver<CalibrationProgress> that receives progress updates
+    ///
+    /// # Notes
+    /// - Returns empty stream if broadcast channel not initialized
+    /// - Stream ends when calibration finishes or channel is closed
+    pub fn subscribe_calibration(&self) -> mpsc::UnboundedReceiver<CalibrationProgress> {
+        let (tx, rx) = mpsc::unbounded_channel();
+
+        // Subscribe to broadcast channel
+        let broadcast_rx = {
+            match self.calibration_broadcast.lock() {
+                Ok(sender_guard) => sender_guard
+                    .as_ref()
+                    .map(|broadcast_sender| broadcast_sender.subscribe()),
+                Err(_) => {
+                    log::error!("Calibration broadcast lock poisoned");
+                    None
+                }
+            }
+        };
+
+        if let Some(mut broadcast_rx) = broadcast_rx {
+            // Forward broadcast → mpsc for Flutter consumption
+            tokio::spawn(async move {
+                while let Ok(progress) = broadcast_rx.recv().await {
+                    if tx.send(progress).is_err() {
+                        break; // Receiver dropped
+                    }
+                }
+            });
+        }
+
         // If broadcast not initialized, return the mpsc receiver anyway
         // (it will just never receive any messages)
 

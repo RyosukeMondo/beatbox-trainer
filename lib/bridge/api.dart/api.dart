@@ -6,13 +6,14 @@
 import 'analysis.dart';
 import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
+import 'calibration/progress.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioMetrics`, `OnsetEvent`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
-// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `calibration_stream`, `onset_events_stream`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `onset_events_stream`
 
 /// Initialize and greet from Rust
 ///
@@ -144,6 +145,31 @@ Future<void> startCalibration() =>
 /// - Lock poisoning on calibration state
 Future<void> finishCalibration() =>
     RustLib.instance.api.crateApiFinishCalibration();
+
+/// Stream of calibration progress updates
+///
+/// Returns a stream that yields CalibrationProgress as samples are collected.
+/// Each progress update contains the current sound being calibrated and
+/// the number of samples collected (0-10).
+///
+/// # Returns
+/// Stream\<CalibrationProgress\> that yields progress updates
+///
+/// # Usage
+/// ```dart
+/// final stream = calibrationStream();
+/// await for (final progress in stream) {
+///   print('${progress.currentSound}: ${progress.samplesCollected}/10');
+/// }
+/// ```
+///
+/// # Implementation
+/// Uses the StreamSink pattern supported by flutter_rust_bridge:
+/// - Rust function accepts `StreamSink<T>` parameter
+/// - Dart receives `Stream<T>` return type
+/// - Function can hold sink and emit results asynchronously
+Stream<CalibrationProgress> calibrationStream() =>
+    RustLib.instance.api.crateApiCalibrationStream();
 
 /// Load calibration state from JSON
 ///

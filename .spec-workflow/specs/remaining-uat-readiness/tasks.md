@@ -44,7 +44,7 @@
   - _Requirements: US-1_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer with expertise in streams and reactive programming | Task: Implement getClassificationStream() in AudioServiceImpl using StreamController.broadcast pattern as specified in design, subscribing to FFI stream and handling errors | Restrictions: Must use lazy initialization, properly handle stream cancellation, emit error states rather than throwing exceptions | Success: Stream emits ClassificationResult objects, handles errors gracefully, multiple subscribers supported via broadcast, stream cleanup on cancel_
 
-- [ ] 2.3. Implement calibration stream FFI (Rust) (Estimate: 3 hours, Priority: Critical)
+- [x] 2.3. Implement calibration stream FFI (Rust) (Estimate: 3 hours, Priority: Critical)
   - File: rust/src/api.rs
   - Add calibration_stream() FFI method returning Stream<CalibrationProgress>
   - Implement subscribe_calibration() in AppContext

@@ -10,6 +10,7 @@ import 'analysis.dart';
 import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'api.dart';
+import 'calibration/progress.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'error.dart';
@@ -28,6 +29,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<CalibrationProgress>
+  dco_decode_StreamSink_calibration_progress_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<ClassificationResult>
   dco_decode_StreamSink_classification_result_Sse(dynamic raw);
 
@@ -42,6 +47,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationError dco_decode_calibration_error(dynamic raw);
+
+  @protected
+  CalibrationProgress dco_decode_calibration_progress(dynamic raw);
+
+  @protected
+  CalibrationSound dco_decode_calibration_sound(dynamic raw);
 
   @protected
   ClassificationResult dco_decode_classification_result(dynamic raw);
@@ -80,6 +91,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  RustStreamSink<CalibrationProgress>
+  sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer);
+
+  @protected
   RustStreamSink<ClassificationResult>
   sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer);
 
@@ -94,6 +109,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationError sse_decode_calibration_error(SseDeserializer deserializer);
+
+  @protected
+  CalibrationProgress sse_decode_calibration_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer);
 
   @protected
   ClassificationResult sse_decode_classification_result(
@@ -142,6 +165,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_calibration_progress_Sse(
+    RustStreamSink<CalibrationProgress> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_classification_result_Sse(
     RustStreamSink<ClassificationResult> self,
     SseSerializer serializer,
@@ -159,6 +188,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_calibration_error(
     CalibrationError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_progress(
+    CalibrationProgress self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_sound(
+    CalibrationSound self,
     SseSerializer serializer,
   );
 
