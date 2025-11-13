@@ -1,6 +1,23 @@
 # beatbox_trainer
 
-A Flutter-based beatbox training application with real-time audio analysis.
+A Flutter-based beatbox training application with real-time audio analysis, built with a modern architecture featuring dependency injection, typed error handling, and comprehensive testing.
+
+## Architecture Overview
+
+This project follows a layered architecture with strict separation of concerns:
+
+- **Layer 1 (Oboe C++)**: Low-latency audio I/O
+- **Layer 2 (Rust)**: Real-time audio processing with lock-free algorithms
+- **Layer 3 (FFI Bridge)**: Type-safe Rust-Dart communication via flutter_rust_bridge
+- **Layer 4 (Dart/Flutter)**: Service layer abstractions and reactive UI
+
+Key architectural patterns:
+- **Dependency Injection**: Services injected via constructor for testability
+- **Typed Error Handling**: Custom error types with user-friendly translation
+- **Service Abstractions**: Interface-based design for mockable dependencies
+- **Lock-Free Audio Path**: Zero-allocation audio callback for <20ms latency
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
 
 ## Getting Started
 
@@ -44,12 +61,16 @@ git commit --no-verify
 
 ### Running Tests
 
-```bash
-# Run Flutter tests
-flutter test
+For comprehensive testing instructions, see [docs/TESTING.md](docs/TESTING.md).
 
-# Run Rust tests
-cd rust && cargo test
+**Quick Start:**
+
+```bash
+# Run all tests (Rust + Dart)
+flutter test && cd rust && cargo test
+
+# Run with coverage
+./scripts/coverage.sh
 ```
 
 ### Test Coverage
