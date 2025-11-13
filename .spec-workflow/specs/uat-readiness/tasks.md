@@ -258,7 +258,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: Integration test documentation, All screens (Tasks 3.2, 3.3, 3.4), Design document integration test notes_
   - _Prompt: Role: Integration Test Engineer | Task: Write integration test for full calibration flow. Test flow: 1. Launch app (no calibration) 2. Verify onboarding screen appears 3. Tap "Start Calibration" 4. Complete calibration (mock FFI) 5. Verify data saved to storage 6. Restart app 7. Verify training screen appears (calibration loaded) | Restrictions: Use integration_test package, May need to mock FFI calls (Rust not available in tests), Use real SharedPreferences (not mocked), Clean up storage after test | Leverage: Integration test documentation, All screens (Tasks 3.2, 3.3, 3.4), Design document integration test notes | Requirements: US-5 (integration test coverage) | Success: File created at test/integration/calibration_flow_test.dart, Test completes entire flow, Test passes consistently, Storage cleanup works_
 
-- [ ] 8.5. Update Coverage Script and Verify 80% Threshold
+- [x] 8.5. Update Coverage Script and Verify 80% Threshold
   - File: scripts/coverage.sh
   - Estimate: 2 hours | Priority: High
   - Update coverage script to enforce 80% threshold

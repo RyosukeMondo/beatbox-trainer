@@ -4,6 +4,8 @@
 #
 # This script generates test coverage reports for both Rust and Dart code,
 # enforces coverage thresholds, and produces unified HTML reports.
+# Generated files (frb_generated, bridge_generated, *.g.dart, *.freezed.dart)
+# are automatically filtered from Dart coverage reports.
 #
 # Requirements:
 #   - cargo-llvm-cov: cargo install cargo-llvm-cov
@@ -157,11 +159,12 @@ check_dependencies() {
             print_success "flutter found"
         fi
 
-        # lcov is optional but recommended for better reports
+        # lcov is required for filtering generated files and creating HTML reports
         if ! command -v lcov &> /dev/null; then
-            print_warning "lcov not found (optional). Install for better HTML reports:"
-            print_warning "  Linux: sudo apt install lcov"
-            print_warning "  macOS: brew install lcov"
+            print_error "lcov not found. Required for filtering generated files and HTML reports."
+            print_error "  Linux: sudo apt install lcov"
+            print_error "  macOS: brew install lcov"
+            missing_deps=true
         else
             print_success "lcov found"
         fi
@@ -255,6 +258,29 @@ EOF
     # Run flutter test with coverage
     if flutter test --coverage; then
         print_success "Dart tests completed with coverage"
+
+        # Filter out generated files from coverage report
+        if [ -f "$PROJECT_ROOT/coverage/lcov.info" ]; then
+            print_info "Filtering out generated files from coverage..."
+
+            # Remove generated files from lcov.info
+            if command -v lcov &> /dev/null; then
+                lcov --remove "$PROJECT_ROOT/coverage/lcov.info" \
+                    '**/frb_generated.dart' \
+                    '**/bridge_generated.dart' \
+                    '**/frb_generated.*.dart' \
+                    '**/*.freezed.dart' \
+                    '**/*.g.dart' \
+                    --output-file "$PROJECT_ROOT/coverage/lcov_filtered.info" \
+                    --quiet
+
+                # Replace original with filtered version
+                mv "$PROJECT_ROOT/coverage/lcov_filtered.info" "$PROJECT_ROOT/coverage/lcov.info"
+                print_success "Generated files filtered from coverage"
+            else
+                print_warning "lcov not found. Skipping file filtering."
+            fi
+        fi
 
         # Check if lcov is available for HTML report generation
         if command -v lcov &> /dev/null && command -v genhtml &> /dev/null; then
