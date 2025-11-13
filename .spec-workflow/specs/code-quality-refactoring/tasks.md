@@ -182,7 +182,7 @@
 
 ### Task 4.1: Extract Shared Dialog Widgets
 
-- [ ] 4.1. Create reusable dialog widgets
+- [x] 4.1. Create reusable dialog widgets
   - Files: lib/ui/widgets/error_dialog.dart (NEW), lib/ui/widgets/permission_dialogs.dart (NEW)
   - Extract ErrorDialog widget with configurable title, message, and retry callback
   - Create static show() method for easy invocation
