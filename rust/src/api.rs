@@ -11,6 +11,48 @@ use crate::calibration::CalibrationProgress;
 use crate::context::AppContext;
 use crate::error::{AudioError, CalibrationError};
 
+/// Audio metrics for debug visualization
+///
+/// Provides real-time DSP metrics from the audio processing pipeline
+/// for debugging and development purposes.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AudioMetrics {
+    /// Root mean square (RMS) amplitude level (0.0 to 1.0)
+    pub rms: f64,
+    /// Spectral centroid in Hz (weighted mean frequency)
+    pub spectral_centroid: f64,
+    /// Spectral flux (measure of spectral change over time)
+    pub spectral_flux: f64,
+    /// Frame number in audio stream
+    pub frame_number: u64,
+    /// Timestamp in milliseconds since engine start
+    pub timestamp: u64,
+}
+
+/// Onset event with classification details
+///
+/// Emitted whenever an onset (percussive transient) is detected,
+/// including the extracted features and classification result.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OnsetEvent {
+    /// Timestamp in milliseconds since engine start
+    pub timestamp: u64,
+    /// Onset energy/strength (unnormalized)
+    pub energy: f64,
+    /// Spectral centroid in Hz
+    pub centroid: f64,
+    /// Zero-crossing rate (0.0 to 1.0)
+    pub zcr: f64,
+    /// Spectral flatness (0.0 to 1.0)
+    pub flatness: f64,
+    /// Spectral rolloff in Hz
+    pub rolloff: f64,
+    /// Decay time in milliseconds
+    pub decay_time_ms: f64,
+    /// Classification result (if available)
+    pub classification: Option<ClassificationResult>,
+}
+
 /// Global AppContext instance - Single dependency injection container
 ///
 /// Consolidates all application state (audio engine, calibration, broadcast channels)
@@ -257,6 +299,57 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
     serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {
         reason: format!("Failed to serialize calibration state to JSON: {}", e),
     })
+}
+
+/// Stream of audio metrics for debug visualization
+///
+/// Returns a stream that yields AudioMetrics with real-time DSP metrics
+/// from the audio processing pipeline. Useful for debugging and development.
+///
+/// Metrics include:
+/// - RMS amplitude level
+/// - Spectral centroid
+/// - Spectral flux
+/// - Frame numbers and timestamps
+///
+/// # Returns
+/// Stream<AudioMetrics> that yields metrics while audio engine is running
+///
+/// # Usage
+/// ```dart
+/// final stream = await audioMetricsStream();
+/// await for (final metrics in stream) {
+///   print('RMS: ${metrics.rms}, Centroid: ${metrics.spectralCentroid} Hz');
+/// }
+/// ```
+#[flutter_rust_bridge::frb]
+pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics> {
+    APP_CONTEXT.audio_metrics_stream().await
+}
+
+/// Stream of onset events for debug visualization
+///
+/// Returns a stream that yields OnsetEvent whenever an onset (percussive transient)
+/// is detected. Each event includes extracted features and classification result.
+///
+/// Useful for:
+/// - Understanding onset detection behavior
+/// - Debugging classification issues
+/// - Visualizing feature extraction in real-time
+///
+/// # Returns
+/// Stream<OnsetEvent> that yields onset events while audio engine is running
+///
+/// # Usage
+/// ```dart
+/// final stream = await onsetEventsStream();
+/// await for (final event in stream) {
+///   print('Onset at ${event.timestamp}ms: ${event.classification?.sound}');
+/// }
+/// ```
+#[flutter_rust_bridge::frb]
+pub async fn onset_events_stream() -> impl futures::Stream<Item = OnsetEvent> {
+    APP_CONTEXT.onset_events_stream().await
 }
 
 #[cfg(test)]

@@ -6,6 +6,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::analysis::ClassificationResult;
+use crate::api::{AudioMetrics, OnsetEvent};
 #[cfg(target_os = "android")]
 use crate::audio::{buffer_pool::BufferPool, engine::AudioEngine};
 use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
@@ -21,12 +22,14 @@ struct AudioEngineState {
 
 /// AppContext: Dependency injection container for all application state
 ///
-/// Consolidates 5 global statics into a single, testable context:
+/// Consolidates global statics into a single, testable context:
 /// - AudioEngine lifecycle management
 /// - CalibrationProcedure workflow
 /// - CalibrationState shared between calibration and classification
 /// - Classification result broadcast channel
 /// - Calibration progress broadcast channel
+/// - Audio metrics broadcast channel (debug)
+/// - Onset events broadcast channel (debug)
 ///
 /// Benefits:
 /// - Single point of truth for application state
@@ -41,6 +44,10 @@ pub struct AppContext {
     classification_broadcast: Arc<Mutex<Option<broadcast::Sender<ClassificationResult>>>>,
     #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     calibration_broadcast: Arc<Mutex<Option<broadcast::Sender<CalibrationProgress>>>>,
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
+    audio_metrics_broadcast: Arc<Mutex<Option<broadcast::Sender<AudioMetrics>>>>,
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
+    onset_events_broadcast: Arc<Mutex<Option<broadcast::Sender<OnsetEvent>>>>,
 }
 
 impl AppContext {
@@ -58,6 +65,8 @@ impl AppContext {
             calibration_state: Arc::new(RwLock::new(CalibrationState::new_default())),
             classification_broadcast: Arc::new(Mutex::new(None)),
             calibration_broadcast: Arc::new(Mutex::new(None)),
+            audio_metrics_broadcast: Arc::new(Mutex::new(None)),
+            onset_events_broadcast: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -554,6 +563,86 @@ impl AppContext {
 
         UnboundedReceiverStream::new(rx)
     }
+
+    /// Stream of audio metrics for debug visualization
+    ///
+    /// Returns a stream that yields AudioMetrics with real-time DSP metrics
+    /// from the audio processing pipeline. Currently returns empty stream
+    /// (placeholder for future implementation when audio engine emits metrics).
+    ///
+    /// # Returns
+    /// Stream<AudioMetrics> that yields metrics while audio engine is running
+    pub async fn audio_metrics_stream(&self) -> impl futures::Stream<Item = AudioMetrics> {
+        use futures::stream::StreamExt;
+
+        // Subscribe to broadcast channel
+        let receiver = {
+            match self.audio_metrics_broadcast.lock() {
+                Ok(sender_guard) => sender_guard
+                    .as_ref()
+                    .map(|broadcast_sender| broadcast_sender.subscribe()),
+                Err(_) => {
+                    // Lock poisoned - return None to produce empty stream
+                    log::error!("Audio metrics broadcast lock poisoned");
+                    None
+                }
+            }
+        };
+
+        if let Some(rx) = receiver {
+            // Create stream from broadcast receiver
+            futures::stream::unfold(rx, |mut rx| async move {
+                match rx.recv().await {
+                    Ok(result) => Some((result, rx)),
+                    Err(_) => None, // Channel closed or lagged
+                }
+            })
+            .boxed()
+        } else {
+            // Return empty stream if broadcast not initialized
+            futures::stream::empty().boxed()
+        }
+    }
+
+    /// Stream of onset events for debug visualization
+    ///
+    /// Returns a stream that yields OnsetEvent whenever an onset is detected.
+    /// Currently returns empty stream (placeholder for future implementation
+    /// when audio engine emits onset events).
+    ///
+    /// # Returns
+    /// Stream<OnsetEvent> that yields onset events while audio engine is running
+    pub async fn onset_events_stream(&self) -> impl futures::Stream<Item = OnsetEvent> {
+        use futures::stream::StreamExt;
+
+        // Subscribe to broadcast channel
+        let receiver = {
+            match self.onset_events_broadcast.lock() {
+                Ok(sender_guard) => sender_guard
+                    .as_ref()
+                    .map(|broadcast_sender| broadcast_sender.subscribe()),
+                Err(_) => {
+                    // Lock poisoned - return None to produce empty stream
+                    log::error!("Onset events broadcast lock poisoned");
+                    None
+                }
+            }
+        };
+
+        if let Some(rx) = receiver {
+            // Create stream from broadcast receiver
+            futures::stream::unfold(rx, |mut rx| async move {
+                match rx.recv().await {
+                    Ok(result) => Some((result, rx)),
+                    Err(_) => None, // Channel closed or lagged
+                }
+            })
+            .boxed()
+        } else {
+            // Return empty stream if broadcast not initialized
+            futures::stream::empty().boxed()
+        }
+    }
 }
 
 impl Default for AppContext {
@@ -632,6 +721,16 @@ impl AppContext {
         if let Ok(mut guard) = self.calibration_broadcast.lock() {
             *guard = None;
         }
+
+        // Clear audio metrics broadcast channel
+        if let Ok(mut guard) = self.audio_metrics_broadcast.lock() {
+            *guard = None;
+        }
+
+        // Clear onset events broadcast channel
+        if let Ok(mut guard) = self.onset_events_broadcast.lock() {
+            *guard = None;
+        }
     }
 
     /// Create AppContext with mock calibration state for testing
@@ -656,6 +755,8 @@ impl AppContext {
             calibration_state: Arc::new(RwLock::new(state)),
             classification_broadcast: Arc::new(Mutex::new(None)),
             calibration_broadcast: Arc::new(Mutex::new(None)),
+            audio_metrics_broadcast: Arc::new(Mutex::new(None)),
+            onset_events_broadcast: Arc::new(Mutex::new(None)),
         }
     }
 

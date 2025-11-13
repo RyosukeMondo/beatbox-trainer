@@ -21,7 +21,7 @@ use std::sync::{Arc, RwLock};
 ///
 /// Level 1 sounds: Kick, Snare, HiHat
 /// Level 2 adds subcategories: ClosedHiHat, OpenHiHat, KSnare
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum BeatboxHit {
     /// Kick drum (low frequency, low ZCR)
     Kick,

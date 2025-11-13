@@ -31,7 +31,7 @@ use quantizer::{Quantizer, TimingFeedback};
 ///
 /// This struct is sent to the Dart UI via flutter_rust_bridge Stream
 /// for real-time display of detected sounds and timing accuracy.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ClassificationResult {
     /// Detected beatbox sound type
     pub sound: BeatboxHit,

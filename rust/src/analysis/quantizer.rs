@@ -19,7 +19,7 @@ use crate::audio::metronome::samples_per_beat;
 ///
 /// Determines whether a detected onset is on-time, early, or late relative
 /// to the nearest beat boundary.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TimingClassification {
     /// Onset is within 50ms of a beat boundary
     OnTime,
@@ -33,7 +33,7 @@ pub enum TimingClassification {
 ///
 /// Provides detailed timing feedback for display to the user, including
 /// the classification (ON_TIME/EARLY/LATE) and the signed error in milliseconds.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TimingFeedback {
     /// Classification of timing accuracy
     pub classification: TimingClassification,
