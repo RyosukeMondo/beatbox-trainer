@@ -250,7 +250,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: test/ui/screens/training_screen_test.dart (widget test patterns), Task 8.1 mocks, Design document section 6 (test patterns)_
   - _Prompt: Role: Flutter Widget Test Engineer | Task: Write widget tests for all new screens. Test files to create: 1. test/ui/screens/splash_screen_test.dart (Test navigation when calibration exists, Test navigation when no calibration, Test error handling) 2. test/ui/screens/onboarding_screen_test.dart (Test UI renders correctly, Test "Start Calibration" navigation) 3. test/ui/screens/settings_screen_test.dart (Test all settings load correctly, Test BPM change persists, Test debug toggle persists, Test level change shows dialog, Test recalibrate button) | Restrictions: Use testWidgets for each case, Mock all services (use Task 8.1 mocks), Use MaterialApp wrapper for navigation context, Verify with tester.pump() and tester.pumpAndSettle() | Leverage: test/ui/screens/training_screen_test.dart (widget test patterns), Task 8.1 mocks, Design document section 6 (test patterns) | Requirements: US-5 (widget test coverage) | Success: 3 test files created, 10+ test cases total, All tests pass, Coverage increases by 15-20%_
 
-- [ ] 8.4. Integration Test: Calibration Flow
+- [x] 8.4. Integration Test: Calibration Flow
   - File: test/integration/calibration_flow_test.dart
   - Estimate: 4 hours | Priority: Medium
   - End-to-end integration test for calibration flow
