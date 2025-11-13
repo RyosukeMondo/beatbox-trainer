@@ -17,7 +17,7 @@
 
 ### Task 1.2: Replace String Errors with Typed Errors
 
-- [ ] 1.2. Replace Result<T, String> with custom error types throughout Rust codebase
+- [x] 1.2. Replace Result<T, String> with custom error types throughout Rust codebase
   - Files: rust/src/api.rs, rust/src/audio/engine.rs, rust/src/calibration/procedure.rs, rust/src/analysis/mod.rs (MODIFIED)
   - Replace all `Result<(), String>` with `Result<(), AudioError>` in api.rs
   - Replace all `Result<T, String>` with appropriate error types in engine.rs
