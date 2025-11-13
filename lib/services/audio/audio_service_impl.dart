@@ -82,13 +82,11 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Stream<ClassificationResult> getClassificationStream() {
-    try {
-      // Delegate to FFI bridge
-      return api.classificationStream();
-    } catch (e) {
-      // Translate Rust error to user-friendly exception
-      throw _errorHandler.createAudioException(e.toString());
-    }
+    // TODO(Task 5.1): Implement after adding classificationStream FFI method
+    throw UnimplementedError(
+      'Classification stream not yet implemented. '
+      'Requires FFI method classificationStream() from Task 5.1',
+    );
   }
 
   @override
@@ -120,12 +118,10 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Stream<CalibrationProgress> getCalibrationStream() {
-    try {
-      // Delegate to FFI bridge
-      return api.calibrationStream();
-    } catch (e) {
-      // Translate Rust error to user-friendly exception
-      throw _errorHandler.createCalibrationException(e.toString());
-    }
+    // TODO(Task 5.1): Implement after adding calibrationStream FFI method
+    throw UnimplementedError(
+      'Calibration stream not yet implemented. '
+      'Requires FFI method calibrationStream() from Task 5.1',
+    );
   }
 }
