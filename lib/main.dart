@@ -40,9 +40,6 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => CalibrationScreen(),
     ),
     GoRoute(path: '/training', builder: (context, state) => TrainingScreen()),
-    GoRoute(
-      path: '/settings',
-      builder: (context, state) => const SettingsScreen(),
-    ),
+    GoRoute(path: '/settings', builder: (context, state) => SettingsScreen()),
   ],
 );
