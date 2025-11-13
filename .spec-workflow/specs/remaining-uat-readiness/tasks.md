@@ -100,7 +100,7 @@
   - _Requirements: US-3_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer with expertise in widget architecture and dependency injection | Task: Refactor CalibrationScreen to remove default instantiation, add .create() factory using GetIt and .test() factory for testing as specified in design document | Restrictions: Do not break existing functionality, must use private constructor, ensure all dependencies are required and non-nullable | Success: Widget has no default instantiation, .create() factory works in production, .test() factory enables widget testing with mocks, all tests pass_
 
-- [ ] 3.5. Refactor SettingsScreen constructor (Estimate: 1.5 hours, Priority: Critical)
+- [x] 3.5. Refactor SettingsScreen constructor (Estimate: 1.5 hours, Priority: Critical)
   - File: lib/ui/screens/settings_screen.dart
   - Remove default service instantiation from constructor parameters
   - Create factory constructor .create() that resolves services from GetIt

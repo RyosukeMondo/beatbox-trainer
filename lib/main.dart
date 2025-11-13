@@ -50,6 +50,9 @@ final GoRouter _router = GoRouter(
       path: '/training',
       builder: (context, state) => TrainingScreen.create(),
     ),
-    GoRoute(path: '/settings', builder: (context, state) => SettingsScreen()),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => SettingsScreen.create(),
+    ),
   ],
 );

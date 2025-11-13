@@ -32,7 +32,7 @@ void main() {
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) => SettingsScreen(
+            builder: (context, state) => SettingsScreen.test(
               settingsService: mockSettingsService,
               storageService: mockStorageService,
             ),

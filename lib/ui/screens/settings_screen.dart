@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../di/service_locator.dart';
 import '../../services/settings/i_settings_service.dart';
-import '../../services/settings/settings_service_impl.dart';
 import '../../services/storage/i_storage_service.dart';
-import '../../services/storage/storage_service_impl.dart';
 
 /// Settings screen for configuring app preferences
 ///
@@ -15,6 +14,12 @@ import '../../services/storage/storage_service_impl.dart';
 ///
 /// All settings persist across app restarts via SharedPreferences.
 /// Changing classifier level requires recalibration (shows warning dialog).
+///
+/// This screen uses dependency injection for services, enabling
+/// testability and separation of concerns.
+///
+/// Use [SettingsScreen.create] for production code (resolves from GetIt).
+/// Use [SettingsScreen.test] for widget tests (accepts mock services).
 class SettingsScreen extends StatefulWidget {
   /// Settings service for BPM, debug mode, and classifier level
   final ISettingsService settingsService;
@@ -22,12 +27,67 @@ class SettingsScreen extends StatefulWidget {
   /// Storage service for clearing calibration
   final IStorageService storageService;
 
-  SettingsScreen({
+  /// Private constructor for dependency injection.
+  ///
+  /// All service dependencies are required and non-nullable.
+  /// This enforces proper dependency injection and prevents
+  /// default instantiation which blocks testability.
+  const SettingsScreen._({
     super.key,
-    ISettingsService? settingsService,
-    IStorageService? storageService,
-  }) : settingsService = settingsService ?? SettingsServiceImpl(),
-       storageService = storageService ?? StorageServiceImpl();
+    required this.settingsService,
+    required this.storageService,
+  });
+
+  /// Factory constructor for production use.
+  ///
+  /// Resolves all service dependencies from the GetIt service locator.
+  /// Ensures services are properly registered before use.
+  ///
+  /// Throws [StateError] if services are not registered in GetIt.
+  ///
+  /// Example:
+  /// ```dart
+  /// GoRoute(
+  ///   path: '/settings',
+  ///   builder: (context, state) => SettingsScreen.create(),
+  /// )
+  /// ```
+  factory SettingsScreen.create({Key? key}) {
+    return SettingsScreen._(
+      key: key,
+      settingsService: getIt<ISettingsService>(),
+      storageService: getIt<IStorageService>(),
+    );
+  }
+
+  /// Test constructor for widget testing.
+  ///
+  /// Accepts mock service implementations for testing.
+  /// This enables isolated widget testing without real service dependencies.
+  ///
+  /// Example:
+  /// ```dart
+  /// await tester.pumpWidget(
+  ///   MaterialApp(
+  ///     home: SettingsScreen.test(
+  ///       settingsService: mockSettings,
+  ///       storageService: mockStorage,
+  ///     ),
+  ///   ),
+  /// );
+  /// ```
+  @visibleForTesting
+  factory SettingsScreen.test({
+    Key? key,
+    required ISettingsService settingsService,
+    required IStorageService storageService,
+  }) {
+    return SettingsScreen._(
+      key: key,
+      settingsService: settingsService,
+      storageService: storageService,
+    );
+  }
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
