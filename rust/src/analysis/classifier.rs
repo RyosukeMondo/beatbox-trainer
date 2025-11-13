@@ -72,7 +72,14 @@ impl Classifier {
     /// BeatboxHit classification result
     pub fn classify_level1(&self, features: &Features) -> BeatboxHit {
         // Read calibration thresholds (thread-safe)
-        let cal = self.calibration.read().unwrap();
+        let cal = match self.calibration.read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                // Lock poisoned - log error and return Unknown
+                log::error!("Calibration state lock poisoned in classify_level1");
+                return BeatboxHit::Unknown;
+            }
+        };
 
         // Rule 1: Low centroid AND low ZCR = KICK
         if features.centroid < cal.t_kick_centroid && features.zcr < cal.t_kick_zcr {
@@ -106,7 +113,14 @@ impl Classifier {
     /// BeatboxHit classification with subcategories
     pub fn classify_level2(&self, features: &Features) -> BeatboxHit {
         // Read calibration thresholds
-        let cal = self.calibration.read().unwrap();
+        let cal = match self.calibration.read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                // Lock poisoned - log error and return Unknown
+                log::error!("Calibration state lock poisoned in classify_level2");
+                return BeatboxHit::Unknown;
+            }
+        };
 
         // First apply Level 1 logic to get base classification
         // Rule 1: Low centroid AND low ZCR = KICK or K-SNARE (check flatness)

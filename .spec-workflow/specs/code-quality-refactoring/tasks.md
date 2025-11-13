@@ -30,7 +30,7 @@
 
 ### Task 1.3: Eliminate Unwrap Calls with Safe Error Handling
 
-- [ ] 1.3. Replace all .unwrap() and .expect() calls with proper error handling
+- [x] 1.3. Replace all .unwrap() and .expect() calls with proper error handling
   - Files: rust/src/api.rs (lines 110, 124, 179, 187, 260, 369), rust/src/analysis/classifier.rs (line 75), rust/src/audio/buffer_pool.rs (MODIFIED)
   - Replace `lock().unwrap()` with `lock().map_err(|_| AudioError::LockPoisoned { component: "..." })?`
   - Replace `read().unwrap()` with `read().map_err(|_| CalibrationError::StatePoisoned)?`
