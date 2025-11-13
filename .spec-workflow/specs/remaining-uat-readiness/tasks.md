@@ -141,7 +141,7 @@
   - _Requirements: US-2_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with expertise in dependency injection testing | Task: Write comprehensive unit tests for service_locator.dart covering service registration, resolution, and cleanup scenarios | Restrictions: Must test in isolation, verify singleton behavior, ensure proper cleanup for test isolation | Success: All DI functionality is tested, service registration verified, cleanup works correctly, tests are isolated_
 
-- [ ] 4.3. Write integration tests for stream workflows (Estimate: 3 hours, Priority: Critical)
+- [x] 4.3. Write integration tests for stream workflows (Estimate: 3 hours, Priority: Critical)
   - File: test/integration/stream_workflows_test.dart
   - Test end-to-end classification stream from Rust to Dart
   - Test end-to-end calibration stream from Rust to Dart
