@@ -41,7 +41,7 @@
   - _Requirements: Requirement 3_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Android build engineer with expertise in Gradle and native library integration | Task: Create a custom Gradle task "buildRustAndroid" in android/app/build.gradle.kts that executes cargo ndk for arm64-v8a, armeabi-v7a, and x86_64 architectures. The task should verify cargo-ndk is installed, execute cross-compilation, and copy resulting .so files to android/app/src/main/jniLibs/{arch}/. Hook the task into the build dependency chain before preBuild. Reference design document Component 1 and Architecture diagram. | Restrictions: Must check for cargo-ndk installation before running, must handle compilation failures gracefully, must not break existing Flutter build process, must support incremental builds | _Leverage: android.defaultConfig for architecture list_ | Success: Task executes during flutter build apk, cargo-ndk compiles Rust library for all 3 architectures, .so files are copied to correct jniLibs locations, task fails with clear error if cargo-ndk missing | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (Gradle task created, shell commands executed, file paths). Then mark as completed [x] in tasks.md_
 
-- [ ] 2.2. Configure jniLibs source directory in Gradle
+- [x] 2.2. Configure jniLibs source directory in Gradle
   - File: `android/app/build.gradle.kts`
   - Add `android.sourceSets` configuration pointing to `jniLibs` directory
   - Verify APK packaging includes .so files from jniLibs
