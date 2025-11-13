@@ -186,7 +186,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
 
 ## Phase 6: Real-Time Feedback Enhancements (3 days)
 
-- [ ] 6.1. Add Confidence Score to Rust Classifier
+- [x] 6.1. Add Confidence Score to Rust Classifier
   - File: rust/src/analysis/classifier.rs, rust/src/analysis/mod.rs
   - Estimate: 3 hours | Priority: Medium
   - Calculate and return confidence scores with classifications

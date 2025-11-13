@@ -1240,6 +1240,7 @@ mod tests {
                         error_ms: 0.0,
                     },
                     timestamp_ms: 0,
+                    confidence: 0.95,
                 };
                 sender.send(test_result).ok();
             }

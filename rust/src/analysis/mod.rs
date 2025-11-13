@@ -39,6 +39,9 @@ pub struct ClassificationResult {
     pub timing: TimingFeedback,
     /// Timestamp in milliseconds since engine start
     pub timestamp_ms: u64,
+    /// Classification confidence score (0.0-1.0)
+    /// Calculated as max_score / sum_of_all_scores
+    pub confidence: f32,
 }
 
 /// Spawn the analysis thread that processes audio buffers through DSP pipeline
@@ -111,8 +114,8 @@ pub fn spawn_analysis_thread(
                     // Extract DSP features
                     let features = feature_extractor.extract(onset_window);
 
-                    // Classify sound
-                    let sound = classifier.classify_level1(&features);
+                    // Classify sound (returns tuple of (BeatboxHit, confidence))
+                    let (sound, confidence) = classifier.classify_level1(&features);
 
                     // Quantize timing (only if metronome is running, BPM > 0)
                     let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
@@ -135,6 +138,7 @@ pub fn spawn_analysis_thread(
                         sound,
                         timing,
                         timestamp_ms,
+                        confidence,
                     };
 
                     // Send result (non-blocking, drops if channel is full)
