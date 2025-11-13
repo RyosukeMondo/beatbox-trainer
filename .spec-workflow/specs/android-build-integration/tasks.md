@@ -99,7 +99,7 @@
   - _Requirements: All requirements (documentation)_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical writer with Android development knowledge | Task: Create comprehensive build setup documentation covering cargo-ndk installation, required tools (Android NDK r25c+, Rust targets), build commands, and troubleshooting guide for common errors (cargo-ndk not found, library missing from APK, JNI initialization failures). Reference design document Error Handling section for error scenarios. | Restrictions: Must provide clear step-by-step instructions, must include troubleshooting for all documented error scenarios, must be accessible to developers unfamiliar with Rust/Android NDK | _Leverage: Design document Error Handling scenarios_ | Success: Documentation is complete and accurate, covers all setup steps and prerequisites, includes troubleshooting section with solutions, developers can follow instructions successfully | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (documentation files created, sections added). Then mark as completed [x] in tasks.md_
 
-- [ ] 4.2. Add CI/CD build verification (optional enhancement)
+- [x] 4.2. Add CI/CD build verification (optional enhancement)
   - File: `.github/workflows/android-build.yml` (create if desired)
   - Configure GitHub Actions workflow to build APK
   - Add cargo-ndk installation step
