@@ -70,7 +70,7 @@
   - _Requirements: Requirement 3, Requirement 4_
   - _Prompt: Implement the task for spec android-build-integration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: DevOps engineer with Android build expertise | Task: Execute full clean build workflow (flutter clean && flutter build apk) and verify native library integration. Check that cargo-ndk task executes, Rust compiles for all architectures, .so files are packaged in APK at correct paths. Measure build time and verify < 5 minute target. Document any build warnings or issues discovered. Reference design document Testing Strategy - Build Reproducibility Test. | Restrictions: Must test clean build from scratch, must verify all 3 architectures present, must not modify code during verification | _Leverage: Gradle buildRustAndroid task, APK packaging configuration_ | Success: Clean build completes in < 5 minutes, APK contains libbeatbox_trainer.so for all architectures in lib/{arch}/ paths, no compilation errors occur, build is reproducible | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (build commands executed, verification results, timing measurements). Then mark as completed [x] in tasks.md_
 
-- [ ] 3.2. Test incremental Rust rebuild
+- [x] 3.2. Test incremental Rust rebuild
   - Modify `rust/src/api.rs` (add comment)
   - Run `flutter build apk` and verify Rust recompilation triggers
   - Measure incremental build time (target < 30 seconds)
