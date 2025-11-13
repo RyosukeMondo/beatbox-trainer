@@ -131,7 +131,7 @@
   - _Requirements: US-1_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with expertise in Flutter testing and stream testing | Task: Write comprehensive unit tests for getClassificationStream() and getCalibrationStream() covering success, error, and cleanup scenarios | Restrictions: Must mock FFI layer, test stream behavior in isolation, ensure tests are deterministic and fast | Success: All stream methods are tested, error scenarios covered, tests pass reliably, stream cleanup verified_
 
-- [ ] 4.2. Write unit tests for DI setup (Estimate: 2 hours, Priority: Critical)
+- [x] 4.2. Write unit tests for DI setup (Estimate: 2 hours, Priority: Critical)
   - File: test/di/service_locator_test.dart
   - Test setupServiceLocator() registers all services
   - Test service resolution works correctly
