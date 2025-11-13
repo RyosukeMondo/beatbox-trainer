@@ -78,7 +78,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/main.dart current structure, Design document section 1.2 (design.md lines 172-202)_
   - _Prompt: Role: Flutter Navigation Developer | Task: Configure go_router for app navigation. Routes to define: `/` → SplashScreen (checks calibration), `/onboarding` → OnboardingScreen, `/calibration` → CalibrationScreen, `/training` → TrainingScreen, `/settings` → SettingsScreen. Replace existing MaterialApp with MaterialApp.router | Restrictions: Keep existing theme configuration, Do NOT break existing TrainingScreen, Use context.go() for navigation (not Navigator.push) | Leverage: lib/main.dart current structure, Design document section 1.2 (design.md lines 172-202) | Requirements: US-1 (onboarding flow navigation) | Success: main.dart uses MaterialApp.router, All 5 routes defined, App compiles and launches, No navigation errors in logs_
 
-- [ ] 3.2. Implement Splash Screen
+- [x] 3.2. Implement Splash Screen
   - File: lib/ui/screens/splash_screen.dart
   - Estimate: 3 hours | Priority: Critical
   - Create splash screen that checks calibration and routes accordingly

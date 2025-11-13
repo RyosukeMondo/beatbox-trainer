@@ -2,7 +2,8 @@
 # This file configures automatic code generation for Flutter-Rust FFI
 
 # Rust source file with #[frb] annotated functions
-rust_input: rust/src/api.rs
+rust_input: crate::api
+rust_root: rust/
 
 # Generated Dart output
 dart_output: lib/bridge/api.dart

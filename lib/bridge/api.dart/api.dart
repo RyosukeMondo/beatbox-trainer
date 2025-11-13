@@ -3,13 +3,11 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import 'analysis.dart';
-import 'analysis/classifier.dart';
-import 'analysis/quantizer.dart';
-import 'calibration/progress.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
+// These functions have error during generation (see debug logs or enable `stop_on_error: true` for more details): `calibration_stream`, `classification_stream`
 
 /// Initialize and greet from Rust
 ///
@@ -80,25 +78,6 @@ Future<void> stopAudio() => RustLib.instance.api.crateApiStopAudio();
 Future<void> setBpm({required int bpm}) =>
     RustLib.instance.api.crateApiSetBpm(bpm: bpm);
 
-/// Stream of classification results
-///
-/// Returns a stream that yields ClassificationResult on each detected onset.
-/// Each result contains the detected sound type (KICK/SNARE/HIHAT/UNKNOWN)
-/// and timing feedback (ON_TIME/EARLY/LATE with error in milliseconds).
-///
-/// # Returns
-/// Stream<ClassificationResult> that yields results until audio engine stops
-///
-/// # Usage
-/// ```dart
-/// final stream = await classificationStream();
-/// await for (final result in stream) {
-///   print('Sound: ${result.sound}, Timing: ${result.timing}');
-/// }
-/// ```
-Stream<ClassificationResult> classificationStream() =>
-    RustLib.instance.api.crateApiClassificationStream();
-
 /// Start calibration workflow
 ///
 /// Begins collecting samples for calibration. The system will detect onsets
@@ -133,21 +112,56 @@ Future<void> startCalibration() =>
 Future<void> finishCalibration() =>
     RustLib.instance.api.crateApiFinishCalibration();
 
-/// Stream of calibration progress updates
+/// Load calibration state from JSON
 ///
-/// Returns a stream that yields CalibrationProgress as samples are collected.
-/// Each progress update contains the current sound being calibrated and
-/// the number of samples collected (0-10).
+/// Restores a previously saved calibration state from JSON string.
+/// This allows users to skip calibration on subsequent app launches.
+///
+/// # Arguments
+/// * `json` - JSON string containing serialized CalibrationState
 ///
 /// # Returns
-/// Stream<CalibrationProgress> that yields progress updates
+/// * `Ok(())` - Calibration state loaded successfully
+/// * `Err(CalibrationError)` - Error if deserialization fails or lock poisoning
+///
+/// # Errors
+/// - JSON deserialization error (invalid format)
+/// - Lock poisoning on calibration state
 ///
 /// # Usage
 /// ```dart
-/// final stream = await calibrationStream();
-/// await for (final progress in stream) {
-///   print('${progress.currentSound}: ${progress.samplesCollected}/10');
+/// try {
+///   await loadCalibrationState(jsonString);
+///   print('Calibration loaded successfully');
+/// } catch (e) {
+///   print('Failed to load calibration: $e');
 /// }
 /// ```
-Stream<CalibrationProgress> calibrationStream() =>
-    RustLib.instance.api.crateApiCalibrationStream();
+Future<void> loadCalibrationState({required String json}) =>
+    RustLib.instance.api.crateApiLoadCalibrationState(json: json);
+
+/// Get current calibration state as JSON
+///
+/// Retrieves the current calibration state serialized to JSON string.
+/// This JSON can be saved to persistent storage and restored later using
+/// `load_calibration_state`.
+///
+/// # Returns
+/// * `Ok(String)` - JSON string containing serialized CalibrationState
+/// * `Err(CalibrationError)` - Error if serialization fails or lock poisoning
+///
+/// # Errors
+/// - JSON serialization error (should be rare)
+/// - Lock poisoning on calibration state
+///
+/// # Usage
+/// ```dart
+/// try {
+///   final jsonString = await getCalibrationState();
+///   // Save jsonString to SharedPreferences
+/// } catch (e) {
+///   print('Failed to get calibration state: $e');
+/// }
+/// ```
+Future<String> getCalibrationState() =>
+    RustLib.instance.api.crateApiGetCalibrationState();

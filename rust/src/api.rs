@@ -120,7 +120,7 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 ///   print('Sound: ${result.sound}, Timing: ${result.timing}');
 /// }
 /// ```
-#[flutter_rust_bridge::frb(stream)]
+#[flutter_rust_bridge::frb]
 pub async fn classification_stream() -> impl futures::Stream<Item = ClassificationResult> {
     APP_CONTEXT.classification_stream().await
 }
@@ -179,7 +179,7 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 ///   print('${progress.currentSound}: ${progress.samplesCollected}/10');
 /// }
 /// ```
-#[flutter_rust_bridge::frb(stream)]
+#[flutter_rust_bridge::frb]
 pub async fn calibration_stream() -> impl futures::Stream<Item = CalibrationProgress> {
     APP_CONTEXT.calibration_stream().await
 }
