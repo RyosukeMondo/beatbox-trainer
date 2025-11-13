@@ -26,7 +26,7 @@ void main() {
     Future<void> pumpCalibrationScreen(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: CalibrationScreen(
+          home: CalibrationScreen.test(
             audioService: mockAudioService,
             storageService: mockStorageService,
           ),
@@ -159,8 +159,10 @@ void main() {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          CalibrationScreen(audioService: mockAudioService),
+                      builder: (_) => CalibrationScreen.test(
+                        audioService: mockAudioService,
+                        storageService: mockStorageService,
+                      ),
                     ),
                   );
                 },
@@ -535,8 +537,10 @@ void main() {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            CalibrationScreen(audioService: mockAudioService),
+                        builder: (_) => CalibrationScreen.test(
+                          audioService: mockAudioService,
+                          storageService: mockStorageService,
+                        ),
                       ),
                     );
                   },

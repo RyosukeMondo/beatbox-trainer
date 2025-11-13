@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../bridge/api.dart/api.dart' as api;
+import '../../di/service_locator.dart';
 import '../../models/calibration_progress.dart';
 import '../../services/audio/i_audio_service.dart';
-import '../../services/audio/audio_service_impl.dart';
 import '../../services/error_handler/exceptions.dart';
 import '../../services/storage/i_storage_service.dart';
-import '../../services/storage/storage_service_impl.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/status_card.dart';
 
@@ -23,6 +22,9 @@ import '../widgets/status_card.dart';
 ///
 /// This screen uses dependency injection for services, enabling
 /// testability and separation of concerns.
+///
+/// Use [CalibrationScreen.create] for production code (resolves from GetIt).
+/// Use [CalibrationScreen.test] for widget tests (accepts mock services).
 class CalibrationScreen extends StatefulWidget {
   /// Audio service for calibration control
   final IAudioService audioService;
@@ -30,12 +32,67 @@ class CalibrationScreen extends StatefulWidget {
   /// Storage service for persisting calibration data
   final IStorageService storageService;
 
-  CalibrationScreen({
+  /// Private constructor for dependency injection.
+  ///
+  /// All service dependencies are required and non-nullable.
+  /// This enforces proper dependency injection and prevents
+  /// default instantiation which blocks testability.
+  const CalibrationScreen._({
     super.key,
-    IAudioService? audioService,
-    IStorageService? storageService,
-  }) : audioService = audioService ?? AudioServiceImpl(),
-       storageService = storageService ?? StorageServiceImpl();
+    required this.audioService,
+    required this.storageService,
+  });
+
+  /// Factory constructor for production use.
+  ///
+  /// Resolves all service dependencies from the GetIt service locator.
+  /// Ensures services are properly registered before use.
+  ///
+  /// Throws [StateError] if services are not registered in GetIt.
+  ///
+  /// Example:
+  /// ```dart
+  /// GoRoute(
+  ///   path: '/calibration',
+  ///   builder: (context, state) => CalibrationScreen.create(),
+  /// )
+  /// ```
+  factory CalibrationScreen.create({Key? key}) {
+    return CalibrationScreen._(
+      key: key,
+      audioService: getIt<IAudioService>(),
+      storageService: getIt<IStorageService>(),
+    );
+  }
+
+  /// Test constructor for widget testing.
+  ///
+  /// Accepts mock service implementations for testing.
+  /// This enables isolated widget testing without real service dependencies.
+  ///
+  /// Example:
+  /// ```dart
+  /// await tester.pumpWidget(
+  ///   MaterialApp(
+  ///     home: CalibrationScreen.test(
+  ///       audioService: mockAudio,
+  ///       storageService: mockStorage,
+  ///     ),
+  ///   ),
+  /// );
+  /// ```
+  @visibleForTesting
+  factory CalibrationScreen.test({
+    Key? key,
+    required IAudioService audioService,
+    required IStorageService storageService,
+  }) {
+    return CalibrationScreen._(
+      key: key,
+      audioService: audioService,
+      storageService: storageService,
+    );
+  }
 
   @override
   State<CalibrationScreen> createState() => _CalibrationScreenState();

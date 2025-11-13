@@ -44,7 +44,7 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/calibration',
-      builder: (context, state) => CalibrationScreen(),
+      builder: (context, state) => CalibrationScreen.create(),
     ),
     GoRoute(
       path: '/training',
