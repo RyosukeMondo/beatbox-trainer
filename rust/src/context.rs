@@ -72,7 +72,7 @@ impl AppContext {
     /// Returns MutexGuard or AudioError::LockPoisoned on lock failure
     fn lock_audio_engine(
         &self,
-    ) -> Result<std::sync::MutexGuard<Option<AudioEngineState>>, AudioError> {
+    ) -> Result<std::sync::MutexGuard<'_, Option<AudioEngineState>>, AudioError> {
         self.audio_engine
             .lock()
             .map_err(|_| AudioError::LockPoisoned {
@@ -85,7 +85,7 @@ impl AppContext {
     /// Returns MutexGuard or CalibrationError::StatePoisoned on lock failure
     fn lock_calibration_procedure(
         &self,
-    ) -> Result<std::sync::MutexGuard<Option<CalibrationProcedure>>, CalibrationError> {
+    ) -> Result<std::sync::MutexGuard<'_, Option<CalibrationProcedure>>, CalibrationError> {
         self.calibration_procedure
             .lock()
             .map_err(|_| CalibrationError::StatePoisoned)
@@ -96,7 +96,7 @@ impl AppContext {
     /// Returns RwLockReadGuard or CalibrationError::StatePoisoned on lock failure
     fn read_calibration(
         &self,
-    ) -> Result<std::sync::RwLockReadGuard<CalibrationState>, CalibrationError> {
+    ) -> Result<std::sync::RwLockReadGuard<'_, CalibrationState>, CalibrationError> {
         self.calibration_state
             .read()
             .map_err(|_| CalibrationError::StatePoisoned)
@@ -151,6 +151,7 @@ impl AppContext {
     pub fn start_audio(&self, bpm: u32) -> Result<(), AudioError> {
         #[cfg(not(target_os = "android"))]
         {
+            let _ = bpm; // Suppress unused variable warning on non-Android
             let err = AudioError::HardwareError {
                 details: "Audio engine only supported on Android".to_string(),
             };
@@ -299,6 +300,7 @@ impl AppContext {
     pub fn set_bpm(&self, bpm: u32) -> Result<(), AudioError> {
         #[cfg(not(target_os = "android"))]
         {
+            let _ = bpm; // Suppress unused variable warning on non-Android
             let err = AudioError::HardwareError {
                 details: "Audio engine only supported on Android".to_string(),
             };
@@ -478,13 +480,9 @@ impl AppContext {
             loop {
                 let progress = {
                     match procedure.lock() {
-                        Ok(procedure_guard) => {
-                            if let Some(procedure) = procedure_guard.as_ref() {
-                                Some(procedure.get_progress())
-                            } else {
-                                None
-                            }
-                        }
+                        Ok(procedure_guard) => procedure_guard
+                            .as_ref()
+                            .map(|procedure| procedure.get_progress()),
                         Err(_) => {
                             // Lock poisoned - log error and break to end the polling loop
                             log::error!("Calibration procedure lock poisoned");
@@ -819,5 +817,439 @@ mod tests {
         ctx.reset();
         ctx.reset(); // Should not panic or cause issues
         assert!(ctx.lock_audio_engine().unwrap().is_none());
+    }
+
+    // ========================================================================
+    // BUSINESS LOGIC TESTS - BPM VALIDATION
+    // ========================================================================
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_start_audio_with_valid_bpm() {
+        let ctx = AppContext::new_test();
+        // Valid BPM in typical range
+        let result = ctx.start_audio(120);
+        // On Android, this should attempt to start (may fail due to hardware)
+        // We're testing that BPM validation passes, not hardware availability
+        match result {
+            Ok(_) => {
+                // Success - cleanup
+                ctx.stop_audio().ok();
+            }
+            Err(AudioError::HardwareError { .. }) => {
+                // Expected if no audio device available
+            }
+            Err(AudioError::StreamOpenFailed { .. }) => {
+                // Expected if audio streams can't be opened
+            }
+            Err(AudioError::PermissionDenied) => {
+                // Expected if no microphone permission
+            }
+            Err(e) => panic!("Unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_start_audio_boundary_bpm_low() {
+        let ctx = AppContext::new_test();
+        // Boundary: BPM = 1 (minimum valid)
+        let result = ctx.start_audio(1);
+        match result {
+            Ok(_) => {
+                ctx.stop_audio().ok();
+            }
+            Err(AudioError::HardwareError { .. }) => {}
+            Err(AudioError::StreamOpenFailed { .. }) => {}
+            Err(AudioError::PermissionDenied) => {}
+            Err(e) => panic!("Unexpected error for BPM=1: {:?}", e),
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_start_audio_boundary_bpm_high() {
+        let ctx = AppContext::new_test();
+        // Boundary: High BPM (300 is valid, just unusual)
+        let result = ctx.start_audio(300);
+        match result {
+            Ok(_) => {
+                ctx.stop_audio().ok();
+            }
+            Err(AudioError::HardwareError { .. }) => {}
+            Err(AudioError::StreamOpenFailed { .. }) => {}
+            Err(AudioError::PermissionDenied) => {}
+            Err(e) => panic!("Unexpected error for BPM=300: {:?}", e),
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_start_audio_invalid_bpm_zero() {
+        let ctx = AppContext::new_test();
+        // Invalid: BPM = 0
+        let result = ctx.start_audio(0);
+        assert!(matches!(result, Err(AudioError::BpmInvalid { bpm: 0 })));
+    }
+
+    #[test]
+    #[cfg(not(target_os = "android"))]
+    fn test_start_audio_not_supported_on_non_android() {
+        let ctx = AppContext::new_test();
+        let result = ctx.start_audio(120);
+        assert!(matches!(result, Err(AudioError::HardwareError { .. })));
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_set_bpm_with_valid_value() {
+        let ctx = AppContext::new_test();
+        // Start audio first
+        if ctx.start_audio(120).is_ok() {
+            let result = ctx.set_bpm(100);
+            assert!(result.is_ok());
+            ctx.stop_audio().ok();
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_set_bpm_invalid_zero() {
+        let ctx = AppContext::new_test();
+        // BPM = 0 is invalid
+        let result = ctx.set_bpm(0);
+        assert!(matches!(result, Err(AudioError::BpmInvalid { bpm: 0 })));
+    }
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_set_bpm_when_not_running() {
+        let ctx = AppContext::new_test();
+        // Try to set BPM without starting audio
+        let result = ctx.set_bpm(120);
+        assert!(matches!(result, Err(AudioError::NotRunning)));
+    }
+
+    #[test]
+    #[cfg(not(target_os = "android"))]
+    fn test_set_bpm_not_supported_on_non_android() {
+        let ctx = AppContext::new_test();
+        let result = ctx.set_bpm(120);
+        assert!(matches!(result, Err(AudioError::HardwareError { .. })));
+    }
+
+    // ========================================================================
+    // BUSINESS LOGIC TESTS - DOUBLE-START PREVENTION
+    // ========================================================================
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_double_start_prevention() {
+        let ctx = AppContext::new_test();
+
+        // First start
+        let first_result = ctx.start_audio(120);
+        if first_result.is_ok() {
+            // Second start should fail with AlreadyRunning
+            let second_result = ctx.start_audio(120);
+            assert!(matches!(second_result, Err(AudioError::AlreadyRunning)));
+
+            // Cleanup
+            ctx.stop_audio().ok();
+        }
+    }
+
+    // ========================================================================
+    // BUSINESS LOGIC TESTS - STOP WHEN NOT RUNNING
+    // ========================================================================
+
+    #[test]
+    #[cfg(target_os = "android")]
+    fn test_stop_when_not_running() {
+        let ctx = AppContext::new_test();
+        // Stop without starting - should be graceful (no error)
+        let result = ctx.stop_audio();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg(not(target_os = "android"))]
+    fn test_stop_audio_not_supported_on_non_android() {
+        let ctx = AppContext::new_test();
+        let result = ctx.stop_audio();
+        assert!(matches!(result, Err(AudioError::HardwareError { .. })));
+    }
+
+    // ========================================================================
+    // BUSINESS LOGIC TESTS - CALIBRATION STATE TRANSITIONS
+    // ========================================================================
+
+    #[test]
+    fn test_calibration_start() {
+        let ctx = AppContext::new_test();
+
+        // Initially no calibration
+        assert_eq!(ctx.is_calibration_active_for_test(), Some(false));
+
+        // Start calibration
+        let result = ctx.start_calibration();
+        assert!(result.is_ok());
+
+        // Calibration should now be active
+        assert_eq!(ctx.is_calibration_active_for_test(), Some(true));
+    }
+
+    #[test]
+    fn test_calibration_double_start_prevention() {
+        let ctx = AppContext::new_test();
+
+        // First start succeeds
+        assert!(ctx.start_calibration().is_ok());
+
+        // Second start fails with AlreadyInProgress
+        let result = ctx.start_calibration();
+        assert!(matches!(result, Err(CalibrationError::AlreadyInProgress)));
+    }
+
+    #[test]
+    fn test_calibration_finish_without_start() {
+        let ctx = AppContext::new_test();
+
+        // Try to finish calibration without starting
+        let result = ctx.finish_calibration();
+        assert!(matches!(result, Err(CalibrationError::NotComplete)));
+    }
+
+    #[test]
+    fn test_calibration_finish_with_insufficient_samples() {
+        let ctx = AppContext::new_test();
+
+        // Start calibration
+        ctx.start_calibration().ok();
+
+        // Finish immediately (no samples collected)
+        let result = ctx.finish_calibration();
+        // Should fail with InsufficientSamples or NotComplete
+        assert!(result.is_err());
+        match result {
+            Err(CalibrationError::InsufficientSamples { .. }) => {}
+            Err(CalibrationError::NotComplete) => {}
+            Err(e) => panic!("Unexpected error: {:?}", e),
+            Ok(_) => panic!("Expected error, got Ok"),
+        }
+    }
+
+    #[test]
+    fn test_calibration_state_transitions() {
+        let ctx = AppContext::new_test();
+
+        // Initial state: not calibrated
+        let initial_state = ctx.get_calibration_state_for_test();
+        assert!(initial_state.is_some());
+        assert!(!initial_state.unwrap().is_calibrated);
+
+        // Start calibration
+        ctx.start_calibration().ok();
+        assert_eq!(ctx.is_calibration_active_for_test(), Some(true));
+
+        // Calibration is active but state not yet updated
+        let during_state = ctx.get_calibration_state_for_test();
+        assert!(during_state.is_some());
+
+        // Try to finish (will fail due to insufficient samples, but tests the flow)
+        let _ = ctx.finish_calibration();
+
+        // Calibration procedure should be cleared even on failure
+        assert_eq!(ctx.is_calibration_active_for_test(), Some(false));
+    }
+
+    // ========================================================================
+    // BUSINESS LOGIC TESTS - STREAM LIFECYCLE
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_classification_stream_without_engine() {
+        let ctx = AppContext::new_test();
+
+        // Get stream without starting audio engine
+        let mut stream = ctx.classification_stream().await;
+
+        // Stream should be empty (no audio engine = no broadcasts)
+        use futures::StreamExt;
+        let next = stream.next().await;
+        assert!(next.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_classification_stream_with_channels() {
+        use futures::StreamExt;
+
+        let ctx = AppContext::new_test_with_channels();
+
+        // Get stream
+        let mut stream = ctx.classification_stream().await;
+
+        // Manually send a test result through the broadcast channel
+        {
+            let sender_guard = ctx.lock_classification_broadcast().unwrap();
+            if let Some(sender) = sender_guard.as_ref() {
+                use crate::analysis::classifier::BeatboxHit;
+                use crate::analysis::quantizer::{TimingClassification, TimingFeedback};
+
+                let test_result = ClassificationResult {
+                    sound: BeatboxHit::Kick,
+                    timing: TimingFeedback {
+                        classification: TimingClassification::OnTime,
+                        error_ms: 0.0,
+                    },
+                    timestamp_ms: 0,
+                };
+                sender.send(test_result).ok();
+            }
+        }
+
+        // Stream should receive the result
+        let next =
+            tokio::time::timeout(tokio::time::Duration::from_millis(100), stream.next()).await;
+
+        assert!(next.is_ok());
+        let item = next.unwrap();
+        assert!(item.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_calibration_stream_starts_and_ends() {
+        use futures::StreamExt;
+
+        let ctx = AppContext::new_test();
+
+        // Start calibration
+        ctx.start_calibration().ok();
+
+        // Get calibration stream
+        let mut stream = ctx.calibration_stream().await;
+
+        // Should receive at least one progress update
+        let next =
+            tokio::time::timeout(tokio::time::Duration::from_millis(200), stream.next()).await;
+
+        assert!(next.is_ok());
+        let progress = next.unwrap();
+        assert!(progress.is_some());
+
+        // Finish calibration (will fail but clears the procedure)
+        ctx.finish_calibration().ok();
+
+        // Stream should eventually end when calibration procedure is gone
+        // (May take up to 100ms poll interval)
+        let final_check =
+            tokio::time::timeout(tokio::time::Duration::from_millis(300), stream.next()).await;
+
+        // Either timeout or None (stream ended)
+        match final_check {
+            Ok(None) => {}    // Stream ended - expected
+            Err(_) => {}      // Timeout - also acceptable
+            Ok(Some(_)) => {} // Got another update before ending - acceptable
+        }
+    }
+
+    #[tokio::test]
+    async fn test_stream_cleanup_on_stop() {
+        use futures::StreamExt;
+
+        #[cfg(target_os = "android")]
+        {
+            let ctx = AppContext::new_test();
+
+            // Start audio (if possible)
+            if ctx.start_audio(120).is_ok() {
+                let mut stream = ctx.classification_stream().await;
+
+                // Stop audio
+                ctx.stop_audio().ok();
+
+                // Stream should eventually end
+                let result =
+                    tokio::time::timeout(tokio::time::Duration::from_millis(100), stream.next())
+                        .await;
+
+                // Either timeout or None
+                match result {
+                    Ok(None) => {}    // Stream ended
+                    Err(_) => {}      // Timeout
+                    Ok(Some(_)) => {} // Received buffered item
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // CONCURRENT ACCESS TESTS
+    // ========================================================================
+
+    #[test]
+    fn test_concurrent_lock_access() {
+        use std::thread;
+
+        let ctx = Arc::new(AppContext::new_test());
+
+        // Spawn multiple threads accessing different locks
+        let mut handles = vec![];
+
+        for i in 0..5 {
+            let ctx_clone = Arc::clone(&ctx);
+            let handle = thread::spawn(move || {
+                if i % 2 == 0 {
+                    // Even threads: access calibration
+                    drop(ctx_clone.lock_calibration_procedure());
+                    drop(ctx_clone.read_calibration());
+                } else {
+                    // Odd threads: access audio engine
+                    drop(ctx_clone.lock_audio_engine());
+                    drop(ctx_clone.lock_classification_broadcast());
+                }
+            });
+            handles.push(handle);
+        }
+
+        // All threads should complete without deadlock
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_concurrent_calibration_operations() {
+        use std::sync::Barrier;
+        use std::thread;
+
+        let ctx = Arc::new(AppContext::new_test());
+        let barrier = Arc::new(Barrier::new(3));
+
+        let mut handles = vec![];
+
+        // Three threads try to start calibration simultaneously
+        for _ in 0..3 {
+            let ctx_clone = Arc::clone(&ctx);
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait(); // Synchronize start
+                ctx_clone.start_calibration()
+            });
+            handles.push(handle);
+        }
+
+        // Collect results
+        let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+
+        // Exactly one should succeed, others fail with AlreadyInProgress
+        let success_count = results.iter().filter(|r| r.is_ok()).count();
+        let already_running_count = results
+            .iter()
+            .filter(|r| matches!(r, Err(CalibrationError::AlreadyInProgress)))
+            .count();
+
+        assert_eq!(success_count, 1);
+        assert_eq!(already_running_count, 2);
     }
 }

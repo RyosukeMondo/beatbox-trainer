@@ -217,9 +217,13 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Expected exactly 10 kick samples"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: 8,
+            } => {}
+            e => panic!("Expected InsufficientSamples error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -231,9 +235,13 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Expected exactly 10 snare samples"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: 8,
+            } => {}
+            e => panic!("Expected InsufficientSamples error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -248,9 +256,13 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Expected exactly 10 hi-hat samples"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InsufficientSamples {
+                required: 10,
+                collected: 12,
+            } => {}
+            e => panic!("Expected InsufficientSamples error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -262,9 +274,12 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("centroid 30 Hz out of valid range"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("centroid") && reason.contains("30"));
+            }
+            e => panic!("Expected InvalidFeatures error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -276,9 +291,12 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("centroid 25000 Hz out of valid range"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("centroid") && reason.contains("25000"));
+            }
+            e => panic!("Expected InvalidFeatures error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -290,7 +308,12 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("ZCR -0.1 out of valid range"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("ZCR") && reason.contains("-0.1"));
+            }
+            e => panic!("Expected InvalidFeatures error, got: {:?}", e),
+        }
     }
 
     #[test]
@@ -302,7 +325,12 @@ mod tests {
         let result = CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples);
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("ZCR 1.5 out of valid range"));
+        match result.unwrap_err() {
+            crate::error::CalibrationError::InvalidFeatures { reason } => {
+                assert!(reason.contains("ZCR") && reason.contains("1.5"));
+            }
+            e => panic!("Expected InvalidFeatures error, got: {:?}", e),
+        }
     }
 
     #[test]
