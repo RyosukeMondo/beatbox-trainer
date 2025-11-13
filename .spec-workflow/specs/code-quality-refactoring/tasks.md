@@ -166,7 +166,7 @@
 
 ### Task 3.5: Add Service Unit Tests
 
-- [ ] 3.5. Create unit tests for AudioServiceImpl and PermissionServiceImpl
+- [x] 3.5. Create unit tests for AudioServiceImpl and PermissionServiceImpl
   - Files: test/services/audio_service_test.dart (NEW), test/services/permission_service_test.dart (NEW), test/services/error_handler_test.dart (NEW)
   - Test AudioServiceImpl with mocked FFI bridge
   - Test error translation and exception throwing
