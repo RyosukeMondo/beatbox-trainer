@@ -11,8 +11,8 @@ void main() async {
   // Ensure Flutter bindings are initialized before async operations
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Setup dependency injection container before running the app
-  await setupServiceLocator();
+  // Setup dependency injection container with router before running the app
+  await setupServiceLocator(_router);
 
   runApp(const MyApp());
 }

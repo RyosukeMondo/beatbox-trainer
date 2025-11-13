@@ -1,9 +1,12 @@
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import '../services/audio/audio_service_impl.dart';
 import '../services/audio/i_audio_service.dart';
 import '../services/debug/debug_service_impl.dart';
 import '../services/debug/i_debug_service.dart';
 import '../services/error_handler/error_handler.dart';
+import '../services/navigation/go_router_navigation_service.dart';
+import '../services/navigation/i_navigation_service.dart';
 import '../services/permission/i_permission_service.dart';
 import '../services/permission/permission_service_impl.dart';
 import '../services/settings/i_settings_service.dart';
@@ -32,6 +35,7 @@ final getIt = GetIt.instance;
 /// - [ISettingsService]: App settings persistence
 /// - [IStorageService]: Calibration data persistence
 /// - [IDebugService]: Debug metrics and event streams
+/// - [INavigationService]: Navigation abstraction for testability
 /// - [ErrorHandler]: Error translation for audio/calibration errors
 ///
 /// Services are registered as lazy singletons, meaning they are instantiated
@@ -43,6 +47,10 @@ final getIt = GetIt.instance;
 ///
 /// This function should be called once during app startup, before [runApp].
 ///
+/// Parameters:
+/// - [router]: The GoRouter instance to use for navigation. Required for
+///   registering the NavigationService.
+///
 /// Throws:
 /// - [StateError] if called multiple times without calling [resetServiceLocator]
 ///
@@ -50,11 +58,12 @@ final getIt = GetIt.instance;
 /// ```dart
 /// void main() async {
 ///   WidgetsFlutterBinding.ensureInitialized();
-///   await setupServiceLocator();
+///   final router = GoRouter(routes: [...]);
+///   await setupServiceLocator(router);
 ///   runApp(MyApp());
 /// }
 /// ```
-Future<void> setupServiceLocator() async {
+Future<void> setupServiceLocator(GoRouter router) async {
   // Fail fast if services are already registered
   if (getIt.isRegistered<IAudioService>()) {
     throw StateError(
@@ -84,6 +93,11 @@ Future<void> setupServiceLocator() async {
 
   // Register DebugService
   getIt.registerLazySingleton<IDebugService>(() => DebugServiceImpl());
+
+  // Register NavigationService with the provided router instance
+  getIt.registerLazySingleton<INavigationService>(
+    () => GoRouterNavigationService(router),
+  );
 
   // Note: Services with async initialization (SettingsService, StorageService,
   // DebugService) are registered as lazy singletons. They will be initialized

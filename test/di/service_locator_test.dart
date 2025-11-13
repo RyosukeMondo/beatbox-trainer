@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:beatbox_trainer/di/service_locator.dart';
 import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
 import 'package:beatbox_trainer/services/debug/i_debug_service.dart';
 import 'package:beatbox_trainer/services/error_handler/error_handler.dart';
+import 'package:beatbox_trainer/services/navigation/i_navigation_service.dart';
 import 'package:beatbox_trainer/services/permission/i_permission_service.dart';
 import 'package:beatbox_trainer/services/settings/i_settings_service.dart';
 import 'package:beatbox_trainer/services/storage/i_storage_service.dart';
@@ -10,6 +13,15 @@ import 'package:beatbox_trainer/services/storage/i_storage_service.dart';
 void main() {
   // Initialize Flutter bindings for SharedPreferences
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  /// Create a minimal GoRouter for testing
+  GoRouter createTestRouter() {
+    return GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (context, state) => const SizedBox()),
+      ],
+    );
+  }
 
   group('Service Locator', () {
     setUp(() async {
@@ -24,7 +36,7 @@ void main() {
 
     test('setupServiceLocator registers all services', () async {
       // Act
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Assert - verify all services are registered
       expect(getIt.isRegistered<ErrorHandler>(), true);
@@ -33,13 +45,14 @@ void main() {
       expect(getIt.isRegistered<ISettingsService>(), true);
       expect(getIt.isRegistered<IStorageService>(), true);
       expect(getIt.isRegistered<IDebugService>(), true);
+      expect(getIt.isRegistered<INavigationService>(), true);
     });
 
     test(
       'setupServiceLocator registers services without eager initialization',
       () async {
         // Act
-        await setupServiceLocator();
+        await setupServiceLocator(createTestRouter());
 
         // Assert - services should be registered but not yet initialized
         // This allows tests to register mocks without triggering SharedPreferences
@@ -54,7 +67,7 @@ void main() {
 
     test('services are resolved as singletons', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Act - resolve services multiple times
       final audioService1 = getIt<IAudioService>();
@@ -69,18 +82,18 @@ void main() {
 
     test('setupServiceLocator fails if called twice', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Act & Assert - second call should throw StateError
       expect(
-        () async => await setupServiceLocator(),
+        () async => await setupServiceLocator(createTestRouter()),
         throwsA(isA<StateError>()),
       );
     });
 
     test('resetServiceLocator unregisters all services', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
       expect(getIt.isRegistered<IAudioService>(), true);
 
       // Act
@@ -92,16 +105,17 @@ void main() {
       expect(getIt.isRegistered<ISettingsService>(), false);
       expect(getIt.isRegistered<IStorageService>(), false);
       expect(getIt.isRegistered<IDebugService>(), false);
+      expect(getIt.isRegistered<INavigationService>(), false);
       expect(getIt.isRegistered<ErrorHandler>(), false);
     });
 
     test('resetServiceLocator allows re-initialization', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
       await resetServiceLocator();
 
       // Act - should be able to setup again without error
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Assert
       expect(getIt.isRegistered<IAudioService>(), true);
@@ -114,7 +128,7 @@ void main() {
 
     test('AudioService receives ErrorHandler dependency', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Act
       final audioService = getIt<IAudioService>();
@@ -134,7 +148,7 @@ void main() {
 
     test('can resolve all services after setup', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Act - resolve all services
       final audioService = getIt<IAudioService>();
@@ -142,6 +156,7 @@ void main() {
       final settingsService = getIt<ISettingsService>();
       final storageService = getIt<IStorageService>();
       final debugService = getIt<IDebugService>();
+      final navigationService = getIt<INavigationService>();
       final errorHandler = getIt<ErrorHandler>();
 
       // Assert - all services should be non-null
@@ -150,12 +165,13 @@ void main() {
       expect(settingsService, isNotNull);
       expect(storageService, isNotNull);
       expect(debugService, isNotNull);
+      expect(navigationService, isNotNull);
       expect(errorHandler, isNotNull);
     });
 
     test('services can be registered and resolved', () async {
       // Arrange
-      await setupServiceLocator();
+      await setupServiceLocator(createTestRouter());
 
       // Act & Assert - all services should be resolvable
       expect(() => getIt<ISettingsService>(), returnsNormally);
