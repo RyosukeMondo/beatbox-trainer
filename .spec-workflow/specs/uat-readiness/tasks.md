@@ -42,7 +42,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/services/audio/i_audio_service.dart (interface pattern), Design document section 1.1 (design.md lines 117-141)_
   - _Prompt: Role: Flutter Service Layer Developer | Task: Create IStorageService interface following existing patterns. Interface methods: abstract class IStorageService { Future<void> init(); Future<bool> hasCalibration(); Future<void> saveCalibration(CalibrationData data); Future<CalibrationData?> loadCalibration(); Future<void> clearCalibration(); } class CalibrationData { final int level; final DateTime timestamp; final Map<String, double> thresholds; CalibrationData({required this.level, required this.timestamp, required this.thresholds}); factory CalibrationData.fromJson(Map<String, dynamic> json); Map<String, dynamic> toJson(); } | Restrictions: Follow existing service interface patterns (see IAudioService), Use abstract class not mixin, Document all methods with /// comments | Leverage: lib/services/audio/i_audio_service.dart (interface pattern), Design document section 1.1 (design.md lines 117-141) | Requirements: US-1 (calibration persistence), US-4 (level storage) | Success: File created at lib/services/storage/i_storage_service.dart, Interface defines all 5 methods, CalibrationData class includes fromJson/toJson, No syntax errors: `dart analyze lib/services/storage/`_
 
-- [ ] 2.2. Implement Storage Service
+- [x] 2.2. Implement Storage Service
   - File: lib/services/storage/storage_service_impl.dart
   - Estimate: 4 hours | Priority: Critical
   - Implement storage service using shared_preferences
