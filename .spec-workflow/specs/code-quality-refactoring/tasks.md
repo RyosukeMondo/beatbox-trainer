@@ -115,7 +115,7 @@
 
 ### Task 3.1: Create Service Interfaces in Dart
 
-- [ ] 3.1. Create IAudioService and IPermissionService interfaces
+- [x] 3.1. Create IAudioService and IPermissionService interfaces
   - Files: lib/services/audio/i_audio_service.dart (NEW), lib/services/permission/i_permission_service.dart (NEW)
   - Define IAudioService abstract class with methods: startAudio(), stopAudio(), setBpm(), getClassificationStream(), startCalibration(), finishCalibration(), getCalibrationStream()
   - Define IPermissionService abstract class with methods: checkMicrophonePermission(), requestMicrophonePermission(), openAppSettings()
