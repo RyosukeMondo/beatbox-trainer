@@ -110,7 +110,7 @@
   - _Requirements: US-3_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer with expertise in widget architecture and dependency injection | Task: Refactor SettingsScreen to remove default instantiation, add .create() factory using GetIt and .test() factory for testing as specified in design document | Restrictions: Do not break existing functionality, must use private constructor, ensure all dependencies are required and non-nullable | Success: Widget has no default instantiation, .create() factory works in production, .test() factory enables widget testing with mocks, all tests pass_
 
-- [-] 3.6. Update main.dart router configuration (Estimate: 1 hour, Priority: Critical)
+- [x] 3.6. Update main.dart router configuration (Estimate: 1 hour, Priority: Critical)
   - File: lib/main.dart
   - Update GoRouter routes to use .create() factory constructors
   - Call setupServiceLocator() before runApp()
