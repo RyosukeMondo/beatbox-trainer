@@ -59,11 +59,7 @@ class StatusCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: iconSize,
-            ),
+            Icon(icon, color: color, size: iconSize),
             const SizedBox(height: 8),
             Text(
               title,
@@ -78,10 +74,7 @@ class StatusCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 subtitle!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 textAlign: TextAlign.center,
               ),
             ],

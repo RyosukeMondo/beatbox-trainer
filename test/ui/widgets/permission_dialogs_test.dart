@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('PermissionDeniedDialog', () {
-    testWidgets('displays correct title and message',
-        (WidgetTester tester) async {
+    testWidgets('displays correct title and message', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -56,8 +57,9 @@ void main() {
       expect(find.text('OK'), findsOneWidget);
     });
 
-    testWidgets('closes dialog when OK button is tapped',
-        (WidgetTester tester) async {
+    testWidgets('closes dialog when OK button is tapped', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -86,15 +88,12 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('can use widget directly without show method',
-        (WidgetTester tester) async {
+    testWidgets('can use widget directly without show method', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PermissionDeniedDialog(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: PermissionDeniedDialog())),
       );
 
       // Assert
@@ -104,8 +103,9 @@ void main() {
   });
 
   group('PermissionSettingsDialog', () {
-    testWidgets('displays correct title and message',
-        (WidgetTester tester) async {
+    testWidgets('displays correct title and message', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -134,8 +134,9 @@ void main() {
       );
     });
 
-    testWidgets('displays Cancel and Open Settings buttons',
-        (WidgetTester tester) async {
+    testWidgets('displays Cancel and Open Settings buttons', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -158,8 +159,9 @@ void main() {
       expect(find.text('Open Settings'), findsOneWidget);
     });
 
-    testWidgets('closes dialog when Cancel button is tapped',
-        (WidgetTester tester) async {
+    testWidgets('closes dialog when Cancel button is tapped', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -188,8 +190,9 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('closes dialog when Open Settings button is tapped',
-        (WidgetTester tester) async {
+    testWidgets('closes dialog when Open Settings button is tapped', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         MaterialApp(
@@ -218,15 +221,12 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('can use widget directly without show method',
-        (WidgetTester tester) async {
+    testWidgets('can use widget directly without show method', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PermissionSettingsDialog(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: PermissionSettingsDialog())),
       );
 
       // Assert

@@ -14,10 +14,7 @@ class TimingFeedback {
   /// - Zero indicates exactly on beat
   final double errorMs;
 
-  const TimingFeedback({
-    required this.classification,
-    required this.errorMs,
-  });
+  const TimingFeedback({required this.classification, required this.errorMs});
 
   /// Format error as string with sign (e.g., "+12.5ms", "-5.0ms", "0.0ms")
   String get formattedError {

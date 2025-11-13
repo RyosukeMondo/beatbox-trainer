@@ -303,7 +303,7 @@ mod tests {
 
         // Should detect at least 2 onsets (we have impulses at 100ms and 300ms)
         assert!(
-            onsets.len() >= 1,
+            !onsets.is_empty(),
             "Expected to detect at least 1 onset, found {}",
             onsets.len()
         );
@@ -313,7 +313,7 @@ mod tests {
             "Detected onsets at times (ms): {:?}",
             onsets
                 .iter()
-                .map(|&s| (s as f32 / sample_rate as f32 * 1000.0))
+                .map(|&s| s as f32 / sample_rate as f32 * 1000.0)
                 .collect::<Vec<f32>>()
         );
 

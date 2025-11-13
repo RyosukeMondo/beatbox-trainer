@@ -22,10 +22,7 @@ class ClassificationIndicator extends StatelessWidget {
   /// Classification result to display (null for idle state)
   final ClassificationResult? result;
 
-  const ClassificationIndicator({
-    super.key,
-    this.result,
-  });
+  const ClassificationIndicator({super.key, this.result});
 
   /// Get color for the given beatbox sound type
   Color _getSoundColor(BeatboxHit sound) {

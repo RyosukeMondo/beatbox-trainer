@@ -27,10 +27,7 @@ class TimingFeedbackWidget extends StatelessWidget {
   /// Classification result containing timing data (null for idle state)
   final ClassificationResult? result;
 
-  const TimingFeedbackWidget({
-    super.key,
-    this.result,
-  });
+  const TimingFeedbackWidget({super.key, this.result});
 
   /// Get color for the given timing classification
   Color _getTimingColor(TimingClassification classification) {
@@ -67,7 +64,8 @@ class TimingFeedbackWidget extends StatelessWidget {
     // Active state - display timing feedback
     final timing = result!.timing;
     final timingColor = _getTimingColor(timing.classification);
-    final displayText = '${timing.formattedError} ${timing.classification.displayName}';
+    final displayText =
+        '${timing.formattedError} ${timing.classification.displayName}';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

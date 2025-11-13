@@ -34,10 +34,12 @@ struct AudioEngineState {
 /// - Graceful lock error handling (no unwrap/expect)
 /// - Clear ownership and lifecycle management
 pub struct AppContext {
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     audio_engine: Arc<Mutex<Option<AudioEngineState>>>,
     calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
     calibration_state: Arc<RwLock<CalibrationState>>,
     classification_broadcast: Arc<Mutex<Option<broadcast::Sender<ClassificationResult>>>>,
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     calibration_broadcast: Arc<Mutex<Option<broadcast::Sender<CalibrationProgress>>>>,
 }
 
@@ -67,6 +69,7 @@ impl AppContext {
     /// Safely acquire lock on audio engine state
     ///
     /// Returns MutexGuard or AudioError::LockPoisoned on lock failure
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     fn lock_audio_engine(
         &self,
     ) -> Result<std::sync::MutexGuard<'_, Option<AudioEngineState>>, AudioError> {
@@ -91,6 +94,7 @@ impl AppContext {
     /// Safely acquire read lock on calibration state
     ///
     /// Returns RwLockReadGuard or CalibrationError::StatePoisoned on lock failure
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     fn read_calibration(
         &self,
     ) -> Result<std::sync::RwLockReadGuard<'_, CalibrationState>, CalibrationError> {
@@ -111,6 +115,7 @@ impl AppContext {
     }
 
     /// Safely acquire lock on classification broadcast sender
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     fn lock_classification_broadcast(
         &self,
     ) -> Result<
@@ -1144,10 +1149,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_stream_cleanup_on_stop() {
-        use futures::StreamExt;
-
         #[cfg(target_os = "android")]
         {
+            use futures::StreamExt;
             let ctx = AppContext::new_test();
 
             // Start audio (if possible)

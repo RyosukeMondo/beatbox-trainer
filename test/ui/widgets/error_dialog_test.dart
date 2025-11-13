@@ -15,11 +15,8 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () => ErrorDialog.show(
-                  context,
-                  title: title,
-                  message: message,
-                ),
+                onPressed: () =>
+                    ErrorDialog.show(context, title: title, message: message),
                 child: const Text('Show Dialog'),
               ),
             ),
@@ -35,8 +32,9 @@ void main() {
       expect(find.text(message), findsOneWidget);
     });
 
-    testWidgets('displays default title when not provided',
-        (WidgetTester tester) async {
+    testWidgets('displays default title when not provided', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
 
@@ -46,10 +44,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () => ErrorDialog.show(
-                  context,
-                  message: message,
-                ),
+                onPressed: () => ErrorDialog.show(context, message: message),
                 child: const Text('Show Dialog'),
               ),
             ),
@@ -65,8 +60,9 @@ void main() {
       expect(find.text(message), findsOneWidget);
     });
 
-    testWidgets('displays OK button when no callbacks provided',
-        (WidgetTester tester) async {
+    testWidgets('displays OK button when no callbacks provided', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
 
@@ -76,10 +72,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () => ErrorDialog.show(
-                  context,
-                  message: message,
-                ),
+                onPressed: () => ErrorDialog.show(context, message: message),
                 child: const Text('Show Dialog'),
               ),
             ),
@@ -96,8 +89,9 @@ void main() {
       expect(find.text('Cancel'), findsNothing);
     });
 
-    testWidgets('displays Retry button when onRetry provided',
-        (WidgetTester tester) async {
+    testWidgets('displays Retry button when onRetry provided', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
       var retryCallbackCalled = false;
@@ -135,8 +129,9 @@ void main() {
       expect(retryCallbackCalled, isTrue);
     });
 
-    testWidgets('displays Cancel button when onCancel provided',
-        (WidgetTester tester) async {
+    testWidgets('displays Cancel button when onCancel provided', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
       var cancelCallbackCalled = false;
@@ -173,8 +168,9 @@ void main() {
       expect(cancelCallbackCalled, isTrue);
     });
 
-    testWidgets('displays both Retry and Cancel when both callbacks provided',
-        (WidgetTester tester) async {
+    testWidgets('displays both Retry and Cancel when both callbacks provided', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
 
@@ -206,8 +202,9 @@ void main() {
       expect(find.text('OK'), findsNothing);
     });
 
-    testWidgets('closes dialog when OK button is tapped',
-        (WidgetTester tester) async {
+    testWidgets('closes dialog when OK button is tapped', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
 
@@ -217,10 +214,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () => ErrorDialog.show(
-                  context,
-                  message: message,
-                ),
+                onPressed: () => ErrorDialog.show(context, message: message),
                 child: const Text('Show Dialog'),
               ),
             ),
@@ -242,8 +236,9 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('closes dialog when Retry button is tapped',
-        (WidgetTester tester) async {
+    testWidgets('closes dialog when Retry button is tapped', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const message = 'This is a test error message';
 
@@ -253,11 +248,8 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () => ErrorDialog.show(
-                  context,
-                  message: message,
-                  onRetry: () {},
-                ),
+                onPressed: () =>
+                    ErrorDialog.show(context, message: message, onRetry: () {}),
                 child: const Text('Show Dialog'),
               ),
             ),
@@ -279,8 +271,9 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('can use widget directly without show method',
-        (WidgetTester tester) async {
+    testWidgets('can use widget directly without show method', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const title = 'Direct Error';
       const message = 'Direct error message';
@@ -289,10 +282,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ErrorDialog(
-              title: title,
-              message: message,
-            ),
+            body: ErrorDialog(title: title, message: message),
           ),
         ),
       );

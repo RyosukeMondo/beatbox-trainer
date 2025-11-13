@@ -6,27 +6,26 @@ import 'package:beatbox_trainer/models/timing_feedback.dart';
 
 void main() {
   group('TimingFeedbackWidget', () {
-    testWidgets('displays idle state with "---" when result is null',
-        (WidgetTester tester) async {
+    testWidgets('displays idle state with "---" when result is null', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: null),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: null)),
         ),
       );
 
       // Assert
       expect(find.text('---'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.grey);
     });
 
-    testWidgets('displays "0.0ms ON-TIME" in green when timing is on-time',
-        (WidgetTester tester) async {
+    testWidgets('displays "0.0ms ON-TIME" in green when timing is on-time', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -40,22 +39,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('0.0ms ON-TIME'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.green);
     });
 
-    testWidgets('displays "+12.5ms LATE" in amber when timing is late',
-        (WidgetTester tester) async {
+    testWidgets('displays "+12.5ms LATE" in amber when timing is late', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -69,22 +66,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('+12.5ms LATE'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.amber);
     });
 
-    testWidgets('displays "-5.0ms EARLY" in amber when timing is early',
-        (WidgetTester tester) async {
+    testWidgets('displays "-5.0ms EARLY" in amber when timing is early', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -98,22 +93,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('-5.0ms EARLY'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.amber);
     });
 
-    testWidgets('formats positive error correctly with + sign',
-        (WidgetTester tester) async {
+    testWidgets('formats positive error correctly with + sign', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -127,9 +120,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
@@ -137,8 +128,9 @@ void main() {
       expect(find.text('+25.7ms LATE'), findsOneWidget);
     });
 
-    testWidgets('formats negative error correctly without extra sign',
-        (WidgetTester tester) async {
+    testWidgets('formats negative error correctly without extra sign', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -152,9 +144,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
@@ -162,8 +152,7 @@ void main() {
       expect(find.text('-15.3ms EARLY'), findsOneWidget);
     });
 
-    testWidgets('rounds error to 1 decimal place',
-        (WidgetTester tester) async {
+    testWidgets('rounds error to 1 decimal place', (WidgetTester tester) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -177,9 +166,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
@@ -187,8 +174,9 @@ void main() {
       expect(find.text('+12.6ms LATE'), findsOneWidget);
     });
 
-    testWidgets('updates display immediately when result changes',
-        (WidgetTester tester) async {
+    testWidgets('updates display immediately when result changes', (
+      WidgetTester tester,
+    ) async {
       // Arrange - Initial state
       const initialResult = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -201,16 +189,15 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: initialResult),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: initialResult)),
         ),
       );
 
       // Verify initial state
       expect(find.text('0.0ms ON-TIME'), findsOneWidget);
-      Container container =
-          tester.widget<Container>(find.byType(Container).first);
+      Container container = tester.widget<Container>(
+        find.byType(Container).first,
+      );
       BoxDecoration decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.green);
 
@@ -226,9 +213,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: newResult),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: newResult)),
         ),
       );
       await tester.pumpAndSettle();
@@ -241,8 +226,9 @@ void main() {
       expect(decoration.color, Colors.amber);
     });
 
-    testWidgets('displays text with correct styling',
-        (WidgetTester tester) async {
+    testWidgets('displays text with correct styling', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -256,9 +242,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
 
@@ -269,15 +253,13 @@ void main() {
       expect(textWidget.style?.color, Colors.white);
     });
 
-    testWidgets(
-        'handles null result transition to valid result correctly',
-        (WidgetTester tester) async {
+    testWidgets('handles null result transition to valid result correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange - Start with null
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: null),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: null)),
         ),
       );
 
@@ -295,9 +277,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TimingFeedbackWidget(result: result),
-          ),
+          home: Scaffold(body: TimingFeedbackWidget(result: result)),
         ),
       );
       await tester.pumpAndSettle();

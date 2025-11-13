@@ -34,18 +34,9 @@ void main() {
 
       test('service implements all interface methods', () {
         // Verify method signatures exist
-        expect(
-          permissionService.checkMicrophonePermission,
-          isA<Function>(),
-        );
-        expect(
-          permissionService.requestMicrophonePermission,
-          isA<Function>(),
-        );
-        expect(
-          permissionService.openAppSettings,
-          isA<Function>(),
-        );
+        expect(permissionService.checkMicrophonePermission, isA<Function>());
+        expect(permissionService.requestMicrophonePermission, isA<Function>());
+        expect(permissionService.openAppSettings, isA<Function>());
       });
     });
 
@@ -62,7 +53,10 @@ void main() {
       });
 
       test('enum values are distinct', () {
-        expect(PermissionStatus.granted, isNot(equals(PermissionStatus.denied)));
+        expect(
+          PermissionStatus.granted,
+          isNot(equals(PermissionStatus.denied)),
+        );
         expect(
           PermissionStatus.granted,
           isNot(equals(PermissionStatus.permanentlyDenied)),

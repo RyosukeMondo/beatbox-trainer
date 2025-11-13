@@ -6,23 +6,17 @@ void main() {
   group('LoadingOverlay', () {
     testWidgets('displays CircularProgressIndicator', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingOverlay())),
       );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('displays default message when message is null', (tester) async {
+    testWidgets('displays default message when message is null', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingOverlay())),
       );
 
       expect(find.text('Loading...'), findsOneWidget);
@@ -33,9 +27,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(message: customMessage),
-          ),
+          home: Scaffold(body: LoadingOverlay(message: customMessage)),
         ),
       );
 
@@ -45,11 +37,7 @@ void main() {
 
     testWidgets('displays message with correct styling', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingOverlay())),
       );
 
       final textWidget = tester.widget<Text>(find.text('Loading...'));
@@ -59,11 +47,7 @@ void main() {
 
     testWidgets('centers content vertically and horizontally', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingOverlay())),
       );
 
       final centerWidget = tester.widget<Center>(find.byType(Center));
@@ -75,11 +59,7 @@ void main() {
 
     testWidgets('has correct spacing between spinner and text', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingOverlay(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingOverlay())),
       );
 
       final column = tester.widget<Column>(find.byType(Column));

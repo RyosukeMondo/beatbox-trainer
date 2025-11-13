@@ -153,19 +153,19 @@ void main() {
       );
 
       final outerPadding = tester.widget<Padding>(
-        find.ancestor(
-          of: find.byType(Container),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .ancestor(
+              of: find.byType(Container),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       expect(
         outerPadding.padding,
         const EdgeInsets.symmetric(horizontal: 32.0),
       );
 
-      final container = tester.widget<Container>(
-        find.byType(Container),
-      );
+      final container = tester.widget<Container>(find.byType(Container));
       expect(container.padding, const EdgeInsets.all(16));
     });
 

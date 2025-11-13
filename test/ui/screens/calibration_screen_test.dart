@@ -20,18 +20,13 @@ void main() {
     /// Helper function to pump CalibrationScreen with mock dependencies
     Future<void> pumpCalibrationScreen(WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: CalibrationScreen(
-            audioService: mockAudioService,
-          ),
-        ),
+        MaterialApp(home: CalibrationScreen(audioService: mockAudioService)),
       );
     }
 
     testWidgets('displays title in AppBar', (WidgetTester tester) async {
       // Setup: calibration starts successfully
-      when(() => mockAudioService.startCalibration())
-          .thenAnswer((_) async {});
+      when(() => mockAudioService.startCalibration()).thenAnswer((_) async {});
       when(() => mockAudioService.getCalibrationStream()).thenAnswer(
         (_) => Stream.value(
           const CalibrationProgress(
@@ -47,11 +42,11 @@ void main() {
       expect(find.text('Calibration'), findsOneWidget);
     });
 
-    testWidgets('displays restart button in AppBar',
-        (WidgetTester tester) async {
+    testWidgets('displays restart button in AppBar', (
+      WidgetTester tester,
+    ) async {
       // Setup: calibration starts successfully
-      when(() => mockAudioService.startCalibration())
-          .thenAnswer((_) async {});
+      when(() => mockAudioService.startCalibration()).thenAnswer((_) async {});
       when(() => mockAudioService.getCalibrationStream()).thenAnswer(
         (_) => Stream.value(
           const CalibrationProgress(
@@ -67,11 +62,11 @@ void main() {
       expect(find.byIcon(Icons.restart_alt), findsOneWidget);
     });
 
-    testWidgets('starts calibration automatically on init',
-        (WidgetTester tester) async {
+    testWidgets('starts calibration automatically on init', (
+      WidgetTester tester,
+    ) async {
       // Setup: calibration starts successfully
-      when(() => mockAudioService.startCalibration())
-          .thenAnswer((_) async {});
+      when(() => mockAudioService.startCalibration()).thenAnswer((_) async {});
       when(() => mockAudioService.getCalibrationStream()).thenAnswer(
         (_) => Stream.value(
           const CalibrationProgress(
@@ -88,11 +83,11 @@ void main() {
       verify(() => mockAudioService.startCalibration()).called(1);
     });
 
-    testWidgets('displays loading state while initializing',
-        (WidgetTester tester) async {
+    testWidgets('displays loading state while initializing', (
+      WidgetTester tester,
+    ) async {
       // Setup: calibration stream delays before emitting data
-      when(() => mockAudioService.startCalibration())
-          .thenAnswer((_) async {});
+      when(() => mockAudioService.startCalibration()).thenAnswer((_) async {});
       when(() => mockAudioService.getCalibrationStream()).thenAnswer(
         (_) => Stream.periodic(
           const Duration(seconds: 1),
@@ -111,8 +106,9 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('displays error when calibration start fails',
-        (WidgetTester tester) async {
+    testWidgets('displays error when calibration start fails', (
+      WidgetTester tester,
+    ) async {
       // Setup: calibration start fails
       when(() => mockAudioService.startCalibration()).thenThrow(
         CalibrationServiceException(
@@ -132,8 +128,9 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('navigates back when Cancel button tapped in error state',
-        (WidgetTester tester) async {
+    testWidgets('navigates back when Cancel button tapped in error state', (
+      WidgetTester tester,
+    ) async {
       // Setup: calibration start fails
       when(() => mockAudioService.startCalibration()).thenThrow(
         CalibrationServiceException(
@@ -152,9 +149,8 @@ void main() {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CalibrationScreen(
-                        audioService: mockAudioService,
-                      ),
+                      builder: (_) =>
+                          CalibrationScreen(audioService: mockAudioService),
                     ),
                   );
                 },
@@ -178,8 +174,9 @@ void main() {
       expect(find.byType(CalibrationScreen), findsNothing);
     });
 
-    testWidgets('retries calibration when Retry button tapped',
-        (WidgetTester tester) async {
+    testWidgets('retries calibration when Retry button tapped', (
+      WidgetTester tester,
+    ) async {
       // Setup: first start fails, second succeeds
       var callCount = 0;
       when(() => mockAudioService.startCalibration()).thenAnswer((_) async {
@@ -215,11 +212,13 @@ void main() {
     });
 
     group('progress display', () {
-      testWidgets('displays kick drum instruction at start',
-          (WidgetTester tester) async {
+      testWidgets('displays kick drum instruction at start', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration started for kick drum
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -242,11 +241,13 @@ void main() {
         expect(find.text('0 / 10 samples'), findsOneWidget);
       });
 
-      testWidgets('displays snare drum instruction when on snare',
-          (WidgetTester tester) async {
+      testWidgets('displays snare drum instruction when on snare', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration on snare drum
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -269,11 +270,13 @@ void main() {
         expect(find.text('3 / 10 samples'), findsOneWidget);
       });
 
-      testWidgets('displays hi-hat instruction when on hi-hat',
-          (WidgetTester tester) async {
+      testWidgets('displays hi-hat instruction when on hi-hat', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration on hi-hat
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -296,10 +299,13 @@ void main() {
         expect(find.text('7 / 10 samples'), findsOneWidget);
       });
 
-      testWidgets('displays correct step indicator', (WidgetTester tester) async {
+      testWidgets('displays correct step indicator', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration on snare drum (step 2)
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -317,12 +323,14 @@ void main() {
         expect(find.text('Step 2 of 3'), findsOneWidget);
       });
 
-      testWidgets('displays overall progress bar correctly',
-          (WidgetTester tester) async {
+      testWidgets('displays overall progress bar correctly', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration on snare with 5/10 samples
         // Overall progress: (1 + 0.5) / 3 = 0.5
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -346,11 +354,13 @@ void main() {
         expect(overallProgress.value, equals(0.5));
       });
 
-      testWidgets('displays current sound progress bar correctly',
-          (WidgetTester tester) async {
+      testWidgets('displays current sound progress bar correctly', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration on kick with 3/10 samples
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -374,11 +384,13 @@ void main() {
         expect(soundProgress.value, equals(0.3));
       });
 
-      testWidgets('displays sound complete status card',
-          (WidgetTester tester) async {
+      testWidgets('displays sound complete status card', (
+        WidgetTester tester,
+      ) async {
         // Setup: kick drum complete, moving to snare
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -398,11 +410,13 @@ void main() {
         expect(find.byIcon(Icons.check_circle), findsOneWidget);
       });
 
-      testWidgets('displays completion status card when calibration complete',
-          (WidgetTester tester) async {
+      testWidgets('displays completion status card when calibration complete', (
+        WidgetTester tester,
+      ) async {
         // Setup: all samples collected
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -412,8 +426,9 @@ void main() {
             ),
           ),
         );
-        when(() => mockAudioService.finishCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.finishCalibration(),
+        ).thenAnswer((_) async {});
 
         await pumpCalibrationScreen(tester);
         await tester.pump();
@@ -424,11 +439,13 @@ void main() {
         expect(find.byIcon(Icons.celebration), findsOneWidget);
       });
 
-      testWidgets('displays waiting message when no progress data yet',
-          (WidgetTester tester) async {
+      testWidgets('displays waiting message when no progress data yet', (
+        WidgetTester tester,
+      ) async {
         // Setup: stream with no immediate data
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.periodic(
             const Duration(seconds: 5),
@@ -451,11 +468,13 @@ void main() {
     });
 
     group('calibration completion', () {
-      testWidgets('calls finishCalibration when all samples collected',
-          (WidgetTester tester) async {
+      testWidgets('calls finishCalibration when all samples collected', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration completes
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -465,8 +484,9 @@ void main() {
             ),
           ),
         );
-        when(() => mockAudioService.finishCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.finishCalibration(),
+        ).thenAnswer((_) async {});
 
         await pumpCalibrationScreen(tester);
         await tester.pump();
@@ -476,11 +496,13 @@ void main() {
         verify(() => mockAudioService.finishCalibration()).called(1);
       });
 
-      testWidgets('navigates back after successful calibration',
-          (WidgetTester tester) async {
+      testWidgets('navigates back after successful calibration', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration completes successfully
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -490,8 +512,9 @@ void main() {
             ),
           ),
         );
-        when(() => mockAudioService.finishCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.finishCalibration(),
+        ).thenAnswer((_) async {});
 
         // Wrap in Navigator to test navigation
         await tester.pumpWidget(
@@ -502,9 +525,8 @@ void main() {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => CalibrationScreen(
-                          audioService: mockAudioService,
-                        ),
+                        builder: (_) =>
+                            CalibrationScreen(audioService: mockAudioService),
                       ),
                     );
                   },
@@ -524,11 +546,13 @@ void main() {
         expect(find.byType(CalibrationScreen), findsNothing);
       });
 
-      testWidgets('displays error when finishCalibration fails',
-          (WidgetTester tester) async {
+      testWidgets('displays error when finishCalibration fails', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration completes but finish fails
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -560,11 +584,13 @@ void main() {
     });
 
     group('restart functionality', () {
-      testWidgets('restarts calibration when restart button tapped',
-          (WidgetTester tester) async {
+      testWidgets('restarts calibration when restart button tapped', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration in progress
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.value(
             const CalibrationProgress(
@@ -586,8 +612,9 @@ void main() {
         verify(() => mockAudioService.startCalibration()).called(2);
       });
 
-      testWidgets('restart button disabled when not calibrating',
-          (WidgetTester tester) async {
+      testWidgets('restart button disabled when not calibrating', (
+        WidgetTester tester,
+      ) async {
         // Setup: calibration start fails
         when(() => mockAudioService.startCalibration()).thenThrow(
           CalibrationServiceException(
@@ -609,11 +636,13 @@ void main() {
     });
 
     group('stream error handling', () {
-      testWidgets('displays error when calibration stream fails',
-          (WidgetTester tester) async {
+      testWidgets('displays error when calibration stream fails', (
+        WidgetTester tester,
+      ) async {
         // Setup: stream emits error
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
         when(() => mockAudioService.getCalibrationStream()).thenAnswer(
           (_) => Stream.error(
             CalibrationServiceException(
@@ -637,10 +666,10 @@ void main() {
       testWidgets('can retry after stream error', (WidgetTester tester) async {
         // Setup: first stream fails, second succeeds
         var callCount = 0;
-        when(() => mockAudioService.startCalibration())
-            .thenAnswer((_) async {});
-        when(() => mockAudioService.getCalibrationStream())
-            .thenAnswer((_) {
+        when(
+          () => mockAudioService.startCalibration(),
+        ).thenAnswer((_) async {});
+        when(() => mockAudioService.getCalibrationStream()).thenAnswer((_) {
           callCount++;
           if (callCount == 1) {
             return Stream.error(

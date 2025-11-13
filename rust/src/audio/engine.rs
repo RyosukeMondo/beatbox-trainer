@@ -34,9 +34,6 @@ use super::metronome::{generate_click_sample, is_on_beat};
 #[cfg(test)]
 use super::buffer_pool::DEFAULT_BUFFER_SIZE;
 
-#[cfg(test)]
-use super::buffer_pool::BufferPool;
-
 /// Audio engine for real-time audio processing with metronome generation
 ///
 /// This struct manages full-duplex audio streams using Oboe and provides

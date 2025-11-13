@@ -15,10 +15,7 @@ class LoadingOverlay extends StatelessWidget {
   ///
   /// The [message] parameter allows customizing the text displayed below
   /// the loading spinner. If null, a default message is shown.
-  const LoadingOverlay({
-    super.key,
-    this.message,
-  });
+  const LoadingOverlay({super.key, this.message});
 
   /// Optional message to display below the loading spinner.
   ///

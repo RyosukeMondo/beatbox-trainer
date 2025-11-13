@@ -40,6 +40,7 @@ fn init_logging() {
 }
 
 #[cfg(not(target_os = "android"))]
+#[allow(dead_code)]
 fn init_logging() {
     env_logger::init();
 }

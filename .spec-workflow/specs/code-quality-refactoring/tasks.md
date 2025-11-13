@@ -335,7 +335,7 @@
 
 ### Task 6.3: Add Integration Tests
 
-- [ ] 6.3. Create integration tests for FFI bridge and service layer
+- [x] 6.3. Create integration tests for FFI bridge and service layer
   - Files: rust/tests/integration_test.rs (NEW), test/integration/audio_integration_test.dart (NEW)
   - Create Rust integration test for full audio lifecycle (start → classify → stop)
   - Test stream behavior (subscribe, receive, close)

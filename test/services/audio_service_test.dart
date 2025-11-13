@@ -18,77 +18,72 @@ void main() {
     });
 
     group('BPM validation', () {
-      test('startAudio throws AudioServiceException for BPM below minimum (40)',
-          () async {
-        // Test boundary: 39 is below minimum
-        expect(
-          () => audioService.startAudio(bpm: 39),
-          throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.message,
-                  'message',
-                  contains('between 40 and 240'),
-                )
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
-          ),
-        );
-      });
+      test(
+        'startAudio throws AudioServiceException for BPM below minimum (40)',
+        () async {
+          // Test boundary: 39 is below minimum
+          expect(
+            () => audioService.startAudio(bpm: 39),
+            throwsA(
+              isA<AudioServiceException>()
+                  .having(
+                    (e) => e.message,
+                    'message',
+                    contains('between 40 and 240'),
+                  )
+                  .having((e) => e.errorCode, 'errorCode', equals(1001)),
+            ),
+          );
+        },
+      );
 
       test(
-          'startAudio throws AudioServiceException for BPM above maximum (240)',
-          () async {
-        // Test boundary: 241 is above maximum
-        expect(
-          () => audioService.startAudio(bpm: 241),
-          throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.message,
-                  'message',
-                  contains('between 40 and 240'),
-                )
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
-          ),
-        );
-      });
+        'startAudio throws AudioServiceException for BPM above maximum (240)',
+        () async {
+          // Test boundary: 241 is above maximum
+          expect(
+            () => audioService.startAudio(bpm: 241),
+            throwsA(
+              isA<AudioServiceException>()
+                  .having(
+                    (e) => e.message,
+                    'message',
+                    contains('between 40 and 240'),
+                  )
+                  .having((e) => e.errorCode, 'errorCode', equals(1001)),
+            ),
+          );
+        },
+      );
 
       test('startAudio throws AudioServiceException for BPM of 0', () async {
         expect(
           () => audioService.startAudio(bpm: 0),
           throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
+            isA<AudioServiceException>().having(
+              (e) => e.errorCode,
+              'errorCode',
+              equals(1001),
+            ),
           ),
         );
       });
 
-      test('startAudio throws AudioServiceException for negative BPM',
-          () async {
-        expect(
-          () => audioService.startAudio(bpm: -10),
-          throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
-          ),
-        );
-      });
+      test(
+        'startAudio throws AudioServiceException for negative BPM',
+        () async {
+          expect(
+            () => audioService.startAudio(bpm: -10),
+            throwsA(
+              isA<AudioServiceException>().having(
+                (e) => e.errorCode,
+                'errorCode',
+                equals(1001),
+              ),
+            ),
+          );
+        },
+      );
 
       test('startAudio accepts valid BPM at lower boundary (40)', () async {
         // Note: This tests validation logic doesn't reject BPM 40
@@ -100,7 +95,10 @@ void main() {
         } on AudioServiceException catch (e) {
           // Should NOT be a validation error (errorCode 1001 with "validation failed")
           expect(e.errorCode, isNot(equals(1001)));
-          expect(e.originalError.toLowerCase(), isNot(contains('validation failed')));
+          expect(
+            e.originalError.toLowerCase(),
+            isNot(contains('validation failed')),
+          );
         }
       });
 
@@ -111,7 +109,10 @@ void main() {
         } on AudioServiceException catch (e) {
           // Should NOT be a validation error
           expect(e.errorCode, isNot(equals(1001)));
-          expect(e.originalError.toLowerCase(), isNot(contains('validation failed')));
+          expect(
+            e.originalError.toLowerCase(),
+            isNot(contains('validation failed')),
+          );
         }
       });
 
@@ -122,39 +123,44 @@ void main() {
         } on AudioServiceException catch (e) {
           // Should NOT be a validation error
           expect(e.errorCode, isNot(equals(1001)));
-          expect(e.originalError.toLowerCase(), isNot(contains('validation failed')));
+          expect(
+            e.originalError.toLowerCase(),
+            isNot(contains('validation failed')),
+          );
         }
       });
 
-      test('setBpm throws AudioServiceException for BPM below minimum',
-          () async {
-        expect(
-          () => audioService.setBpm(bpm: 30),
-          throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
-          ),
-        );
-      });
+      test(
+        'setBpm throws AudioServiceException for BPM below minimum',
+        () async {
+          expect(
+            () => audioService.setBpm(bpm: 30),
+            throwsA(
+              isA<AudioServiceException>().having(
+                (e) => e.errorCode,
+                'errorCode',
+                equals(1001),
+              ),
+            ),
+          );
+        },
+      );
 
-      test('setBpm throws AudioServiceException for BPM above maximum',
-          () async {
-        expect(
-          () => audioService.setBpm(bpm: 300),
-          throwsA(
-            isA<AudioServiceException>()
-                .having(
-                  (e) => e.errorCode,
-                  'errorCode',
-                  equals(1001),
-                ),
-          ),
-        );
-      });
+      test(
+        'setBpm throws AudioServiceException for BPM above maximum',
+        () async {
+          expect(
+            () => audioService.setBpm(bpm: 300),
+            throwsA(
+              isA<AudioServiceException>().having(
+                (e) => e.errorCode,
+                'errorCode',
+                equals(1001),
+              ),
+            ),
+          );
+        },
+      );
 
       test('setBpm accepts valid BPM (120)', () async {
         try {
@@ -163,7 +169,10 @@ void main() {
         } on AudioServiceException catch (e) {
           // Should NOT be a validation error
           expect(e.errorCode, isNot(equals(1001)));
-          expect(e.originalError.toLowerCase(), isNot(contains('validation failed')));
+          expect(
+            e.originalError.toLowerCase(),
+            isNot(contains('validation failed')),
+          );
         }
       });
     });

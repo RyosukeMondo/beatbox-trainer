@@ -6,27 +6,26 @@ import 'package:beatbox_trainer/models/timing_feedback.dart';
 
 void main() {
   group('ClassificationIndicator', () {
-    testWidgets('displays idle state with "---" when result is null',
-        (WidgetTester tester) async {
+    testWidgets('displays idle state with "---" when result is null', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: null),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: null)),
         ),
       );
 
       // Assert
       expect(find.text('---'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.grey);
     });
 
-    testWidgets('displays KICK in red container when sound is kick',
-        (WidgetTester tester) async {
+    testWidgets('displays KICK in red container when sound is kick', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -40,22 +39,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('KICK'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.red);
     });
 
-    testWidgets('displays SNARE in blue container when sound is snare',
-        (WidgetTester tester) async {
+    testWidgets('displays SNARE in blue container when sound is snare', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.snare,
@@ -69,22 +66,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('SNARE'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.blue);
     });
 
-    testWidgets('displays HI-HAT in green container when sound is hiHat',
-        (WidgetTester tester) async {
+    testWidgets('displays HI-HAT in green container when sound is hiHat', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.hiHat,
@@ -98,82 +93,80 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('HI-HAT'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.green);
     });
 
     testWidgets(
-        'displays CLOSED HI-HAT in green container when sound is closedHiHat',
-        (WidgetTester tester) async {
-      // Arrange
-      const result = ClassificationResult(
-        sound: BeatboxHit.closedHiHat,
-        timing: TimingFeedback(
-          classification: TimingClassification.onTime,
-          errorMs: 0.0,
-        ),
-        timestampMs: 1000,
-      );
-
-      // Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
+      'displays CLOSED HI-HAT in green container when sound is closedHiHat',
+      (WidgetTester tester) async {
+        // Arrange
+        const result = ClassificationResult(
+          sound: BeatboxHit.closedHiHat,
+          timing: TimingFeedback(
+            classification: TimingClassification.onTime,
+            errorMs: 0.0,
           ),
-        ),
-      );
+          timestampMs: 1000,
+        );
 
-      // Assert
-      expect(find.text('CLOSED HI-HAT'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, Colors.green);
-    });
+        // Act
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(body: ClassificationIndicator(result: result)),
+          ),
+        );
+
+        // Assert
+        expect(find.text('CLOSED HI-HAT'), findsOneWidget);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
+        final decoration = container.decoration as BoxDecoration;
+        expect(decoration.color, Colors.green);
+      },
+    );
 
     testWidgets(
-        'displays OPEN HI-HAT in green container when sound is openHiHat',
-        (WidgetTester tester) async {
-      // Arrange
-      const result = ClassificationResult(
-        sound: BeatboxHit.openHiHat,
-        timing: TimingFeedback(
-          classification: TimingClassification.onTime,
-          errorMs: 0.0,
-        ),
-        timestampMs: 1000,
-      );
-
-      // Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
+      'displays OPEN HI-HAT in green container when sound is openHiHat',
+      (WidgetTester tester) async {
+        // Arrange
+        const result = ClassificationResult(
+          sound: BeatboxHit.openHiHat,
+          timing: TimingFeedback(
+            classification: TimingClassification.onTime,
+            errorMs: 0.0,
           ),
-        ),
-      );
+          timestampMs: 1000,
+        );
 
-      // Assert
-      expect(find.text('OPEN HI-HAT'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, Colors.green);
-    });
+        // Act
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(body: ClassificationIndicator(result: result)),
+          ),
+        );
 
-    testWidgets('displays K-SNARE in purple container when sound is kSnare',
-        (WidgetTester tester) async {
+        // Assert
+        expect(find.text('OPEN HI-HAT'), findsOneWidget);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
+        final decoration = container.decoration as BoxDecoration;
+        expect(decoration.color, Colors.green);
+      },
+    );
+
+    testWidgets('displays K-SNARE in purple container when sound is kSnare', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kSnare,
@@ -187,22 +180,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('K-SNARE'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.purple);
     });
 
-    testWidgets('displays UNKNOWN in grey container when sound is unknown',
-        (WidgetTester tester) async {
+    testWidgets('displays UNKNOWN in grey container when sound is unknown', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.unknown,
@@ -216,22 +207,20 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 
       // Assert
       expect(find.text('UNKNOWN'), findsOneWidget);
-      final container =
-          tester.widget<Container>(find.byType(Container).first);
+      final container = tester.widget<Container>(find.byType(Container).first);
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.grey);
     });
 
-    testWidgets('updates display when result changes',
-        (WidgetTester tester) async {
+    testWidgets('updates display when result changes', (
+      WidgetTester tester,
+    ) async {
       // Arrange - Initial state
       const initialResult = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -244,16 +233,15 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: initialResult),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: initialResult)),
         ),
       );
 
       // Verify initial state
       expect(find.text('KICK'), findsOneWidget);
-      Container container =
-          tester.widget<Container>(find.byType(Container).first);
+      Container container = tester.widget<Container>(
+        find.byType(Container).first,
+      );
       BoxDecoration decoration = container.decoration as BoxDecoration;
       expect(decoration.color, Colors.red);
 
@@ -269,9 +257,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: newResult),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: newResult)),
         ),
       );
       await tester.pumpAndSettle();
@@ -284,8 +270,9 @@ void main() {
       expect(decoration.color, Colors.blue);
     });
 
-    testWidgets('displays text with correct styling',
-        (WidgetTester tester) async {
+    testWidgets('displays text with correct styling', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const result = ClassificationResult(
         sound: BeatboxHit.kick,
@@ -299,9 +286,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClassificationIndicator(result: result),
-          ),
+          home: Scaffold(body: ClassificationIndicator(result: result)),
         ),
       );
 

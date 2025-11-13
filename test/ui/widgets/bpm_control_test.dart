@@ -4,17 +4,13 @@ import 'package:beatbox_trainer/ui/widgets/bpm_control.dart';
 
 void main() {
   group('BPMControl', () {
-    testWidgets('displays current BPM value prominently',
-        (WidgetTester tester) async {
+    testWidgets('displays current BPM value prominently', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 120,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 120, onChanged: (_) {})),
         ),
       );
 
@@ -22,17 +18,13 @@ void main() {
       expect(find.text('120 BPM'), findsOneWidget);
     });
 
-    testWidgets('renders slider with correct range (40-240)',
-        (WidgetTester tester) async {
+    testWidgets('renders slider with correct range (40-240)', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 120,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 120, onChanged: (_) {})),
         ),
       );
 
@@ -44,8 +36,9 @@ void main() {
       expect(slider.value, 120);
     });
 
-    testWidgets('slider calls onChanged callback when dragged',
-        (WidgetTester tester) async {
+    testWidgets('slider calls onChanged callback when dragged', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -79,17 +72,11 @@ void main() {
       expect(changedValue, lessThanOrEqualTo(165));
     });
 
-    testWidgets('renders all preset buttons',
-        (WidgetTester tester) async {
+    testWidgets('renders all preset buttons', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 120,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 120, onChanged: (_) {})),
         ),
       );
 
@@ -102,8 +89,9 @@ void main() {
       expect(find.text('160'), findsOneWidget);
     });
 
-    testWidgets('preset button 60 calls onChanged with 60',
-        (WidgetTester tester) async {
+    testWidgets('preset button 60 calls onChanged with 60', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -125,8 +113,9 @@ void main() {
       expect(changedValue, 60);
     });
 
-    testWidgets('preset button 80 calls onChanged with 80',
-        (WidgetTester tester) async {
+    testWidgets('preset button 80 calls onChanged with 80', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -148,8 +137,9 @@ void main() {
       expect(changedValue, 80);
     });
 
-    testWidgets('preset button 100 calls onChanged with 100',
-        (WidgetTester tester) async {
+    testWidgets('preset button 100 calls onChanged with 100', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -171,8 +161,9 @@ void main() {
       expect(changedValue, 100);
     });
 
-    testWidgets('preset button 120 calls onChanged with 120',
-        (WidgetTester tester) async {
+    testWidgets('preset button 120 calls onChanged with 120', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -194,8 +185,9 @@ void main() {
       expect(changedValue, 120);
     });
 
-    testWidgets('preset button 140 calls onChanged with 140',
-        (WidgetTester tester) async {
+    testWidgets('preset button 140 calls onChanged with 140', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -217,8 +209,9 @@ void main() {
       expect(changedValue, 140);
     });
 
-    testWidgets('preset button 160 calls onChanged with 160',
-        (WidgetTester tester) async {
+    testWidgets('preset button 160 calls onChanged with 160', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       int? changedValue;
       await tester.pumpWidget(
@@ -240,62 +233,50 @@ void main() {
       expect(changedValue, 160);
     });
 
-    testWidgets('selected preset button has highlighted styling',
-        (WidgetTester tester) async {
+    testWidgets('selected preset button has highlighted styling', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 120,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 120, onChanged: (_) {})),
         ),
       );
 
       // Assert - Find the 120 button (which matches currentBpm)
-      final button120 =
-          tester.widget<ElevatedButton>(
-              find.widgetWithText(ElevatedButton, '120'));
+      final button120 = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, '120'),
+      );
       final buttonStyle = button120.style;
 
       // The button should have a non-null style when selected
       expect(buttonStyle, isNotNull);
     });
 
-    testWidgets('non-selected preset buttons have default styling',
-        (WidgetTester tester) async {
+    testWidgets('non-selected preset buttons have default styling', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 120,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 120, onChanged: (_) {})),
         ),
       );
 
       // Assert - Find a non-selected button (e.g., 60)
-      final button60 =
-          tester.widget<ElevatedButton>(
-              find.widgetWithText(ElevatedButton, '60'));
+      final button60 = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, '60'),
+      );
       expect(button60.style, isNotNull);
     });
 
-    testWidgets('updates display when currentBpm changes',
-        (WidgetTester tester) async {
+    testWidgets('updates display when currentBpm changes', (
+      WidgetTester tester,
+    ) async {
       // Arrange - Initial state
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 100,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 100, onChanged: (_) {})),
         ),
       );
 
@@ -307,12 +288,7 @@ void main() {
       // Act - Update to new BPM
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 140,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 140, onChanged: (_) {})),
         ),
       );
       await tester.pumpAndSettle();
@@ -324,17 +300,13 @@ void main() {
       expect(slider.value, 140);
     });
 
-    testWidgets('slider respects min boundary (40 BPM)',
-        (WidgetTester tester) async {
+    testWidgets('slider respects min boundary (40 BPM)', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 40,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 40, onChanged: (_) {})),
         ),
       );
 
@@ -345,17 +317,13 @@ void main() {
       expect(slider.min, 40);
     });
 
-    testWidgets('slider respects max boundary (240 BPM)',
-        (WidgetTester tester) async {
+    testWidgets('slider respects max boundary (240 BPM)', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: BPMControl(
-              currentBpm: 240,
-              onChanged: (_) {},
-            ),
-          ),
+          home: Scaffold(body: BPMControl(currentBpm: 240, onChanged: (_) {})),
         ),
       );
 
