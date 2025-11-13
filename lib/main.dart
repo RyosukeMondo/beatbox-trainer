@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'di/service_locator.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/calibration_screen.dart';
 import 'ui/screens/training_screen.dart';
 import 'ui/screens/settings_screen.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter bindings are initialized before async operations
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Setup dependency injection container before running the app
+  await setupServiceLocator();
+
   runApp(const MyApp());
 }
 
@@ -39,7 +46,10 @@ final GoRouter _router = GoRouter(
       path: '/calibration',
       builder: (context, state) => CalibrationScreen(),
     ),
-    GoRoute(path: '/training', builder: (context, state) => TrainingScreen()),
+    GoRoute(
+      path: '/training',
+      builder: (context, state) => TrainingScreen.create(),
+    ),
     GoRoute(path: '/settings', builder: (context, state) => SettingsScreen()),
   ],
 );

@@ -34,7 +34,7 @@ void main() {
           errorMs: 0.0,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -62,7 +62,7 @@ void main() {
           errorMs: 12.5,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -90,7 +90,7 @@ void main() {
           errorMs: -5.0,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -118,7 +118,7 @@ void main() {
           errorMs: 25.7,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -143,7 +143,7 @@ void main() {
           errorMs: -15.3,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -166,7 +166,7 @@ void main() {
           errorMs: 12.56789,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -191,7 +191,7 @@ void main() {
           errorMs: 0.0,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       await tester.pumpWidget(
@@ -216,7 +216,7 @@ void main() {
           errorMs: 15.0,
         ),
         timestampMs: 2000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       await tester.pumpWidget(
@@ -245,7 +245,7 @@ void main() {
           errorMs: 0.0,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       // Act
@@ -282,7 +282,7 @@ void main() {
           errorMs: 10.0,
         ),
         timestampMs: 1000,
-              confidence: 0.95,
+        confidence: 0.95,
       );
 
       await tester.pumpWidget(

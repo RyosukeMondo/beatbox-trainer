@@ -33,7 +33,11 @@ class ClassificationResult {
   });
 
   @override
-  int get hashCode => sound.hashCode ^ timing.hashCode ^ timestampMs.hashCode ^ confidence.hashCode;
+  int get hashCode =>
+      sound.hashCode ^
+      timing.hashCode ^
+      timestampMs.hashCode ^
+      confidence.hashCode;
 
   @override
   bool operator ==(Object other) =>

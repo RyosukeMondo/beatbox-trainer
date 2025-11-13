@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/remaining-uat-readiness/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-13T22:08:28.416Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763071708411_jl857angv",
+      "approvalTitle": "Tasks Document - UAT Readiness Code Quality Remediation"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-13T22:14:51.459Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763071708411_jl857angv",
+      "approvalTitle": "Tasks Document - UAT Readiness Code Quality Remediation"
+    }
+  ]
+}

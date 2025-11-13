@@ -278,7 +278,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: requirements.md user stories, Design document UAT section (design.md lines 687-735)_
   - _Prompt: Role: QA Documentation Specialist | Task: Create comprehensive UAT test scenarios document. Document structure: 1. Test environment (devices, Android versions) 2. 15+ test scenarios covering: First-time user onboarding, Calibration flow, Real-time classification feedback, Debug mode, Settings (BPM, debug, level, recalibrate), Persistence (calibration, settings), Error handling, Performance benchmarks 3. Each scenario has: Prerequisite, Steps (numbered), Expected result, Pass/Fail checkbox 4. Performance benchmark table 5. Sign-off section | Restrictions: Clear step-by-step instructions, Testable by non-developers, Specific measurable expectations, Include edge cases | Leverage: requirements.md user stories, Design document UAT section (design.md lines 687-735) | Requirements: US-6 (UAT documentation) | Success: File created with 15+ scenarios, Each scenario is complete and testable, Performance benchmarks defined, Sign-off checklist present, Formatted in Markdown_
 
-- [ ] 9.2. Execute UAT Scenarios on Test Devices
+- [-] 9.2. Execute UAT Scenarios on Test Devices
   - File: UAT_TEST_SCENARIOS.md (updated with results)
   - Estimate: 8 hours (spread over 2 days) | Priority: Critical
   - Run all UAT scenarios on 3 test devices and document results

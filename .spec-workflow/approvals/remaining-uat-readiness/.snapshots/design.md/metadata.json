@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/remaining-uat-readiness/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-13T22:02:41.931Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763071361926_yc6dprcxg",
+      "approvalTitle": "Design Document - UAT Readiness Code Quality Remediation"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-13T22:04:34.209Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763071361926_yc6dprcxg",
+      "approvalTitle": "Design Document - UAT Readiness Code Quality Remediation"
+    }
+  ]
+}

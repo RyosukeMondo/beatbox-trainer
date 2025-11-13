@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../di/service_locator.dart';
 import '../../models/classification_result.dart';
 import '../../services/audio/i_audio_service.dart';
-import '../../services/audio/audio_service_impl.dart';
 import '../../services/permission/i_permission_service.dart';
-import '../../services/permission/permission_service_impl.dart';
 import '../../services/settings/i_settings_service.dart';
-import '../../services/settings/settings_service_impl.dart';
 import '../../services/debug/i_debug_service.dart';
-import '../../services/debug/debug_service_impl.dart';
 import '../../services/error_handler/exceptions.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/loading_overlay.dart';
@@ -26,6 +23,9 @@ import '../utils/display_formatters.dart';
 ///
 /// This screen uses dependency injection for services, enabling
 /// testability and separation of concerns.
+///
+/// Use [TrainingScreen.create] for production code (resolves from GetIt).
+/// Use [TrainingScreen.test] for widget tests (accepts mock services).
 class TrainingScreen extends StatefulWidget {
   /// Audio service for engine control
   final IAudioService audioService;
@@ -39,22 +39,84 @@ class TrainingScreen extends StatefulWidget {
   /// Debug service for debug overlay data
   final IDebugService debugService;
 
-  TrainingScreen({
+  /// Private constructor for dependency injection.
+  ///
+  /// All service dependencies are required and non-nullable.
+  /// This enforces proper dependency injection and prevents
+  /// default instantiation which blocks testability.
+  const TrainingScreen._({
     super.key,
-    IAudioService? audioService,
-    IPermissionService? permissionService,
-    ISettingsService? settingsService,
-    IDebugService? debugService,
-  }) : audioService = audioService ?? AudioServiceImpl(),
-       permissionService = permissionService ?? PermissionServiceImpl(),
-       settingsService = settingsService ?? SettingsServiceImpl(),
-       debugService = debugService ?? DebugServiceImpl();
+    required this.audioService,
+    required this.permissionService,
+    required this.settingsService,
+    required this.debugService,
+  });
+
+  /// Factory constructor for production use.
+  ///
+  /// Resolves all service dependencies from the GetIt service locator.
+  /// Ensures services are properly registered before use.
+  ///
+  /// Throws [StateError] if services are not registered in GetIt.
+  ///
+  /// Example:
+  /// ```dart
+  /// GoRoute(
+  ///   path: '/training',
+  ///   builder: (context, state) => TrainingScreen.create(),
+  /// )
+  /// ```
+  factory TrainingScreen.create({Key? key}) {
+    return TrainingScreen._(
+      key: key,
+      audioService: getIt<IAudioService>(),
+      permissionService: getIt<IPermissionService>(),
+      settingsService: getIt<ISettingsService>(),
+      debugService: getIt<IDebugService>(),
+    );
+  }
+
+  /// Test constructor for widget testing.
+  ///
+  /// Accepts mock service implementations for testing.
+  /// This enables isolated widget testing without real service dependencies.
+  ///
+  /// Example:
+  /// ```dart
+  /// await tester.pumpWidget(
+  ///   MaterialApp(
+  ///     home: TrainingScreen.test(
+  ///       audioService: mockAudio,
+  ///       permissionService: mockPermission,
+  ///       settingsService: mockSettings,
+  ///       debugService: mockDebug,
+  ///     ),
+  ///   ),
+  /// );
+  /// ```
+  @visibleForTesting
+  factory TrainingScreen.test({
+    Key? key,
+    required IAudioService audioService,
+    required IPermissionService permissionService,
+    required ISettingsService settingsService,
+    required IDebugService debugService,
+  }) {
+    return TrainingScreen._(
+      key: key,
+      audioService: audioService,
+      permissionService: permissionService,
+      settingsService: settingsService,
+      debugService: debugService,
+    );
+  }
 
   @override
   State<TrainingScreen> createState() => _TrainingScreenState();
 }
 
-class _TrainingScreenState extends State<TrainingScreen> with SingleTickerProviderStateMixin {
+class _TrainingScreenState extends State<TrainingScreen>
+    with SingleTickerProviderStateMixin {
   /// Current BPM value (beats per minute)
   int _currentBpm = 120;
 
@@ -92,10 +154,7 @@ class _TrainingScreenState extends State<TrainingScreen> with SingleTickerProvid
 
     // Create fade animation (linear fade from 1.0 to 0.0)
     _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _fadeAnimationController,
-        curve: Curves.easeOut,
-      ),
+      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeOut),
     );
   }
 

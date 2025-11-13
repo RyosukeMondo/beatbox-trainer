@@ -2,25 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beatbox_trainer/ui/screens/calibration_screen.dart';
-import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
 import 'package:beatbox_trainer/services/error_handler/exceptions.dart';
 import 'package:beatbox_trainer/models/calibration_progress.dart';
-
-/// Mock audio service for testing CalibrationScreen behavior
-class MockAudioService extends Mock implements IAudioService {}
+import '../../mocks.dart';
 
 void main() {
   group('CalibrationScreen', () {
     late MockAudioService mockAudioService;
+    late MockStorageService mockStorageService;
 
     setUp(() {
       mockAudioService = MockAudioService();
+      mockStorageService = MockStorageService();
+
+      // Mock storage service init() by default
+      when(() => mockStorageService.init()).thenAnswer((_) async {});
+
+      // Mock finishCalibration() to prevent dispose errors
+      when(() => mockAudioService.finishCalibration()).thenAnswer((_) async {});
     });
 
     /// Helper function to pump CalibrationScreen with mock dependencies
     Future<void> pumpCalibrationScreen(WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(home: CalibrationScreen(audioService: mockAudioService)),
+        MaterialApp(
+          home: CalibrationScreen(
+            audioService: mockAudioService,
+            storageService: mockStorageService,
+          ),
+        ),
       );
     }
 

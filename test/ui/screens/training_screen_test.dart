@@ -49,7 +49,7 @@ void main() {
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) => TrainingScreen(
+            builder: (context, state) => TrainingScreen.test(
               audioService: mockAudioService,
               permissionService: mockPermissionService,
               settingsService: mockSettingsService,
@@ -580,7 +580,7 @@ void main() {
                   errorMs: 0,
                 ),
                 timestampMs: 1000,
-              confidence: 0.95,
+                confidence: 0.95,
               ),
             ),
           );

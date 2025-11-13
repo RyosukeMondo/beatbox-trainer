@@ -64,7 +64,7 @@
 
 ### 3. Widget Testability (Remove Default Instantiation)
 
-- [ ] 3.1. Create INavigationService interface (Estimate: 1 hour, Priority: Critical)
+- [x] 3.1. Create INavigationService interface (Estimate: 1 hour, Priority: Critical)
   - File: lib/services/navigation/i_navigation_service.dart
   - Define abstract interface with goTo(), goBack(), replace(), canGoBack() methods
   - Document interface purpose and usage
@@ -72,7 +72,7 @@
   - _Requirements: US-4, US-9_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Architect specializing in abstraction and interface design | Task: Create INavigationService interface with goTo(), goBack(), replace(), canGoBack() methods as specified in design document | Restrictions: Must be framework-agnostic, do not expose go_router implementation details, maintain simple clear contract | Success: Interface is well-defined with dartdoc comments, methods have clear signatures, interface supports all navigation use cases_
 
-- [ ] 3.2. Implement GoRouterNavigationService (Estimate: 1.5 hours, Priority: Critical)
+- [x] 3.2. Implement GoRouterNavigationService (Estimate: 1.5 hours, Priority: Critical)
   - File: lib/services/navigation/go_router_navigation_service.dart
   - Implement INavigationService using GoRouter
   - Wrap go_router methods (go, pop, replace, canPop)
@@ -80,7 +80,7 @@
   - _Requirements: US-4, US-9_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer with expertise in navigation and routing | Task: Implement GoRouterNavigationService that wraps GoRouter methods implementing INavigationService as specified in design document | Restrictions: Must only wrap go_router, do not add business logic, ensure thread-safe navigation calls | Success: All INavigationService methods are implemented correctly, navigation works identically to direct go_router usage, no regressions in navigation behavior_
 
-- [ ] 3.3. Refactor TrainingScreen constructor (Estimate: 2 hours, Priority: Critical)
+- [x] 3.3. Refactor TrainingScreen constructor (Estimate: 2 hours, Priority: Critical)
   - File: lib/ui/screens/training_screen.dart
   - Remove default service instantiation from constructor parameters
   - Create factory constructor .create() that resolves services from GetIt
