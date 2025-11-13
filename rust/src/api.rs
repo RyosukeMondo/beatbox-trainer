@@ -7,6 +7,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 
 use crate::analysis::ClassificationResult;
+use crate::bridge_generated::StreamSink;
 use crate::calibration::CalibrationProgress;
 use crate::context::AppContext;
 use crate::error::{AudioError, CalibrationError};
@@ -152,24 +153,39 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 /// Each result contains the detected sound type (KICK/SNARE/HIHAT/UNKNOWN)
 /// and timing feedback (ON_TIME/EARLY/LATE with error in milliseconds).
 ///
-/// # Returns
-/// `Stream<ClassificationResult>` that yields results until audio engine stops
+/// The stream is active while the audio engine is running and emits results
+/// continuously until the audio engine is stopped.
+///
+/// # Parameters
+/// * `sink` - StreamSink for forwarding classification results to Dart
 ///
 /// # Usage
 /// ```dart
-/// final stream = await classificationStream();
+/// final stream = classificationStream();
 /// await for (final result in stream) {
 ///   print('Sound: ${result.sound}, Timing: ${result.timing}');
 /// }
 /// ```
 ///
-/// # Note
-/// This method currently has codegen issues with flutter_rust_bridge 2.11.1.
-/// The subscribe_classification() method in AppContext is implemented and ready
-/// to use once flutter_rust_bridge stream support is working properly.
-#[flutter_rust_bridge::frb(ignore)]
-pub async fn classification_stream() -> impl futures::Stream<Item = ClassificationResult> {
-    APP_CONTEXT.classification_stream().await
+/// # Implementation
+/// Uses the StreamSink pattern supported by flutter_rust_bridge:
+/// - Rust function accepts `StreamSink<T>` parameter
+/// - Dart receives `Stream<T>` return type
+/// - Function can hold sink and emit results asynchronously
+#[allow(unused_must_use)] // frb macro generates code that triggers this lint
+#[flutter_rust_bridge::frb]
+pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
+    // Subscribe to the classification broadcast channel
+    let mut receiver = APP_CONTEXT.subscribe_classification();
+
+    // Spawn task to forward classification results to the stream sink
+    tokio::spawn(async move {
+        while let Some(result) = receiver.recv().await {
+            // Forward result to Dart via StreamSink
+            sink.add(result);
+        }
+        // Stream ends when receiver channel closes (audio engine stopped)
+    });
 }
 
 /// Start calibration workflow

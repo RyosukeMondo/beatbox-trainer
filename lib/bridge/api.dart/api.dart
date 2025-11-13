@@ -3,13 +3,16 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import 'analysis.dart';
+import 'analysis/classifier.dart';
+import 'analysis/quantizer.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioMetrics`, `OnsetEvent`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
-// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `calibration_stream`, `classification_stream`, `onset_events_stream`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `calibration_stream`, `onset_events_stream`
 
 /// Initialize and greet from Rust
 ///
@@ -79,6 +82,34 @@ Future<void> stopAudio() => RustLib.instance.api.crateApiStopAudio();
 /// - Lock poisoning on audio engine state
 Future<void> setBpm({required int bpm}) =>
     RustLib.instance.api.crateApiSetBpm(bpm: bpm);
+
+/// Stream of classification results
+///
+/// Returns a stream that yields ClassificationResult on each detected onset.
+/// Each result contains the detected sound type (KICK/SNARE/HIHAT/UNKNOWN)
+/// and timing feedback (ON_TIME/EARLY/LATE with error in milliseconds).
+///
+/// The stream is active while the audio engine is running and emits results
+/// continuously until the audio engine is stopped.
+///
+/// # Parameters
+/// * `sink` - StreamSink for forwarding classification results to Dart
+///
+/// # Usage
+/// ```dart
+/// final stream = classificationStream();
+/// await for (final result in stream) {
+///   print('Sound: ${result.sound}, Timing: ${result.timing}');
+/// }
+/// ```
+///
+/// # Implementation
+/// Uses the StreamSink pattern supported by flutter_rust_bridge:
+/// - Rust function accepts `StreamSink<T>` parameter
+/// - Dart receives `Stream<T>` return type
+/// - Function can hold sink and emit results asynchronously
+Stream<ClassificationResult> classificationStream() =>
+    RustLib.instance.api.crateApiClassificationStream();
 
 /// Start calibration workflow
 ///

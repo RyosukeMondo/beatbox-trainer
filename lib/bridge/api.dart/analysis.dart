@@ -23,6 +23,7 @@ class ClassificationResult {
   final BigInt timestampMs;
 
   /// Classification confidence score (0.0-1.0)
+  /// Calculated as max_score / sum_of_all_scores
   final double confidence;
 
   const ClassificationResult({

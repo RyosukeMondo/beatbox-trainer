@@ -1,6 +1,10 @@
 import '../../models/classification_result.dart';
 import '../../models/calibration_progress.dart';
+import '../../models/timing_feedback.dart';
 import '../../bridge/api.dart/api.dart' as api;
+import '../../bridge/api.dart/analysis.dart' as ffi_analysis;
+import '../../bridge/api.dart/analysis/classifier.dart' as ffi_classifier;
+import '../../bridge/api.dart/analysis/quantizer.dart' as ffi_quantizer;
 import '../error_handler/error_handler.dart';
 import '../error_handler/exceptions.dart';
 import 'i_audio_service.dart';
@@ -82,11 +86,81 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Stream<ClassificationResult> getClassificationStream() {
-    // TODO(Task 5.1): Implement after adding classificationStream FFI method
-    throw UnimplementedError(
-      'Classification stream not yet implemented. '
-      'Requires FFI method classificationStream() from Task 5.1',
+    try {
+      // Get stream from FFI bridge and map FFI types to model types
+      // The FFI stream uses StreamSink pattern for real-time classification results
+      return api
+          .classificationStream()
+          .map(_mapFfiToModelClassificationResult)
+          .handleError((error) {
+            // Translate Rust errors to user-friendly exceptions
+            throw _errorHandler.createAudioException(error.toString());
+          });
+    } catch (e) {
+      // Handle synchronous errors during stream creation
+      throw _errorHandler.createAudioException(e.toString());
+    }
+  }
+
+  /// Map FFI ClassificationResult to model ClassificationResult
+  ///
+  /// Converts flutter_rust_bridge generated types to application model types,
+  /// handling BigInt to int conversion for timestamp.
+  ClassificationResult _mapFfiToModelClassificationResult(
+    ffi_analysis.ClassificationResult ffiResult,
+  ) {
+    return ClassificationResult(
+      sound: _mapFfiToModelBeatboxHit(ffiResult.sound),
+      timing: _mapFfiToModelTimingFeedback(ffiResult.timing),
+      timestampMs: ffiResult.timestampMs.toInt(),
+      confidence: ffiResult.confidence,
     );
+  }
+
+  /// Map FFI BeatboxHit to model BeatboxHit
+  BeatboxHit _mapFfiToModelBeatboxHit(ffi_classifier.BeatboxHit ffiHit) {
+    switch (ffiHit) {
+      case ffi_classifier.BeatboxHit.kick:
+        return BeatboxHit.kick;
+      case ffi_classifier.BeatboxHit.snare:
+        return BeatboxHit.snare;
+      case ffi_classifier.BeatboxHit.hiHat:
+        return BeatboxHit.hiHat;
+      case ffi_classifier.BeatboxHit.closedHiHat:
+        return BeatboxHit.closedHiHat;
+      case ffi_classifier.BeatboxHit.openHiHat:
+        return BeatboxHit.openHiHat;
+      case ffi_classifier.BeatboxHit.kSnare:
+        return BeatboxHit.kSnare;
+      case ffi_classifier.BeatboxHit.unknown:
+        return BeatboxHit.unknown;
+    }
+  }
+
+  /// Map FFI TimingFeedback to model TimingFeedback
+  TimingFeedback _mapFfiToModelTimingFeedback(
+    ffi_quantizer.TimingFeedback ffiTiming,
+  ) {
+    return TimingFeedback(
+      classification: _mapFfiToModelTimingClassification(
+        ffiTiming.classification,
+      ),
+      errorMs: ffiTiming.errorMs,
+    );
+  }
+
+  /// Map FFI TimingClassification to model TimingClassification
+  TimingClassification _mapFfiToModelTimingClassification(
+    ffi_quantizer.TimingClassification ffiClassification,
+  ) {
+    switch (ffiClassification) {
+      case ffi_quantizer.TimingClassification.onTime:
+        return TimingClassification.onTime;
+      case ffi_quantizer.TimingClassification.early:
+        return TimingClassification.early;
+      case ffi_quantizer.TimingClassification.late_:
+        return TimingClassification.late;
+    }
   }
 
   @override

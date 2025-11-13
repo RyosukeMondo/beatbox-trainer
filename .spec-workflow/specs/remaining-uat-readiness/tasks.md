@@ -35,7 +35,7 @@
   - _Requirements: US-1_
   - _Status: Rust infrastructure ready, FFI layer blocked by tooling limitation_
 
-- [ ] 2.2. Implement classification stream FFI (Dart) (Estimate: 2 hours, Priority: Critical)
+- [x] 2.2. Implement classification stream FFI (Dart) (Estimate: 2 hours, Priority: Critical)
   - File: lib/services/audio/audio_service_impl.dart
   - Implement getClassificationStream() using StreamController.broadcast
   - Subscribe to FFI stream and forward to StreamController

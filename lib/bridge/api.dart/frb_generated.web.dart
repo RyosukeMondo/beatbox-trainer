@@ -6,6 +6,9 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'analysis.dart';
+import 'analysis/classifier.dart';
+import 'analysis/quantizer.dart';
 import 'api.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -25,19 +28,44 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<ClassificationResult>
+  dco_decode_StreamSink_classification_result_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
   AudioError dco_decode_audio_error(dynamic raw);
 
   @protected
+  BeatboxHit dco_decode_beatbox_hit(dynamic raw);
+
+  @protected
   CalibrationError dco_decode_calibration_error(dynamic raw);
+
+  @protected
+  ClassificationResult dco_decode_classification_result(dynamic raw);
+
+  @protected
+  double dco_decode_f_32(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  TimingClassification dco_decode_timing_classification(dynamic raw);
+
+  @protected
+  TimingFeedback dco_decode_timing_feedback(dynamic raw);
+
+  @protected
   int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -52,19 +80,48 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  RustStreamSink<ClassificationResult>
+  sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
   AudioError sse_decode_audio_error(SseDeserializer deserializer);
 
   @protected
+  BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer);
+
+  @protected
   CalibrationError sse_decode_calibration_error(SseDeserializer deserializer);
+
+  @protected
+  ClassificationResult sse_decode_classification_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  TimingClassification sse_decode_timing_classification(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TimingFeedback sse_decode_timing_feedback(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -76,14 +133,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_classification_result_Sse(
+    RustStreamSink<ClassificationResult> self,
     SseSerializer serializer,
   );
 
@@ -94,10 +154,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_audio_error(AudioError self, SseSerializer serializer);
 
   @protected
+  void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer);
+
+  @protected
   void sse_encode_calibration_error(
     CalibrationError self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_classification_result(
+    ClassificationResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -106,7 +181,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_timing_classification(
+    TimingClassification self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_timing_feedback(
+    TimingFeedback self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -116,9 +206,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
