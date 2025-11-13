@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/classification_result.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/audio/audio_service_impl.dart';
@@ -245,6 +246,13 @@ class _TrainingScreenState extends State<TrainingScreen> {
       appBar: AppBar(
         title: const Text('Beatbox Trainer'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.go('/settings'),
+            tooltip: 'Settings',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -130,7 +130,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/ui/screens/training_screen.dart (UI patterns), Task 4.2 SettingsServiceImpl, Task 2.2 StorageServiceImpl (for clearing calibration), Design document section 4 (design.md lines 549-650)_
   - _Prompt: Role: Flutter UI Developer | Task: Create SettingsScreen with all settings. UI sections: 1. Default BPM slider (40-240) 2. Debug Mode switch 3. Classifier Level switch (Beginner/Advanced) - Show recalibration warning dialog on change 4. Recalibrate button | Restrictions: Use ListView for scrollable settings, Follow Material Design patterns, Inject ISettingsService and IStorageService, Handle recalibration flow (clear data, navigate) | Leverage: lib/ui/screens/training_screen.dart (UI patterns), Task 4.2 SettingsServiceImpl, Task 2.2 StorageServiceImpl (for clearing calibration), Design document section 4 (design.md lines 549-650) | Requirements: US-3 (debug toggle), US-4 (level selection, recalibrate) | Success: File created at lib/ui/screens/settings_screen.dart, All 4 settings functional, Recalibration warning dialog shows, Settings persist across restarts, Navigates to /calibration when recalibrating_
 
-- [ ] 4.4. Add Settings Navigation
+- [x] 4.4. Add Settings Navigation
   - File: lib/ui/screens/training_screen.dart
   - Estimate: 1 hour | Priority: Medium
   - Add settings button to TrainingScreen AppBar

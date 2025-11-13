@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beatbox_trainer/ui/screens/training_screen.dart';
 import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
@@ -26,14 +27,24 @@ void main() {
 
     /// Helper function to pump TrainingScreen with mock dependencies
     Future<void> pumpTrainingScreen(WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TrainingScreen(
-            audioService: mockAudioService,
-            permissionService: mockPermissionService,
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => TrainingScreen(
+              audioService: mockAudioService,
+              permissionService: mockPermissionService,
+            ),
           ),
-        ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) =>
+                const Scaffold(body: Text('Settings Screen')),
+          ),
+        ],
       );
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     }
 
     testWidgets('displays title in AppBar', (WidgetTester tester) async {
