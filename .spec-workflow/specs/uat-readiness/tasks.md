@@ -242,7 +242,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: Task 2.3 storage service tests (test pattern), Task 4.2 SettingsServiceImpl, Design document test examples_
   - _Prompt: Role: Test Engineer | Task: Write comprehensive tests for SettingsServiceImpl. Test cases: 1. Default values returned when no data 2. getBpm/setBpm persistence 3. getDebugMode/setDebugMode persistence 4. getClassifierLevel/setClassifierLevel persistence 5. BPM validation (reject <40 or >240) 6. Level validation (reject <1 or >2) | Restrictions: Use SharedPreferences.setMockInitialValues, Follow existing test patterns, Aim for 100% coverage of settings service | Leverage: Task 2.3 storage service tests (test pattern), Task 4.2 SettingsServiceImpl, Design document test examples | Requirements: US-5 (test coverage) | Success: File created at test/services/settings_service_test.dart, All 6+ test cases pass, Coverage of settings_service_impl.dart is 100%, Tests run in <3 seconds_
 
-- [ ] 8.3. Write Widget Tests for New Screens
+- [x] 8.3. Write Widget Tests for New Screens
   - File: Multiple test files
   - Estimate: 6 hours | Priority: High
   - Widget tests for splash, onboarding, and settings screens
