@@ -5,9 +5,14 @@ import '../../services/audio/i_audio_service.dart';
 import '../../services/audio/audio_service_impl.dart';
 import '../../services/permission/i_permission_service.dart';
 import '../../services/permission/permission_service_impl.dart';
+import '../../services/settings/i_settings_service.dart';
+import '../../services/settings/settings_service_impl.dart';
+import '../../services/debug/i_debug_service.dart';
+import '../../services/debug/debug_service_impl.dart';
 import '../../services/error_handler/exceptions.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/loading_overlay.dart';
+import '../widgets/debug_overlay.dart';
 import '../utils/display_formatters.dart';
 
 /// TrainingScreen provides the main training UI with real-time feedback
@@ -16,6 +21,7 @@ import '../utils/display_formatters.dart';
 /// - BPM control with slider (40-240 range)
 /// - Start/Stop training buttons
 /// - Real-time classification results stream
+/// - Debug overlay toggle (when debug mode enabled)
 /// - Error handling for audio engine failures
 ///
 /// This screen uses dependency injection for services, enabling
@@ -27,12 +33,22 @@ class TrainingScreen extends StatefulWidget {
   /// Permission service for microphone access
   final IPermissionService permissionService;
 
+  /// Settings service for debug mode and other settings
+  final ISettingsService settingsService;
+
+  /// Debug service for debug overlay data
+  final IDebugService debugService;
+
   TrainingScreen({
     super.key,
     IAudioService? audioService,
     IPermissionService? permissionService,
+    ISettingsService? settingsService,
+    IDebugService? debugService,
   }) : audioService = audioService ?? AudioServiceImpl(),
-       permissionService = permissionService ?? PermissionServiceImpl();
+       permissionService = permissionService ?? PermissionServiceImpl(),
+       settingsService = settingsService ?? SettingsServiceImpl(),
+       debugService = debugService ?? DebugServiceImpl();
 
   @override
   State<TrainingScreen> createState() => _TrainingScreenState();
@@ -50,6 +66,35 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   /// Current classification result (null when idle)
   ClassificationResult? _currentResult;
+
+  /// Whether debug mode is enabled (loaded from settings)
+  bool _debugModeEnabled = false;
+
+  /// Whether debug overlay is currently visible
+  bool _debugOverlayVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDebugSettings();
+  }
+
+  /// Load debug mode setting from settings service
+  Future<void> _loadDebugSettings() async {
+    try {
+      await widget.settingsService.init();
+      final debugMode = await widget.settingsService.getDebugMode();
+      if (mounted) {
+        setState(() {
+          _debugModeEnabled = debugMode;
+          _debugOverlayVisible = debugMode;
+        });
+      }
+    } catch (e) {
+      // Log error but don't block UI
+      debugPrint('Failed to load debug settings: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -240,13 +285,32 @@ class _TrainingScreenState extends State<TrainingScreen> {
     );
   }
 
+  /// Toggle debug overlay visibility
+  void _toggleDebugOverlay() {
+    setState(() {
+      _debugOverlayVisible = !_debugOverlayVisible;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: const Text('Beatbox Trainer'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          if (_debugModeEnabled)
+            IconButton(
+              icon: Icon(
+                _debugOverlayVisible
+                    ? Icons.bug_report
+                    : Icons.bug_report_outlined,
+              ),
+              onPressed: _toggleDebugOverlay,
+              tooltip: _debugOverlayVisible
+                  ? 'Hide Debug Overlay'
+                  : 'Show Debug Overlay',
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
@@ -373,6 +437,17 @@ class _TrainingScreenState extends State<TrainingScreen> {
         backgroundColor: _isTraining ? Colors.red : Colors.green,
       ),
     );
+
+    // Wrap with DebugOverlay if debug mode is enabled and overlay is visible
+    if (_debugModeEnabled && _debugOverlayVisible) {
+      return DebugOverlay(
+        debugService: widget.debugService,
+        onClose: _toggleDebugOverlay,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   /// Build classification result display widget

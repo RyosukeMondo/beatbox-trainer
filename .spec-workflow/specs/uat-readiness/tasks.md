@@ -174,7 +174,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: lib/ui/widgets/loading_overlay.dart (overlay pattern), Task 5.3 DebugServiceImpl, Design document section 3.2 (design.md lines 415-497)_
   - _Prompt: Role: Flutter UI Developer | Task: Create DebugOverlay widget with real-time debug UI. UI components: 1. Header with "Debug Metrics" and close button 2. Audio metrics section: RMS level (numerical + bar meter), Spectral centroid, Spectral flux, Frame number 3. Onset events log (scrollable list, last 10 events). Use Stack widget to overlay on top of main content | Restrictions: Use semi-transparent black background (0.85 opacity), Do NOT block touches to underlying UI (use Positioned correctly), StreamBuilder for reactive updates, Inject IDebugService | Leverage: lib/ui/widgets/loading_overlay.dart (overlay pattern), Task 5.3 DebugServiceImpl, Design document section 3.2 (design.md lines 415-497) | Requirements: US-3 (debug visualization) | Success: File created at lib/ui/widgets/debug_overlay.dart, Displays all metrics in real-time, RMS level meter animates, Onset events log scrolls, Close button dismisses overlay, No performance impact on audio_
 
-- [ ] 5.5. Integrate Debug Overlay into TrainingScreen
+- [x] 5.5. Integrate Debug Overlay into TrainingScreen
   - File: lib/ui/screens/training_screen.dart
   - Estimate: 2 hours | Priority: High
   - Add debug overlay toggle to training screen

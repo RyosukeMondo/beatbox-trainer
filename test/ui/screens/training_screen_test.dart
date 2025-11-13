@@ -5,6 +5,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:beatbox_trainer/ui/screens/training_screen.dart';
 import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
 import 'package:beatbox_trainer/services/permission/i_permission_service.dart';
+import 'package:beatbox_trainer/services/settings/i_settings_service.dart';
+import 'package:beatbox_trainer/services/debug/i_debug_service.dart';
 import 'package:beatbox_trainer/services/error_handler/exceptions.dart';
 import 'package:beatbox_trainer/models/classification_result.dart';
 import 'package:beatbox_trainer/models/timing_feedback.dart';
@@ -15,14 +17,30 @@ class MockAudioService extends Mock implements IAudioService {}
 /// Mock permission service for testing permission handling
 class MockPermissionService extends Mock implements IPermissionService {}
 
+/// Mock settings service for testing settings
+class MockSettingsService extends Mock implements ISettingsService {}
+
+/// Mock debug service for testing debug overlay
+class MockDebugService extends Mock implements IDebugService {}
+
 void main() {
   group('TrainingScreen', () {
     late MockAudioService mockAudioService;
     late MockPermissionService mockPermissionService;
+    late MockSettingsService mockSettingsService;
+    late MockDebugService mockDebugService;
 
     setUp(() {
       mockAudioService = MockAudioService();
       mockPermissionService = MockPermissionService();
+      mockSettingsService = MockSettingsService();
+      mockDebugService = MockDebugService();
+
+      // Setup default mock responses for settings service
+      when(() => mockSettingsService.init()).thenAnswer((_) async => {});
+      when(
+        () => mockSettingsService.getDebugMode(),
+      ).thenAnswer((_) async => false);
     });
 
     /// Helper function to pump TrainingScreen with mock dependencies
@@ -34,6 +52,8 @@ void main() {
             builder: (context, state) => TrainingScreen(
               audioService: mockAudioService,
               permissionService: mockPermissionService,
+              settingsService: mockSettingsService,
+              debugService: mockDebugService,
             ),
           ),
           GoRoute(
@@ -45,6 +65,8 @@ void main() {
       );
 
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      // Wait for initState to complete
+      await tester.pumpAndSettle();
     }
 
     testWidgets('displays title in AppBar', (WidgetTester tester) async {
