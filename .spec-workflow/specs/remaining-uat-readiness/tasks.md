@@ -218,7 +218,7 @@
   - _Requirements: US-6_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in clean view layer architecture | Task: Refactor TrainingScreen to UI-only delegating business logic to TrainingController, reducing file to under 500 lines as specified in design document | Restrictions: Must maintain existing UI functionality, only render UI, delegate all business logic to controller | Success: TrainingScreen is under 500 lines, contains only UI code, delegates to controller correctly, UI functionality preserved_
 
-- [ ] 6.3. Wire TrainingController to UI (Estimate: 1 hour, Priority: High)
+- [x] 6.3. Wire TrainingController to UI (Estimate: 1 hour, Priority: High)
   - File: lib/ui/screens/training_screen.dart
   - Update factory constructors to create TrainingController
   - Connect UI events to controller methods
