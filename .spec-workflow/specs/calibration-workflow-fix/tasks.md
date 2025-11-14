@@ -125,7 +125,7 @@
   - _Requirements: Design Section 7.2.1_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust integration test engineer | Task: Create rust/tests/calibration_integration_test.rs with end-to-end tests for calibration workflow. Implement test_full_calibration_workflow() verifying procedure initialization and audio engine start. Implement test_calibration_restart_audio() measuring audio restart latency (<200ms requirement). Add conditional compilation for Android-only tests. Reference design document Section 7.2.1 for complete test specifications. | Restrictions: Must use conditional compilation for Android tests, must not require physical device for desktop tests, must verify state transitions not actual audio processing (requires manual testing), must measure timing accurately, must clean up resources after tests | _Leverage: AppContext::new(), start_calibration(), CalibrationManager::get_procedure_arc()_ | Success: Tests compile on all platforms, Android tests verify correct initialization, restart latency test passes (<200ms), tests clean up properly, no resource leaks | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (test file created, test cases implemented, timing measurements). Then mark as completed [x] in tasks.md_
 
-- [ ] 5.2. Manual testing on Android device
+- [x] 5.2. Manual testing on Android device
   - Deploy to Android device and test complete calibration workflow
   - Test Case 1: Complete calibration (30 samples: 10 kick, 10 snare, 10 hihat)
   - Test Case 2: Invalid sample rejection (quiet sounds, non-beatbox sounds)
