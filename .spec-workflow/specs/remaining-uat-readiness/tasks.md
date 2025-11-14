@@ -287,7 +287,7 @@
 
 ### 9. Interface Segregation
 
-- [ ] 9.1. Split IDebugService interface (Estimate: 2 hours, Priority: High)
+- [x] 9.1. Split IDebugService interface (Estimate: 2 hours, Priority: High)
   - File: lib/services/debug/i_audio_metrics_provider.dart, lib/services/debug/i_onset_event_provider.dart, lib/services/debug/i_log_exporter.dart
   - Create IAudioMetricsProvider with getAudioMetricsStream()
   - Create IOnsetEventProvider with getOnsetEventsStream()
