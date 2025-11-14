@@ -424,7 +424,7 @@
   - _Requirements: All_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer with software architecture expertise | Task: Create architecture documentation covering DI setup, manager pattern, and controller pattern with examples | Restrictions: Must be accurate and reflect actual implementation, include code examples, maintain consistency with existing docs | Success: Architecture patterns documented clearly, examples provided, documentation is accurate and helpful_
 
-- [ ] 14.2. Update API documentation (Estimate: 2 hours, Priority: Medium)
+- [x] 14.2. Update API documentation (Estimate: 2 hours, Priority: Medium)
   - File: various Dart and Rust files
   - Add/update dartdoc comments for all public APIs
   - Add/update rustdoc comments for all public APIs

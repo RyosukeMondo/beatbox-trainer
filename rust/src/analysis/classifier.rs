@@ -52,7 +52,7 @@ impl Classifier {
     /// Create a new Classifier with calibration state reference
     ///
     /// # Arguments
-    /// * `calibration` - Arc<RwLock<CalibrationState>> for thread-safe threshold access
+    /// * `calibration` - `Arc<RwLock<CalibrationState>>` for thread-safe threshold access
     pub fn new(calibration: Arc<RwLock<CalibrationState>>) -> Self {
         Self { calibration }
     }

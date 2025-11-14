@@ -31,7 +31,7 @@ class GoRouterNavigationService implements INavigationService {
   /// Create a navigation service wrapping the provided [GoRouter] instance.
   ///
   /// Parameters:
-  /// - [router]: The go_router instance to use for navigation operations
+  /// - `router`: The go_router instance to use for navigation operations
   ///
   /// Example:
   /// ```dart

@@ -42,6 +42,20 @@ void main() {
       expect(controller.classificationStream, equals(mockStream));
       verify(() => mockAudioService.getClassificationStream()).called(1);
     });
+
+    test('should get debug mode from settings', () async {
+      // Arrange
+      when(
+        () => mockSettingsService.getDebugMode(),
+      ).thenAnswer((_) async => true);
+
+      // Act
+      final debugMode = await controller.getDebugMode();
+
+      // Assert
+      expect(debugMode, isTrue);
+      verify(() => mockSettingsService.getDebugMode()).called(1);
+    });
   });
 
   group('TrainingController - startTraining', () {
@@ -442,6 +456,14 @@ void main() {
       // Assert - state should remain unchanged
       expect(controller.isTraining, isFalse);
       expect(controller.currentBpm, equals(120)); // Should keep loaded BPM
+    });
+
+    test('PermissionException toString should return message', () {
+      // Arrange
+      const exception = PermissionException('Microphone access denied');
+
+      // Act & Assert
+      expect(exception.toString(), equals('Microphone access denied'));
     });
   });
 }

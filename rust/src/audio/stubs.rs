@@ -130,7 +130,7 @@ impl AudioEngine {
     /// Get shared reference to frame counter
     ///
     /// # Returns
-    /// Arc<AtomicU64> that can be cloned and shared across threads
+    /// `Arc<AtomicU64>` that can be cloned and shared across threads
     pub fn get_frame_counter_ref(&self) -> Arc<AtomicU64> {
         Arc::clone(&self.frame_counter)
     }
@@ -138,7 +138,7 @@ impl AudioEngine {
     /// Get shared reference to BPM
     ///
     /// # Returns
-    /// Arc<AtomicU32> that can be cloned and shared across threads
+    /// `Arc<AtomicU32>` that can be cloned and shared across threads
     pub fn get_bpm_ref(&self) -> Arc<AtomicU32> {
         Arc::clone(&self.bpm)
     }
