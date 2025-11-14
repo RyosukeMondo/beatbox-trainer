@@ -266,7 +266,7 @@
   - _Requirements: US-8_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in clean code and refactoring | Task: Refactor all functions over 50 lines in TrainingScreen extracting helpers following SLAP principle as specified in design document | Restrictions: Must maintain existing functionality, each function single abstraction level, do not introduce unnecessary complexity | Success: All functions under 50 lines, code more readable, SLAP applied correctly, no functional regressions_
 
-- [ ] 8.2. Refactor large functions in CalibrationScreen (Estimate: 2 hours, Priority: High)
+- [x] 8.2. Refactor large functions in CalibrationScreen (Estimate: 2 hours, Priority: High)
   - File: lib/ui/screens/calibration_screen.dart
   - Extract _retrieveCalibrationData() from _finishCalibration()
   - Extract _handleSuccessfulCalibration() helper method

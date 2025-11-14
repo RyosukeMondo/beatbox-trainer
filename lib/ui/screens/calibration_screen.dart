@@ -182,45 +182,43 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
   /// Finish calibration and compute thresholds
   Future<void> _finishCalibration() async {
     try {
-      // Finalize calibration and compute thresholds
       await widget.audioService.finishCalibration();
-
-      // Get calibration state from Rust backend
-      final calibrationStateJson = await api.getCalibrationState();
-
-      // Deserialize JSON to CalibrationData
-      final calibrationJson =
-          jsonDecode(calibrationStateJson) as Map<String, dynamic>;
-      final calibrationData = CalibrationData.fromJson(calibrationJson);
-
-      // Save calibration data to storage
+      final calibrationData = await _retrieveCalibrationData();
       await widget.storageService.saveCalibration(calibrationData);
-
-      // Show success dialog
-      if (mounted) {
-        await _showSuccessDialog();
-      }
-
-      // Navigate to training screen
-      if (mounted) {
-        context.go('/training');
-      }
+      await _handleSuccessfulCalibration();
     } on CalibrationServiceException catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-        _isCalibrating = false;
-      });
+      _handleCalibrationError(e.message);
     } on StorageException catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to save calibration: ${e.message}';
-        _isCalibrating = false;
-      });
+      _handleCalibrationError('Failed to save calibration: ${e.message}');
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Calibration failed: $e';
-        _isCalibrating = false;
-      });
+      _handleCalibrationError('Calibration failed: $e');
     }
+  }
+
+  /// Retrieve calibration data from Rust backend
+  Future<CalibrationData> _retrieveCalibrationData() async {
+    final calibrationStateJson = await api.getCalibrationState();
+    final calibrationJson =
+        jsonDecode(calibrationStateJson) as Map<String, dynamic>;
+    return CalibrationData.fromJson(calibrationJson);
+  }
+
+  /// Handle successful calibration completion
+  Future<void> _handleSuccessfulCalibration() async {
+    if (mounted) {
+      await _showSuccessDialog();
+    }
+    if (mounted) {
+      context.go('/training');
+    }
+  }
+
+  /// Handle calibration error by updating state
+  void _handleCalibrationError(String message) {
+    setState(() {
+      _errorMessage = message;
+      _isCalibrating = false;
+    });
   }
 
   /// Restart calibration from beginning
@@ -346,59 +344,69 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 64),
-                const SizedBox(height: 24),
-                Text(
-                  'Stream error: ${snapshot.error}',
-                  style: const TextStyle(fontSize: 18, color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _restartCalibration,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
+          return _buildStreamErrorDisplay(snapshot.error);
         }
 
-        // Update current progress
-        if (snapshot.hasData) {
-          _currentProgress = snapshot.data;
+        _handleProgressUpdate(snapshot.data);
 
-          // Check if calibration is complete
-          if (_currentProgress!.isCalibrationComplete) {
-            // Automatically finish calibration when all samples collected
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _finishCalibration();
-            });
-          }
-        }
-
-        // Display current progress or idle state
         if (_currentProgress != null) {
           return _buildProgressContent(_currentProgress!);
         } else {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.mic, size: 64, color: Colors.grey),
-                SizedBox(height: 24),
-                Text(
-                  'Waiting for calibration data...',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
+          return _buildWaitingDisplay();
         }
       },
+    );
+  }
+
+  /// Build stream error display widget
+  Widget _buildStreamErrorDisplay(Object? error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 64),
+          const SizedBox(height: 24),
+          Text(
+            'Stream error: $error',
+            style: const TextStyle(fontSize: 18, color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _restartCalibration,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Handle progress update from stream
+  void _handleProgressUpdate(CalibrationProgress? progress) {
+    if (progress != null) {
+      _currentProgress = progress;
+      if (_currentProgress!.isCalibrationComplete) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _finishCalibration();
+        });
+      }
+    }
+  }
+
+  /// Build waiting for data display widget
+  Widget _buildWaitingDisplay() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.mic, size: 64, color: Colors.grey),
+          SizedBox(height: 24),
+          Text(
+            'Waiting for calibration data...',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
