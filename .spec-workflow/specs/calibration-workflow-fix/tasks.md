@@ -21,7 +21,7 @@
   - _Requirements: Design Section 3.1_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust systems programmer with async/threading expertise | Task: Modify spawn_analysis_thread() signature in rust/src/analysis/mod.rs (line 73) to add two new parameters: calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>> and calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>. Rename existing calibration parameter to calibration_state. Update doc comments to describe new parameters. Reference design document Section 3.1. | Restrictions: Must maintain backward compatibility for existing calls (will be updated in next tasks), must compile successfully even if parameters not used yet, must include comprehensive parameter documentation | _Leverage: Existing parameter patterns with Arc and broadcast channels_ | Success: Function signature updated correctly, compiles with new parameters, documentation is clear and complete, no functional changes yet | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (function signature, parameter types, doc updates). Then mark as completed [x] in tasks.md_
 
-- [ ] 2.2. Implement calibration mode logic in analysis thread
+- [x] 2.2. Implement calibration mode logic in analysis thread
   - File: `rust/src/analysis/mod.rs`
   - Replace onset processing loop (lines 104-146) with calibration mode check
   - Add non-blocking try_lock() for calibration state check

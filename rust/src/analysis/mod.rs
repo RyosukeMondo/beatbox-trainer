@@ -81,8 +81,8 @@ pub struct ClassificationResult {
 pub fn spawn_analysis_thread(
     mut analysis_channels: AnalysisThreadChannels,
     calibration_state: Arc<RwLock<CalibrationState>>,
-    _calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
-    _calibration_progress_tx: Option<tokio::sync::broadcast::Sender<CalibrationProgress>>,
+    calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
+    calibration_progress_tx: Option<tokio::sync::broadcast::Sender<CalibrationProgress>>,
     frame_counter: Arc<AtomicU64>,
     bpm: Arc<AtomicU32>,
     sample_rate: u32,
@@ -111,7 +111,7 @@ pub fn spawn_analysis_thread(
             // Process buffer through onset detection
             let onsets = onset_detector.process(&buffer);
 
-            // For each detected onset, run classification pipeline
+            // For each detected onset, run pipeline (calibration or classification mode)
             for onset_timestamp in onsets {
                 // Extract 1024-sample window starting at onset
                 // Note: We need to handle the case where onset is near the end of buffer
@@ -120,39 +120,72 @@ pub fn spawn_analysis_thread(
                 if onset_idx + 1024 <= buffer.len() {
                     let onset_window = &buffer[onset_idx..onset_idx + 1024];
 
-                    // Extract DSP features
+                    // Extract DSP features (always needed for both modes)
                     let features = feature_extractor.extract(onset_window);
 
-                    // Classify sound (returns tuple of (BeatboxHit, confidence))
-                    let (sound, confidence) = classifier.classify_level1(&features);
+                    // Check if calibration is active (non-blocking check)
+                    let calibration_active =
+                        if let Ok(procedure_guard) = calibration_procedure.try_lock() {
+                            procedure_guard.is_some()
+                        } else {
+                            false // Lock failed, assume not calibrating
+                        };
 
-                    // Quantize timing (only if metronome is running, BPM > 0)
-                    let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
-                    let timing = if current_bpm > 0 {
-                        quantizer.quantize(onset_timestamp)
-                    } else {
-                        // Calibration mode - no timing feedback
-                        TimingFeedback {
-                            classification: quantizer::TimingClassification::OnTime,
-                            error_ms: 0.0,
+                    if calibration_active {
+                        // ====== CALIBRATION MODE ======
+                        // Forward features to calibration procedure
+                        if let Ok(mut procedure_guard) = calibration_procedure.lock() {
+                            if let Some(ref mut procedure) = *procedure_guard {
+                                match procedure.add_sample(features) {
+                                    Ok(()) => {
+                                        // Sample accepted - broadcast progress
+                                        let progress = procedure.get_progress();
+
+                                        if let Some(ref tx) = calibration_progress_tx {
+                                            let _ = tx.send(progress);
+                                        }
+                                    }
+                                    Err(err) => {
+                                        // Sample rejected (validation error)
+                                        eprintln!("Calibration sample rejected: {:?}", err);
+                                        // Continue processing without crashing
+                                    }
+                                }
+                            }
                         }
-                    };
+                    } else {
+                        // ====== CLASSIFICATION MODE (existing logic) ======
+                        // Classify sound (returns tuple of (BeatboxHit, confidence))
+                        let (sound, confidence) = classifier.classify_level1(&features);
 
-                    // Convert timestamp to milliseconds
-                    let timestamp_ms =
-                        (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
+                        // Quantize timing (only if metronome is running, BPM > 0)
+                        let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
+                        let timing = if current_bpm > 0 {
+                            quantizer.quantize(onset_timestamp)
+                        } else {
+                            // No metronome - no timing feedback
+                            TimingFeedback {
+                                classification: quantizer::TimingClassification::OnTime,
+                                error_ms: 0.0,
+                            }
+                        };
 
-                    // Create result and send to Dart UI
-                    let result = ClassificationResult {
-                        sound,
-                        timing,
-                        timestamp_ms,
-                        confidence,
-                    };
+                        // Convert timestamp to milliseconds
+                        let timestamp_ms =
+                            (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
 
-                    // Send result to broadcast channel (drops if no subscribers)
-                    // Broadcast channels don't fail on send, they just drop messages if no one is listening
-                    let _ = result_sender.send(result);
+                        // Create result and send to Dart UI
+                        let result = ClassificationResult {
+                            sound,
+                            timing,
+                            timestamp_ms,
+                            confidence,
+                        };
+
+                        // Send result to broadcast channel (drops if no subscribers)
+                        // Broadcast channels don't fail on send, they just drop messages if no one is listening
+                        let _ = result_sender.send(result);
+                    }
                 }
                 // If onset is too close to end of buffer, skip it (will be caught in next buffer)
             }
