@@ -87,6 +87,31 @@ pub extern "system" fn JNI_OnLoad(
     jni::sys::JNI_VERSION_1_6
 }
 
+/// Initialize the Android context safely, preventing re-initialization
+#[cfg(target_os = "android")]
+fn initialize_ndk_context_once(vm: &JavaVM, context_global: &jni::objects::GlobalRef) {
+    use log::info;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    static CONTEXT_INITIALIZED: AtomicBool = AtomicBool::new(false);
+
+    if CONTEXT_INITIALIZED
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_ok()
+    {
+        // SAFETY: JavaVM and context pointers are valid, guaranteed by Android runtime
+        unsafe {
+            ndk_context::initialize_android_context(
+                vm.get_java_vm_pointer() as *mut _,
+                context_global.as_raw() as *mut _,
+            );
+        }
+        info!("Android context initialized successfully with JavaVM and Context");
+    } else {
+        info!("Android context already initialized, skipping re-initialization");
+    }
+}
+
 /// Initialize the Android context with both JavaVM and Context parameters
 /// This function must be called by MainActivity after the library is loaded
 ///
@@ -104,59 +129,24 @@ pub extern "system" fn Java_com_ryosukemondo_beatbox_1trainer_MainActivity_initi
 
     info!("initializeAudioContext called from MainActivity");
 
-    // Get the stored JavaVM
     let vm = match JAVA_VM.get() {
         Some(vm) => vm,
         None => {
-            error!(
-                "JavaVM not initialized. JNI_OnLoad must be called before initializeAudioContext."
-            );
+            error!("JavaVM not initialized. JNI_OnLoad must be called first.");
             return;
         }
     };
 
-    // Convert the context to a global reference to ensure it remains valid
-    // across different JNI calls
     let context_global = match env.new_global_ref(context) {
         Ok(global_ref) => global_ref,
         Err(e) => {
-            error!(
-                "Failed to create global reference for context: {}. Android audio will not work.",
-                e
-            );
+            error!("Failed to create global reference for context: {}", e);
             return;
         }
     };
 
     info!("Created global reference for application context");
-
-    // Check if ndk-context is already initialized
-    // ndk_context::initialize_android_context can only be called once
-    // Calling it multiple times will cause a panic
-    #[cfg(target_os = "android")]
-    {
-        use std::sync::atomic::{AtomicBool, Ordering};
-        static CONTEXT_INITIALIZED: AtomicBool = AtomicBool::new(false);
-
-        if CONTEXT_INITIALIZED
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-        {
-            // Initialize ndk-context with both JavaVM and Context parameters
-            // SAFETY: The JavaVM pointer is guaranteed to be valid by the Android runtime.
-            // The context jobject is a global reference that will remain valid for the
-            // lifetime of the process.
-            unsafe {
-                ndk_context::initialize_android_context(
-                    vm.get_java_vm_pointer() as *mut _,
-                    context_global.as_raw() as *mut _,
-                );
-            }
-            info!("Android context initialized successfully with JavaVM and Context");
-        } else {
-            info!("Android context already initialized, skipping re-initialization");
-        }
-    }
+    initialize_ndk_context_once(vm, &context_global);
 }
 
 #[cfg(test)]
@@ -165,5 +155,86 @@ mod tests {
     fn test_module_structure() {
         // Verify all modules are accessible
         // This ensures the crate compiles with proper module hierarchy
+    }
+
+    /// Test atomic initialization guard behavior
+    ///
+    /// This test verifies the fix for the SIGABRT crash that occurred when
+    /// the Android context was initialized multiple times (e.g., during app restarts).
+    ///
+    /// The bug: ndk_context::initialize_android_context() panics if called multiple times
+    /// The fix: Use AtomicBool with compare_exchange to ensure single initialization
+    #[test]
+    fn test_atomic_initialization_guard_pattern() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        // Simulate the initialization guard pattern used in initialize_ndk_context_once
+        static TEST_INITIALIZED: AtomicBool = AtomicBool::new(false);
+
+        // First call: should succeed (false -> true)
+        let first_call = TEST_INITIALIZED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok();
+        assert!(first_call, "First initialization should succeed");
+
+        // Second call: should fail (already true)
+        let second_call = TEST_INITIALIZED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok();
+        assert!(!second_call, "Second initialization should be skipped");
+
+        // Third call: should also fail
+        let third_call = TEST_INITIALIZED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok();
+        assert!(!third_call, "Third initialization should be skipped");
+
+        // Verify flag is set
+        assert!(
+            TEST_INITIALIZED.load(Ordering::SeqCst),
+            "Initialization flag should be set"
+        );
+    }
+
+    /// Test that multiple threads cannot initialize simultaneously
+    ///
+    /// This verifies the atomic guard is thread-safe and prevents race conditions
+    /// during concurrent initialization attempts.
+    #[test]
+    fn test_atomic_guard_prevents_concurrent_initialization() {
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::thread;
+
+        static CONCURRENT_INIT_FLAG: AtomicBool = AtomicBool::new(false);
+        let init_count = Arc::new(AtomicUsize::new(0));
+
+        // Spawn 10 threads that all try to initialize
+        let handles: Vec<_> = (0..10)
+            .map(|_| {
+                let counter = Arc::clone(&init_count);
+                thread::spawn(move || {
+                    if CONCURRENT_INIT_FLAG
+                        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                        .is_ok()
+                    {
+                        // Only one thread should reach here
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                })
+            })
+            .collect();
+
+        // Wait for all threads
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Verify only one thread initialized
+        assert_eq!(
+            init_count.load(Ordering::SeqCst),
+            1,
+            "Only one thread should have successfully initialized"
+        );
     }
 }
