@@ -43,10 +43,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioError dco_decode_audio_error(dynamic raw);
 
   @protected
+  AudioErrorCodes dco_decode_audio_error_codes(dynamic raw);
+
+  @protected
   BeatboxHit dco_decode_beatbox_hit(dynamic raw);
 
   @protected
   CalibrationError dco_decode_calibration_error(dynamic raw);
+
+  @protected
+  CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw);
 
   @protected
   CalibrationProgress dco_decode_calibration_progress(dynamic raw);
@@ -105,10 +111,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioError sse_decode_audio_error(SseDeserializer deserializer);
 
   @protected
+  AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer);
+
+  @protected
   BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer);
 
   @protected
   CalibrationError sse_decode_calibration_error(SseDeserializer deserializer);
+
+  @protected
+  CalibrationErrorCodes sse_decode_calibration_error_codes(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CalibrationProgress sse_decode_calibration_progress(
@@ -183,11 +197,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_audio_error(AudioError self, SseSerializer serializer);
 
   @protected
+  void sse_encode_audio_error_codes(
+    AudioErrorCodes self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer);
 
   @protected
   void sse_encode_calibration_error(
     CalibrationError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_error_codes(
+    CalibrationErrorCodes self,
     SseSerializer serializer,
   );
 

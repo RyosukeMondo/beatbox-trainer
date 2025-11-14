@@ -153,7 +153,7 @@ Future<void> finishCalibration() =>
 /// the number of samples collected (0-10).
 ///
 /// # Returns
-/// Stream\<CalibrationProgress\> that yields progress updates
+/// Stream<CalibrationProgress> that yields progress updates
 ///
 /// # Usage
 /// ```dart
@@ -224,3 +224,11 @@ Future<void> loadCalibrationState({required String json}) =>
 /// ```
 Future<String> getCalibrationState() =>
     RustLib.instance.api.crateApiGetCalibrationState();
+
+/// Get AudioErrorCodes as a structured object with all error code constants
+AudioErrorCodes getAudioErrorCodes() =>
+    RustLib.instance.api.crateApiGetAudioErrorCodes();
+
+/// Get CalibrationErrorCodes as a structured object with all error code constants
+CalibrationErrorCodes getCalibrationErrorCodes() =>
+    RustLib.instance.api.crateApiGetCalibrationErrorCodes();

@@ -27,8 +27,8 @@ pub trait ErrorCode {
 /// generate corresponding Dart constants.
 ///
 /// Error code range: 1001-1009
-#[frb]
-pub struct AudioErrorCodes;
+#[frb(unignore)]
+pub struct AudioErrorCodes {}
 
 #[frb]
 impl AudioErrorCodes {
@@ -58,6 +58,62 @@ impl AudioErrorCodes {
 
     /// Android context was not initialized before audio engine start
     pub const CONTEXT_NOT_INITIALIZED: i32 = 1009;
+
+    // Getter methods for FFI exposure (flutter_rust_bridge requires methods not const)
+
+    /// Get BPM_INVALID error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn bpm_invalid() -> i32 {
+        Self::BPM_INVALID
+    }
+
+    /// Get ALREADY_RUNNING error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn already_running() -> i32 {
+        Self::ALREADY_RUNNING
+    }
+
+    /// Get NOT_RUNNING error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn not_running() -> i32 {
+        Self::NOT_RUNNING
+    }
+
+    /// Get HARDWARE_ERROR error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn hardware_error() -> i32 {
+        Self::HARDWARE_ERROR
+    }
+
+    /// Get PERMISSION_DENIED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn permission_denied() -> i32 {
+        Self::PERMISSION_DENIED
+    }
+
+    /// Get STREAM_OPEN_FAILED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn stream_open_failed() -> i32 {
+        Self::STREAM_OPEN_FAILED
+    }
+
+    /// Get LOCK_POISONED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn lock_poisoned() -> i32 {
+        Self::LOCK_POISONED
+    }
+
+    /// Get JNI_INIT_FAILED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn jni_init_failed() -> i32 {
+        Self::JNI_INIT_FAILED
+    }
+
+    /// Get CONTEXT_NOT_INITIALIZED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn context_not_initialized() -> i32 {
+        Self::CONTEXT_NOT_INITIALIZED
+    }
 }
 
 /// Calibration error code constants exposed to Dart via FFI
@@ -67,8 +123,8 @@ impl AudioErrorCodes {
 /// generate corresponding Dart constants.
 ///
 /// Error code range: 2001-2005
-#[frb]
-pub struct CalibrationErrorCodes;
+#[frb(unignore)]
+pub struct CalibrationErrorCodes {}
 
 #[frb]
 impl CalibrationErrorCodes {
@@ -86,6 +142,38 @@ impl CalibrationErrorCodes {
 
     /// Calibration state RwLock was poisoned
     pub const STATE_POISONED: i32 = 2005;
+
+    // Getter methods for FFI exposure (flutter_rust_bridge requires methods not const)
+
+    /// Get INSUFFICIENT_SAMPLES error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn insufficient_samples() -> i32 {
+        Self::INSUFFICIENT_SAMPLES
+    }
+
+    /// Get INVALID_FEATURES error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn invalid_features() -> i32 {
+        Self::INVALID_FEATURES
+    }
+
+    /// Get NOT_COMPLETE error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn not_complete() -> i32 {
+        Self::NOT_COMPLETE
+    }
+
+    /// Get ALREADY_IN_PROGRESS error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn already_in_progress() -> i32 {
+        Self::ALREADY_IN_PROGRESS
+    }
+
+    /// Get STATE_POISONED error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn state_poisoned() -> i32 {
+        Self::STATE_POISONED
+    }
 }
 
 /// Log an audio error with structured context

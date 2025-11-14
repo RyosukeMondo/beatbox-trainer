@@ -12,6 +12,9 @@ use crate::calibration::CalibrationProgress;
 use crate::context::AppContext;
 use crate::error::{AudioError, CalibrationError};
 
+// Re-export error code constants for FFI exposure
+pub use crate::error::{AudioErrorCodes, CalibrationErrorCodes};
+
 /// Audio metrics for debug visualization
 ///
 /// Provides real-time DSP metrics from the audio processing pipeline
@@ -388,6 +391,21 @@ pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics>
 #[flutter_rust_bridge::frb(ignore)]
 pub async fn onset_events_stream() -> impl futures::Stream<Item = OnsetEvent> {
     APP_CONTEXT.onset_events_stream().await
+}
+
+// Error code constant accessors for Dart/Flutter
+// These functions expose error code constants from AudioErrorCodes and CalibrationErrorCodes
+
+/// Get AudioErrorCodes as a structured object with all error code constants
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_audio_error_codes() -> AudioErrorCodes {
+    AudioErrorCodes {}
+}
+
+/// Get CalibrationErrorCodes as a structured object with all error code constants
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_calibration_error_codes() -> CalibrationErrorCodes {
+    CalibrationErrorCodes {}
 }
 
 #[cfg(test)]

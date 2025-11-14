@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1802762475;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -450156763;
 
 // Section: executor
 
@@ -150,6 +150,64 @@ fn wire__crate__api__finish_calibration_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__get_audio_error_codes_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_audio_error_codes",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::get_audio_error_codes())?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__get_calibration_error_codes_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_calibration_error_codes",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::get_calibration_error_codes())?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -504,6 +562,13 @@ impl SseDecode for crate::error::AudioError {
     }
 }
 
+impl SseDecode for crate::error::AudioErrorCodes {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        return crate::error::AudioErrorCodes {};
+    }
+}
+
 impl SseDecode for crate::analysis::classifier::BeatboxHit {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -551,6 +616,13 @@ impl SseDecode for crate::error::CalibrationError {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseDecode for crate::error::CalibrationErrorCodes {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        return crate::error::CalibrationErrorCodes {};
     }
 }
 
@@ -702,12 +774,12 @@ fn pde_ffi_dispatcher_primary_impl(
         1 => wire__crate__api__calibration_stream_impl(port, ptr, rust_vec_len, data_len),
         2 => wire__crate__api__classification_stream_impl(port, ptr, rust_vec_len, data_len),
         3 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -720,8 +792,10 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        5 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -760,6 +834,20 @@ impl flutter_rust_bridge::IntoDart for crate::error::AudioError {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::error::AudioError {}
 impl flutter_rust_bridge::IntoIntoDart<crate::error::AudioError> for crate::error::AudioError {
     fn into_into_dart(self) -> crate::error::AudioError {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::error::AudioErrorCodes {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        Vec::<u8>::new().into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::error::AudioErrorCodes {}
+impl flutter_rust_bridge::IntoIntoDart<crate::error::AudioErrorCodes>
+    for crate::error::AudioErrorCodes
+{
+    fn into_into_dart(self) -> crate::error::AudioErrorCodes {
         self
     }
 }
@@ -822,6 +910,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::error::CalibrationError>
     for crate::error::CalibrationError
 {
     fn into_into_dart(self) -> crate::error::CalibrationError {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::error::CalibrationErrorCodes {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        Vec::<u8>::new().into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::error::CalibrationErrorCodes
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::error::CalibrationErrorCodes>
+    for crate::error::CalibrationErrorCodes
+{
+    fn into_into_dart(self) -> crate::error::CalibrationErrorCodes {
         self
     }
 }
@@ -1017,6 +1122,11 @@ impl SseEncode for crate::error::AudioError {
     }
 }
 
+impl SseEncode for crate::error::AudioErrorCodes {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
 impl SseEncode for crate::analysis::classifier::BeatboxHit {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1068,6 +1178,11 @@ impl SseEncode for crate::error::CalibrationError {
             }
         }
     }
+}
+
+impl SseEncode for crate::error::CalibrationErrorCodes {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
 impl SseEncode for crate::calibration::progress::CalibrationProgress {

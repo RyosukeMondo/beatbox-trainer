@@ -46,6 +46,25 @@ sealed class AudioError with _$AudioError implements FrbException {
       AudioError_ContextNotInitialized;
 }
 
+/// Audio error code constants exposed to Dart via FFI
+///
+/// These constants provide a single source of truth for error codes
+/// shared between Rust and Dart. The flutter_rust_bridge will automatically
+/// generate corresponding Dart constants.
+///
+/// Error code range: 1001-1009
+class AudioErrorCodes {
+  const AudioErrorCodes();
+
+  @override
+  int get hashCode => 0;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AudioErrorCodes && runtimeType == other.runtimeType;
+}
+
 @freezed
 sealed class CalibrationError with _$CalibrationError implements FrbException {
   const CalibrationError._();
@@ -70,4 +89,23 @@ sealed class CalibrationError with _$CalibrationError implements FrbException {
   /// Calibration state RwLock was poisoned
   const factory CalibrationError.statePoisoned() =
       CalibrationError_StatePoisoned;
+}
+
+/// Calibration error code constants exposed to Dart via FFI
+///
+/// These constants provide a single source of truth for error codes
+/// shared between Rust and Dart. The flutter_rust_bridge will automatically
+/// generate corresponding Dart constants.
+///
+/// Error code range: 2001-2005
+class CalibrationErrorCodes {
+  const CalibrationErrorCodes();
+
+  @override
+  int get hashCode => 0;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalibrationErrorCodes && runtimeType == other.runtimeType;
 }
