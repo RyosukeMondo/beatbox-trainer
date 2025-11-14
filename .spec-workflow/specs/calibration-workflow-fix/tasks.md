@@ -12,7 +12,7 @@
 
 ## Phase 2: Analysis Thread Modifications
 
-- [ ] 2.1. Update spawn_analysis_thread() signature
+- [x] 2.1. Update spawn_analysis_thread() signature
   - File: `rust/src/analysis/mod.rs`
   - Add calibration_procedure and calibration_progress_tx parameters to function signature
   - Rename calibration parameter to calibration_state for clarity

@@ -10,10 +10,12 @@
 // - Output: ClassificationResult sent via tokio channel to Dart Stream
 
 use std::sync::atomic::{AtomicU32, AtomicU64};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
 
 use crate::audio::buffer_pool::AnalysisThreadChannels;
+use crate::calibration::procedure::CalibrationProcedure;
+use crate::calibration::progress::CalibrationProgress;
 use crate::calibration::state::CalibrationState;
 
 pub mod classifier;
@@ -47,11 +49,15 @@ pub struct ClassificationResult {
 ///
 /// The analysis thread consumes filled audio buffers from the DATA_QUEUE,
 /// processes them through the onset detection and classification pipeline,
-/// and sends results to the UI via a tokio channel.
+/// and sends results to the UI via a tokio channel. During calibration mode,
+/// detected features are forwarded to the calibration procedure instead of
+/// being classified.
 ///
 /// # Arguments
-/// * `buffer_channels` - Buffer pool channels (data_consumer, pool_producer)
-/// * `calibration` - Calibration state with classification thresholds
+/// * `analysis_channels` - Buffer pool channels (data_consumer, pool_producer)
+/// * `calibration_state` - Calibration state with classification thresholds
+/// * `calibration_procedure` - Optional calibration procedure for sample collection
+/// * `calibration_progress_tx` - Optional broadcast channel for calibration progress updates
 /// * `frame_counter` - Shared frame counter from AudioEngine
 /// * `bpm` - Shared BPM setting from AudioEngine
 /// * `sample_rate` - Audio sample rate in Hz
@@ -64,15 +70,19 @@ pub struct ClassificationResult {
 /// - Uses lock-free queues for audio data (rtrb)
 /// - Uses atomic references for frame_counter and BPM
 /// - Uses RwLock for calibration state (read-only in this thread)
+/// - Uses Mutex for calibration procedure (try_lock for non-blocking access)
 /// - Thread panics are isolated and won't crash audio thread
 ///
 /// # Error Handling
 /// - Dropped buffers if DATA_QUEUE is empty (no blocking)
 /// - Continues processing on classification errors
 /// - Logs errors but doesn't terminate thread
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_analysis_thread(
     mut analysis_channels: AnalysisThreadChannels,
-    calibration: Arc<RwLock<CalibrationState>>,
+    calibration_state: Arc<RwLock<CalibrationState>>,
+    _calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
+    _calibration_progress_tx: Option<tokio::sync::broadcast::Sender<CalibrationProgress>>,
     frame_counter: Arc<AtomicU64>,
     bpm: Arc<AtomicU32>,
     sample_rate: u32,
@@ -82,7 +92,7 @@ pub fn spawn_analysis_thread(
         // Initialize DSP components (all allocations happen here, not in loop)
         let mut onset_detector = OnsetDetector::new(sample_rate);
         let feature_extractor = FeatureExtractor::new(sample_rate);
-        let classifier = Classifier::new(Arc::clone(&calibration));
+        let classifier = Classifier::new(Arc::clone(&calibration_state));
         let quantizer = Quantizer::new(Arc::clone(&frame_counter), Arc::clone(&bpm), sample_rate);
 
         // Main analysis loop - runs until sender is dropped (audio engine stops)
