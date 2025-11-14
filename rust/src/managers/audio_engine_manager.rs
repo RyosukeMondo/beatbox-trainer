@@ -4,7 +4,7 @@
 // Extracted from AppContext to reduce complexity and improve testability
 
 use std::sync::{Arc, Mutex, RwLock};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::broadcast;
 
 use crate::analysis::ClassificationResult;
 use crate::calibration::CalibrationState;
@@ -62,7 +62,6 @@ impl AudioEngineManager {
     /// # Arguments
     /// * `bpm` - Beats per minute (must be > 0)
     /// * `calibration` - Calibration state for classification
-    /// * `classification_tx` - Channel for sending classification results
     /// * `broadcast_tx` - Broadcast channel for classification results
     ///
     /// # Returns
@@ -79,7 +78,6 @@ impl AudioEngineManager {
         &self,
         bpm: u32,
         calibration: Arc<RwLock<CalibrationState>>,
-        classification_tx: mpsc::UnboundedSender<ClassificationResult>,
         broadcast_tx: broadcast::Sender<ClassificationResult>,
     ) -> Result<(), AudioError> {
         #[cfg(not(target_os = "android"))]
@@ -101,12 +99,10 @@ impl AudioEngineManager {
             let buffer_pool = self.create_buffer_pool();
             let mut engine = self.create_engine(bpm, buffer_pool)?;
 
-            engine
-                .start(calibration, classification_tx)
-                .map_err(|err| {
-                    log_audio_error(&err, "start_audio");
-                    err
-                })?;
+            engine.start(calibration, broadcast_tx).map_err(|err| {
+                log_audio_error(&err, "start_audio");
+                err
+            })?;
 
             *guard = Some(AudioEngineState { engine });
 

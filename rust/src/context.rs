@@ -88,21 +88,9 @@ impl AppContext {
             // Get calibration state for classification
             let calibration_state = self.calibration.get_state_arc();
 
-            // Create mpsc channel for audio engine → broadcast forwarding
-            let (classification_tx, mut classification_rx) = mpsc::unbounded_channel();
-
-            // Spawn forwarder task: mpsc → broadcast
-            let broadcast_tx_clone = broadcast_tx.clone();
-            tokio::spawn(async move {
-                while let Some(result) = classification_rx.recv().await {
-                    // Broadcast to all subscribers (ignore if no subscribers)
-                    let _ = broadcast_tx_clone.send(result);
-                }
-            });
-
             // Start audio engine (delegates to AudioEngineManager)
-            self.audio
-                .start(bpm, calibration_state, classification_tx, broadcast_tx)
+            // Audio engine now sends directly to broadcast channel, eliminating mpsc → broadcast forwarding
+            self.audio.start(bpm, calibration_state, broadcast_tx)
         }
     }
 
@@ -243,8 +231,8 @@ impl AppContext {
     /// Returns a receiver for consuming real-time classification results from the
     /// audio engine. Each subscriber receives independent copies via broadcast channel.
     ///
-    /// The stream forwards classification results from the audio engine's analysis thread
-    /// using a tokio broadcast → mpsc pattern for Flutter compatibility.
+    /// The audio engine sends directly to the broadcast channel, and this method forwards
+    /// to an mpsc channel for Flutter FFI compatibility.
     ///
     /// # Returns
     /// `mpsc::UnboundedReceiver<ClassificationResult>` - Stream of classification results

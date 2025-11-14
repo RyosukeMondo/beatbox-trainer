@@ -166,12 +166,12 @@ impl AudioEngine {
     /// # Arguments
     /// * `buffer_channels` - Buffer pool channels for audio data transfer
     /// * `calibration` - Calibration state for sound classification
-    /// * `result_sender` - Tokio channel for sending classification results to UI
+    /// * `result_sender` - Tokio broadcast channel for sending classification results to UI
     fn spawn_analysis_thread_internal(
         &self,
         buffer_channels: BufferPoolChannels,
         calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
-        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+        result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) {
         let (_, analysis_channels) = buffer_channels.split_for_threads();
 
@@ -197,7 +197,7 @@ impl AudioEngine {
     ///
     /// # Arguments
     /// * `calibration` - Calibration state for sound classification
-    /// * `result_sender` - Tokio channel for sending classification results to UI
+    /// * `result_sender` - Tokio broadcast channel for sending classification results to UI
     ///
     /// # Returns
     /// Result indicating success or error
@@ -207,7 +207,7 @@ impl AudioEngine {
     pub fn start(
         &mut self,
         calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
-        result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+        result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) -> Result<(), AudioError> {
         // Create and open audio streams
         let input_stream = self.create_input_stream()?;
@@ -344,7 +344,7 @@ impl AudioEngine {
         _calibration: std::sync::Arc<
             std::sync::RwLock<crate::calibration::state::CalibrationState>,
         >,
-        _result_sender: tokio::sync::mpsc::UnboundedSender<crate::analysis::ClassificationResult>,
+        _result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) -> Result<(), AudioError> {
         log::warn!("AudioEngine::start() called on non-Android platform - no-op");
         Ok(())

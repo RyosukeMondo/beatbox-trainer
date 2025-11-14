@@ -314,7 +314,7 @@
 
 ### 10. Stream Simplification
 
-- [ ] 10.1. Simplify Rust stream plumbing (Estimate: 3 hours, Priority: High)
+- [x] 10.1. Simplify Rust stream plumbing (Estimate: 3 hours, Priority: High)
   - File: rust/src/audio/engine.rs, rust/src/managers/broadcast_manager.rs
   - Refactor audio engine to send directly to broadcast channel
   - Remove mpsc → broadcast forwarding layer

@@ -12,7 +12,6 @@
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
-use tokio::sync::mpsc;
 
 use crate::audio::buffer_pool::AnalysisThreadChannels;
 use crate::calibration::state::CalibrationState;
@@ -56,7 +55,7 @@ pub struct ClassificationResult {
 /// * `frame_counter` - Shared frame counter from AudioEngine
 /// * `bpm` - Shared BPM setting from AudioEngine
 /// * `sample_rate` - Audio sample rate in Hz
-/// * `result_sender` - Tokio channel sender for ClassificationResult
+/// * `result_sender` - Tokio broadcast channel sender for ClassificationResult
 ///
 /// # Returns
 /// JoinHandle for the spawned analysis thread
@@ -77,7 +76,7 @@ pub fn spawn_analysis_thread(
     frame_counter: Arc<AtomicU64>,
     bpm: Arc<AtomicU32>,
     sample_rate: u32,
-    result_sender: mpsc::UnboundedSender<ClassificationResult>,
+    result_sender: tokio::sync::broadcast::Sender<ClassificationResult>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         // Initialize DSP components (all allocations happen here, not in loop)
@@ -141,13 +140,9 @@ pub fn spawn_analysis_thread(
                         confidence,
                     };
 
-                    // Send result (non-blocking, drops if channel is full)
-                    if result_sender.send(result).is_err() {
-                        // Channel closed, audio engine stopped
-                        // Return buffer and exit thread
-                        let _ = analysis_channels.pool_producer.push(buffer);
-                        return;
-                    }
+                    // Send result to broadcast channel (drops if no subscribers)
+                    // Broadcast channels don't fail on send, they just drop messages if no one is listening
+                    let _ = result_sender.send(result);
                 }
                 // If onset is too close to end of buffer, skip it (will be caught in next buffer)
             }
