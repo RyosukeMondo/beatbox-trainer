@@ -150,7 +150,7 @@ impl CalibrationManager {
     ///
     /// # Thread Safety
     /// The returned Arc can be safely cloned and shared across threads. Access to
-    /// the inner Option<CalibrationProcedure> is protected by a Mutex.
+    /// the inner `Option<CalibrationProcedure>` is protected by a Mutex.
     pub fn get_procedure_arc(&self) -> Arc<Mutex<Option<CalibrationProcedure>>> {
         Arc::clone(&self.procedure)
     }
