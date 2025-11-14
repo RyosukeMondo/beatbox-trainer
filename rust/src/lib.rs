@@ -89,7 +89,7 @@ pub extern "system" fn JNI_OnLoad(
 
 /// Initialize the Android context safely, preventing re-initialization
 #[cfg(target_os = "android")]
-fn initialize_ndk_context_once(vm: &JavaVM, context_global: &jni::objects::GlobalRef) {
+fn initialize_ndk_context_once(vm: &jni::JavaVM, context_global: &jni::objects::GlobalRef) {
     use log::info;
     use std::sync::atomic::{AtomicBool, Ordering};
 

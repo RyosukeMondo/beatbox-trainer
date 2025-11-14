@@ -19,7 +19,7 @@
 
 #[cfg(target_os = "android")]
 use oboe::{
-    AudioStreamAsync, AudioStreamBuilder, DataCallbackResult, Input, Output, PerformanceMode,
+    AudioStream, AudioStreamAsync, AudioStreamBuilder, AudioStreamSync, Input, Output, PerformanceMode,
     SharingMode,
 };
 #[cfg(target_os = "android")]
@@ -62,9 +62,9 @@ use super::buffer_pool::DEFAULT_BUFFER_SIZE;
 #[cfg(target_os = "android")]
 pub struct AudioEngine {
     /// Output audio stream (master - triggers input reads)
-    output_stream: Option<AudioStreamAsync<Output>>,
+    output_stream: Option<AudioStreamAsync<Output, OutputCallback>>,
     /// Input audio stream (slave - read by output callback)
-    input_stream: Option<AudioStreamAsync<Input>>,
+    input_stream: Option<AudioStreamSync<Input, (f32, oboe::Mono)>>,
     /// Atomic frame counter for sample-accurate timing
     frame_counter: Arc<AtomicU64>,
     /// Atomic BPM for dynamic tempo changes
@@ -120,13 +120,13 @@ impl AudioEngine {
     ///
     /// # Errors
     /// Returns error if input stream cannot be opened
-    fn create_input_stream(&self) -> Result<AudioStreamAsync<Input>, AudioError> {
+    fn create_input_stream(&self) -> Result<AudioStreamSync<Input, (f32, oboe::Mono)>, AudioError> {
         AudioStreamBuilder::default()
             .set_performance_mode(PerformanceMode::LowLatency)
             .set_sharing_mode(SharingMode::Exclusive)
             .set_direction::<Input>()
             .set_sample_rate(self.sample_rate as i32)
-            .set_channel_count(1) // Mono input for beatbox detection
+            .set_channel_count::<oboe::Mono>() // Mono input for beatbox detection
             .set_format::<f32>()
             .open_stream()
             .map_err(|e| AudioError::StreamOpenFailed {
@@ -141,7 +141,7 @@ impl AudioEngine {
     ///
     /// # Errors
     /// Returns error if output stream cannot be opened
-    fn create_output_stream(&self) -> Result<AudioStreamAsync<Output>, AudioError> {
+    fn create_output_stream(&self) -> Result<AudioStreamAsync<Output, OutputCallback>, AudioError> {
         // Create OutputCallback struct with cloned Arc references
         let callback = OutputCallback::new(
             Arc::clone(&self.frame_counter),
@@ -156,7 +156,7 @@ impl AudioEngine {
             .set_sharing_mode(SharingMode::Exclusive)
             .set_direction::<Output>()
             .set_sample_rate(self.sample_rate as i32)
-            .set_channel_count(1) // Mono output for metronome
+            .set_channel_count::<oboe::Mono>() // Mono output for metronome
             .set_format::<f32>()
             .set_callback(callback)
             .open_stream()
@@ -214,8 +214,8 @@ impl AudioEngine {
         result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) -> Result<(), AudioError> {
         // Create and open audio streams
-        let input_stream = self.create_input_stream()?;
-        let output_stream = self.create_output_stream()?;
+        let mut input_stream = self.create_input_stream()?;
+        let mut output_stream = self.create_output_stream()?;
 
         // Start streams (input first, then output as master)
         input_stream
@@ -260,14 +260,14 @@ impl AudioEngine {
     /// Result indicating success or error
     pub fn stop(&mut self) -> Result<(), AudioError> {
         // Stop output stream first (master)
-        if let Some(stream) = self.output_stream.take() {
+        if let Some(mut stream) = self.output_stream.take() {
             stream.stop().map_err(|e| AudioError::HardwareError {
                 details: format!("Failed to stop output stream: {:?}", e),
             })?;
         }
 
         // Then stop input stream (slave)
-        if let Some(stream) = self.input_stream.take() {
+        if let Some(mut stream) = self.input_stream.take() {
             stream.stop().map_err(|e| AudioError::HardwareError {
                 details: format!("Failed to stop input stream: {:?}", e),
             })?;

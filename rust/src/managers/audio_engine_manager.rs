@@ -11,7 +11,7 @@ use crate::calibration::CalibrationState;
 use crate::error::{log_audio_error, AudioError};
 
 #[cfg(target_os = "android")]
-use crate::audio::{buffer_pool::BufferPool, engine::AudioEngine};
+use crate::audio::{buffer_pool::{BufferPool, BufferPoolChannels}, engine::AudioEngine};
 
 /// AudioEngine state container for lifecycle management
 struct AudioEngineState {
@@ -244,9 +244,9 @@ impl AudioEngineManager {
     /// Create buffer pool for audio processing
     ///
     /// # Returns
-    /// BufferPool with 16 buffers of 2048 samples each
+    /// BufferPoolChannels with 16 buffers of 2048 samples each
     #[cfg(target_os = "android")]
-    fn create_buffer_pool(&self) -> BufferPool {
+    fn create_buffer_pool(&self) -> BufferPoolChannels {
         BufferPool::new(16, 2048)
     }
 
@@ -254,15 +254,15 @@ impl AudioEngineManager {
     ///
     /// # Arguments
     /// * `bpm` - Beats per minute
-    /// * `buffer_pool` - Pre-allocated buffer pool
+    /// * `buffer_channels` - Pre-allocated buffer pool channels
     ///
     /// # Returns
     /// * `Ok(AudioEngine)` - Engine created successfully
     /// * `Err(AudioError)` - Error during engine creation
     #[cfg(target_os = "android")]
-    fn create_engine(&self, bpm: u32, buffer_pool: BufferPool) -> Result<AudioEngine, AudioError> {
+    fn create_engine(&self, bpm: u32, buffer_channels: BufferPoolChannels) -> Result<AudioEngine, AudioError> {
         let sample_rate = 48000; // Standard sample rate for Android
-        AudioEngine::new(bpm, sample_rate, buffer_pool).map_err(|err| {
+        AudioEngine::new(bpm, sample_rate, buffer_channels).map_err(|err| {
             log_audio_error(&err, "create_engine");
             err
         })
