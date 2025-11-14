@@ -296,7 +296,7 @@
   - _Requirements: US-10_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Architect specializing in Interface Segregation Principle | Task: Split IDebugService into three focused interfaces (IAudioMetricsProvider, IOnsetEventProvider, ILogExporter) as specified in design document | Restrictions: Must follow ISP, each interface single responsibility, maintain clear contracts | Success: Three focused interfaces created, each with single responsibility, well-documented with dartdoc_
 
-- [ ] 9.2. Update DebugServiceImpl to implement split interfaces (Estimate: 1.5 hours, Priority: High)
+- [x] 9.2. Update DebugServiceImpl to implement split interfaces (Estimate: 1.5 hours, Priority: High)
   - File: lib/services/debug/debug_service_impl.dart
   - Update class to implement IAudioMetricsProvider, IOnsetEventProvider, ILogExporter
   - Ensure all interface methods implemented correctly

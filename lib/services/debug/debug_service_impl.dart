@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'i_debug_service.dart';
+import 'i_audio_metrics_provider.dart';
+import 'i_onset_event_provider.dart';
+import 'i_log_exporter.dart';
 
-/// Implementation of [IDebugService] wrapping FFI debug streams.
+/// Implementation of debug service interfaces wrapping FFI debug streams.
 ///
 /// This service provides access to real-time debug data from the Rust audio
 /// engine by wrapping FFI stream methods. It also maintains a circular buffer
@@ -13,9 +16,23 @@ import 'i_debug_service.dart';
 /// return types. This implementation provides placeholder streams that will work
 /// once the FFI bridge is properly configured or when stream methods are fixed.
 ///
+/// This implementation follows the Interface Segregation Principle by
+/// implementing three focused interfaces:
+/// - [IAudioMetricsProvider]: Provides audio metrics streaming
+/// - [IOnsetEventProvider]: Provides onset event streaming
+/// - [ILogExporter]: Provides log export functionality
+///
+/// The class also implements the legacy [IDebugService] interface for
+/// backward compatibility during the migration period.
+///
 /// Temporary workaround: Empty streams until FFI generation is resolved.
 /// See: lib/bridge/api.dart/api.dart line 12 for generation errors.
-class DebugServiceImpl implements IDebugService {
+class DebugServiceImpl
+    implements
+        IDebugService,
+        IAudioMetricsProvider,
+        IOnsetEventProvider,
+        ILogExporter {
   /// Maximum number of events to keep in log buffer
   static const int _maxLogBufferSize = 1000;
 
