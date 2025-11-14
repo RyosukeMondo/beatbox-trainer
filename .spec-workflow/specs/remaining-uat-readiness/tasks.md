@@ -181,7 +181,7 @@
   - _Requirements: US-5_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with expertise in async channels and concurrency | Task: Extract BroadcastChannelManager from AppContext centralizing tokio broadcast channel management as specified in design document | Restrictions: Must maintain thread safety, ensure proper channel cleanup, support multiple subscribers | Success: BroadcastChannelManager compiles and works correctly, all channels managed centrally, subscription/unsubscription works properly_
 
-- [ ] 5.4. Refactor AppContext to facade pattern (Estimate: 3 hours, Priority: High)
+- [x] 5.4. Refactor AppContext to facade pattern (Estimate: 3 hours, Priority: High)
   - File: rust/src/context.rs
   - Compose AudioEngineManager, CalibrationManager, BroadcastChannelManager
   - Delegate all methods to respective managers

@@ -128,6 +128,17 @@ impl CalibrationManager {
         Ok(state_guard.clone())
     }
 
+    /// Get Arc reference to calibration state
+    ///
+    /// Returns an Arc reference to the calibration state for sharing with
+    /// audio engine or other components that need concurrent access.
+    ///
+    /// # Returns
+    /// `Arc<RwLock<CalibrationState>>` - Thread-safe reference to calibration state
+    pub fn get_state_arc(&self) -> Arc<std::sync::RwLock<CalibrationState>> {
+        Arc::clone(&self.state)
+    }
+
     /// Load calibration state from persistent storage
     ///
     /// Updates the calibration state with values loaded from storage.
