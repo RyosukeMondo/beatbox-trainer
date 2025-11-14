@@ -404,7 +404,7 @@
   - _Requirements: All_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Code Quality Engineer with metrics analysis expertise | Task: Verify all files under 500 lines and all functions under 50 lines generating compliance report | Restrictions: Count only code lines excluding comments and blanks, identify violations, do not suppress metrics | Success: All files under 500 lines, all functions under 50 lines, compliance report generated, violations documented if any_
 
-- [ ] 13.3. Run test coverage report (Estimate: 1 hour, Priority: Medium)
+- [x] 13.3. Run test coverage report (Estimate: 1 hour, Priority: Medium)
   - File: coverage reports
   - Run `flutter test --coverage` for Dart code
   - Run `cargo tarpaulin` or similar for Rust code
