@@ -47,7 +47,7 @@
 
 ## Phase 3: AudioEngine Integration
 
-- [ ] 3.1. Update AudioEngine::start() signature
+- [x] 3.1. Update AudioEngine::start() signature
   - File: `rust/src/audio/engine.rs`
   - Modify start() method signature (line 211) to add calibration parameters
   - Rename calibration parameter to calibration_state

@@ -169,12 +169,22 @@ impl AudioEngine {
     ///
     /// # Arguments
     /// * `buffer_channels` - Buffer pool channels for audio data transfer
-    /// * `calibration` - Calibration state for sound classification
+    /// * `calibration_state` - Calibration state for sound classification
+    /// * `calibration_procedure` - Optional calibration procedure for collecting training samples
+    /// * `calibration_progress_tx` - Optional broadcast channel for calibration progress updates
     /// * `result_sender` - Tokio broadcast channel for sending classification results to UI
     fn spawn_analysis_thread_internal(
         &self,
         buffer_channels: BufferPoolChannels,
-        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        calibration_state: std::sync::Arc<
+            std::sync::RwLock<crate::calibration::state::CalibrationState>,
+        >,
+        calibration_procedure: std::sync::Arc<
+            std::sync::Mutex<Option<crate::calibration::procedure::CalibrationProcedure>>,
+        >,
+        calibration_progress_tx: Option<
+            tokio::sync::broadcast::Sender<crate::calibration::procedure::CalibrationProgress>,
+        >,
         result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) {
         let (_, analysis_channels) = buffer_channels.split_for_threads();
@@ -184,7 +194,9 @@ impl AudioEngine {
 
         crate::analysis::spawn_analysis_thread(
             analysis_channels,
-            calibration,
+            calibration_state,
+            calibration_procedure,
+            calibration_progress_tx,
             frame_counter_clone,
             bpm_clone,
             self.sample_rate,
@@ -200,7 +212,9 @@ impl AudioEngine {
     /// captured audio through the DSP pipeline.
     ///
     /// # Arguments
-    /// * `calibration` - Calibration state for sound classification
+    /// * `calibration_state` - Calibration state for sound classification
+    /// * `calibration_procedure` - Optional calibration procedure for collecting training samples
+    /// * `calibration_progress_tx` - Optional broadcast channel for calibration progress updates
     /// * `result_sender` - Tokio broadcast channel for sending classification results to UI
     ///
     /// # Returns
@@ -210,7 +224,15 @@ impl AudioEngine {
     /// Returns error if streams cannot be opened or started
     pub fn start(
         &mut self,
-        calibration: std::sync::Arc<std::sync::RwLock<crate::calibration::state::CalibrationState>>,
+        calibration_state: std::sync::Arc<
+            std::sync::RwLock<crate::calibration::state::CalibrationState>,
+        >,
+        calibration_procedure: std::sync::Arc<
+            std::sync::Mutex<Option<crate::calibration::procedure::CalibrationProcedure>>,
+        >,
+        calibration_progress_tx: Option<
+            tokio::sync::broadcast::Sender<crate::calibration::procedure::CalibrationProgress>,
+        >,
         result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) -> Result<(), AudioError> {
         // Create and open audio streams
@@ -246,7 +268,13 @@ impl AudioEngine {
         );
 
         // Spawn analysis thread
-        self.spawn_analysis_thread_internal(buffer_channels, calibration, result_sender);
+        self.spawn_analysis_thread_internal(
+            buffer_channels,
+            calibration_state,
+            calibration_procedure,
+            calibration_progress_tx,
+            result_sender,
+        );
 
         Ok(())
     }
