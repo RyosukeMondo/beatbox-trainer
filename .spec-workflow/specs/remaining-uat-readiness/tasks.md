@@ -200,7 +200,7 @@
 
 ### 6. Dart Business Logic Extraction
 
-- [ ] 6.1. Create TrainingController (Estimate: 4 hours, Priority: High)
+- [x] 6.1. Create TrainingController (Estimate: 4 hours, Priority: High)
   - File: lib/controllers/training/training_controller.dart
   - Extract business logic from TrainingScreen
   - Implement startTraining(), stopTraining(), updateBpm()
@@ -209,7 +209,7 @@
   - _Requirements: US-6_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in controller pattern and business logic separation | Task: Create TrainingController extracting business logic from TrainingScreen implementing audio lifecycle, BPM management, and permissions as specified in design document | Restrictions: Must not contain UI code, properly handle async operations, maintain clear separation from view layer | Success: Controller handles all business logic, methods are testable independently, audio lifecycle managed correctly, BPM validation works_
 
-- [ ] 6.2. Refactor TrainingScreen to UI-only (Estimate: 3 hours, Priority: High)
+- [x] 6.2. Refactor TrainingScreen to UI-only (Estimate: 3 hours, Priority: High)
   - File: lib/ui/screens/training_screen.dart
   - Remove business logic, keep only UI rendering
   - Inject TrainingController via constructor

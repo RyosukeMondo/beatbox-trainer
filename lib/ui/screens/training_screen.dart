@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
 import '../../models/classification_result.dart';
-import '../../services/audio/i_audio_service.dart';
-import '../../services/permission/i_permission_service.dart';
-import '../../services/settings/i_settings_service.dart';
+import '../../controllers/training/training_controller.dart';
 import '../../services/debug/i_debug_service.dart';
-import '../../services/error_handler/exceptions.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/debug_overlay.dart';
@@ -21,41 +18,33 @@ import '../utils/display_formatters.dart';
 /// - Debug overlay toggle (when debug mode enabled)
 /// - Error handling for audio engine failures
 ///
-/// This screen uses dependency injection for services, enabling
-/// testability and separation of concerns.
+/// This screen uses dependency injection for the controller and debug service,
+/// enabling testability and separation of concerns.
 ///
 /// Use [TrainingScreen.create] for production code (resolves from GetIt).
-/// Use [TrainingScreen.test] for widget tests (accepts mock services).
+/// Use [TrainingScreen.test] for widget tests (accepts mock controller).
 class TrainingScreen extends StatefulWidget {
-  /// Audio service for engine control
-  final IAudioService audioService;
-
-  /// Permission service for microphone access
-  final IPermissionService permissionService;
-
-  /// Settings service for debug mode and other settings
-  final ISettingsService settingsService;
+  /// Controller handling business logic
+  final TrainingController controller;
 
   /// Debug service for debug overlay data
   final IDebugService debugService;
 
   /// Private constructor for dependency injection.
   ///
-  /// All service dependencies are required and non-nullable.
+  /// All dependencies are required and non-nullable.
   /// This enforces proper dependency injection and prevents
   /// default instantiation which blocks testability.
   const TrainingScreen._({
     super.key,
-    required this.audioService,
-    required this.permissionService,
-    required this.settingsService,
+    required this.controller,
     required this.debugService,
   });
 
   /// Factory constructor for production use.
   ///
-  /// Resolves all service dependencies from the GetIt service locator.
-  /// Ensures services are properly registered before use.
+  /// Resolves all service dependencies from the GetIt service locator
+  /// and creates the TrainingController.
   ///
   /// Throws [StateError] if services are not registered in GetIt.
   ///
@@ -69,26 +58,26 @@ class TrainingScreen extends StatefulWidget {
   factory TrainingScreen.create({Key? key}) {
     return TrainingScreen._(
       key: key,
-      audioService: getIt<IAudioService>(),
-      permissionService: getIt<IPermissionService>(),
-      settingsService: getIt<ISettingsService>(),
-      debugService: getIt<IDebugService>(),
+      controller: TrainingController(
+        audioService: getIt(),
+        permissionService: getIt(),
+        settingsService: getIt(),
+      ),
+      debugService: getIt(),
     );
   }
 
   /// Test constructor for widget testing.
   ///
-  /// Accepts mock service implementations for testing.
-  /// This enables isolated widget testing without real service dependencies.
+  /// Accepts mock controller and debug service for testing.
+  /// This enables isolated widget testing without real dependencies.
   ///
   /// Example:
   /// ```dart
   /// await tester.pumpWidget(
   ///   MaterialApp(
   ///     home: TrainingScreen.test(
-  ///       audioService: mockAudio,
-  ///       permissionService: mockPermission,
-  ///       settingsService: mockSettings,
+  ///       controller: mockController,
   ///       debugService: mockDebug,
   ///     ),
   ///   ),
@@ -97,16 +86,12 @@ class TrainingScreen extends StatefulWidget {
   @visibleForTesting
   factory TrainingScreen.test({
     Key? key,
-    required IAudioService audioService,
-    required IPermissionService permissionService,
-    required ISettingsService settingsService,
+    required TrainingController controller,
     required IDebugService debugService,
   }) {
     return TrainingScreen._(
       key: key,
-      audioService: audioService,
-      permissionService: permissionService,
-      settingsService: settingsService,
+      controller: controller,
       debugService: debugService,
     );
   }
@@ -117,15 +102,6 @@ class TrainingScreen extends StatefulWidget {
 
 class _TrainingScreenState extends State<TrainingScreen>
     with SingleTickerProviderStateMixin {
-  /// Current BPM value (beats per minute)
-  int _currentBpm = 120;
-
-  /// Whether the audio engine is currently running
-  bool _isTraining = false;
-
-  /// Stream of classification results from audio service
-  Stream<ClassificationResult>? _classificationStream;
-
   /// Current classification result (null when idle)
   ClassificationResult? _currentResult;
 
@@ -158,11 +134,10 @@ class _TrainingScreenState extends State<TrainingScreen>
     );
   }
 
-  /// Load debug mode setting from settings service
+  /// Load debug mode setting from controller's settings service
   Future<void> _loadDebugSettings() async {
     try {
-      await widget.settingsService.init();
-      final debugMode = await widget.settingsService.getDebugMode();
+      final debugMode = await widget.controller.getDebugMode();
       if (mounted) {
         setState(() {
           _debugModeEnabled = debugMode;
@@ -177,192 +152,67 @@ class _TrainingScreenState extends State<TrainingScreen>
 
   @override
   void dispose() {
-    // Stop audio engine if still running when screen is disposed
-    if (_isTraining) {
-      _stopTraining();
-    }
-    // Dispose animation controller
+    // Note: We call dispose without awaiting since Widget.dispose() is synchronous
+    // The controller will handle async cleanup internally
+    widget.controller.dispose();
     _fadeAnimationController.dispose();
     super.dispose();
   }
 
-  /// Start audio engine and begin training session
-  Future<void> _startTraining() async {
-    // Check microphone permission before starting audio
-    final hasPermission = await _requestMicrophonePermission();
-    if (!hasPermission) {
-      return; // Permission denied, cannot proceed
-    }
-
+  /// Handle start training button press
+  Future<void> _handleStartTraining() async {
     try {
-      // Start audio engine with current BPM
-      await widget.audioService.startAudio(bpm: _currentBpm);
-
-      // Subscribe to classification stream
-      final stream = widget.audioService.getClassificationStream();
-
-      setState(() {
-        _isTraining = true;
-        _classificationStream = stream;
-        _currentResult = null;
-      });
-    } on AudioServiceException catch (e) {
-      // Show error dialog if audio engine fails to start
+      await widget.controller.startTraining();
+      setState(() {}); // Refresh UI after state change
+    } on PermissionException catch (e) {
       if (mounted) {
-        await ErrorDialog.show(
-          context,
-          title: 'Audio Error',
-          message: e.message,
-          onRetry: _startTraining,
-        );
+        await _showPermissionDialog(e.message);
       }
     } catch (e) {
-      // Handle unexpected errors
       if (mounted) {
         await ErrorDialog.show(
           context,
-          message: 'Failed to start audio: $e',
-          onRetry: _startTraining,
+          message: 'Failed to start training: $e',
+          onRetry: _handleStartTraining,
         );
       }
     }
   }
 
-  /// Stop audio engine and end training session
-  Future<void> _stopTraining() async {
+  /// Handle stop training button press
+  Future<void> _handleStopTraining() async {
     try {
-      // Stop audio engine
-      await widget.audioService.stopAudio();
+      await widget.controller.stopTraining();
+      setState(() {}); // Refresh UI after state change
+    } catch (e) {
+      if (mounted) {
+        await ErrorDialog.show(context, message: 'Failed to stop training: $e');
+      }
+    }
+  }
 
-      setState(() {
-        _isTraining = false;
-        _classificationStream = null;
-        _currentResult = null;
-      });
-    } on AudioServiceException catch (e) {
-      // Show error dialog if stop fails
+  /// Handle BPM slider change
+  Future<void> _handleBpmChange(int newBpm) async {
+    try {
+      await widget.controller.updateBpm(newBpm);
+      setState(() {}); // Refresh UI to show new BPM
+    } catch (e) {
       if (mounted) {
         await ErrorDialog.show(
           context,
-          title: 'Audio Error',
-          message: e.message,
+          title: 'BPM Update Error',
+          message: 'Failed to update BPM: $e',
         );
       }
-    } catch (e) {
-      // Handle unexpected errors
-      if (mounted) {
-        await ErrorDialog.show(context, message: 'Failed to stop audio: $e');
-      }
     }
   }
 
-  /// Update BPM dynamically during training
-  Future<void> _updateBpm(int newBpm) async {
-    setState(() {
-      _currentBpm = newBpm;
-    });
-
-    // If training is active, update BPM in real-time
-    if (_isTraining) {
-      try {
-        await widget.audioService.setBpm(bpm: newBpm);
-      } on AudioServiceException catch (e) {
-        // Show error if BPM update fails
-        if (mounted) {
-          await ErrorDialog.show(
-            context,
-            title: 'BPM Update Error',
-            message: e.message,
-          );
-        }
-      } catch (e) {
-        // Handle unexpected errors
-        if (mounted) {
-          await ErrorDialog.show(context, message: 'Failed to update BPM: $e');
-        }
-      }
-    }
-  }
-
-  /// Request microphone permission and handle different states
-  Future<bool> _requestMicrophonePermission() async {
-    final status = await widget.permissionService.checkMicrophonePermission();
-
-    // Permission already granted
-    if (status == PermissionStatus.granted) {
-      return true;
-    }
-
-    // Permission permanently denied - show settings dialog
-    if (status == PermissionStatus.permanentlyDenied) {
-      if (mounted) {
-        await _showPermissionPermanentlyDeniedDialog();
-      }
-      return false;
-    }
-
-    // Request permission
-    final result = await widget.permissionService.requestMicrophonePermission();
-
-    // Permission granted after request
-    if (result == PermissionStatus.granted) {
-      return true;
-    }
-
-    // Permission denied - show rationale dialog
-    if (result == PermissionStatus.denied) {
-      if (mounted) {
-        await _showPermissionDeniedDialog();
-      }
-      return false;
-    }
-
-    // Permission permanently denied after request
-    if (result == PermissionStatus.permanentlyDenied) {
-      if (mounted) {
-        await _showPermissionPermanentlyDeniedDialog();
-      }
-      return false;
-    }
-
-    return false;
-  }
-
-  /// Show dialog when permission is denied
-  Future<void> _showPermissionDeniedDialog() async {
+  /// Show permission dialog
+  Future<void> _showPermissionDialog(String message) async {
     return ErrorDialog.show(
       context,
       title: 'Microphone Permission Required',
-      message:
-          'This app needs microphone access to detect your beatbox sounds. '
-          'Please grant permission to continue.',
-    );
-  }
-
-  /// Show dialog when permission is permanently denied
-  Future<void> _showPermissionPermanentlyDeniedDialog() async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Microphone Permission Required'),
-        content: const Text(
-          'This app needs microphone access to detect your beatbox sounds. '
-          'Please enable microphone permission in your device settings.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await widget.permissionService.openAppSettings();
-            },
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
+      message: message,
     );
   }
 
@@ -376,149 +226,9 @@ class _TrainingScreenState extends State<TrainingScreen>
   @override
   Widget build(BuildContext context) {
     final scaffold = Scaffold(
-      appBar: AppBar(
-        title: const Text('Beatbox Trainer'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          if (_debugModeEnabled)
-            IconButton(
-              icon: Icon(
-                _debugOverlayVisible
-                    ? Icons.bug_report
-                    : Icons.bug_report_outlined,
-              ),
-              onPressed: _toggleDebugOverlay,
-              tooltip: _debugOverlayVisible
-                  ? 'Hide Debug Overlay'
-                  : 'Show Debug Overlay',
-            ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/settings'),
-            tooltip: 'Settings',
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // BPM Control Section
-            Text(
-              DisplayFormatters.formatBpm(_currentBpm),
-              style: Theme.of(
-                context,
-              ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-
-            // BPM Slider
-            Slider(
-              value: _currentBpm.toDouble(),
-              min: 40,
-              max: 240,
-              divisions: 200,
-              label: DisplayFormatters.formatBpm(_currentBpm),
-              onChanged: _isTraining
-                  ? (value) => _updateBpm(value.round())
-                  : (value) {
-                      setState(() {
-                        _currentBpm = value.round();
-                      });
-                    },
-            ),
-            const SizedBox(height: 32),
-
-            // Classification Results Display
-            Expanded(
-              child: _isTraining && _classificationStream != null
-                  ? StreamBuilder<ClassificationResult>(
-                      stream: _classificationStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const LoadingOverlay(
-                            message: 'Starting audio engine...',
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red,
-                                  size: 48,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Stream error: ${snapshot.error}',
-                                  style: const TextStyle(color: Colors.red),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasData) {
-                          _currentResult = snapshot.data;
-                          // Restart fade animation on each new result
-                          _fadeAnimationController.forward(from: 0.0);
-                          return _buildClassificationDisplay(_currentResult!);
-                        }
-
-                        // Idle state - waiting for first classification
-                        return const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.mic, size: 64, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text(
-                                'Make a beatbox sound!',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  : const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.play_circle_outline,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Press Start to begin training',
-                            style: TextStyle(fontSize: 24, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isTraining ? _stopTraining : _startTraining,
-        icon: Icon(_isTraining ? Icons.stop : Icons.play_arrow),
-        label: Text(_isTraining ? 'Stop' : 'Start'),
-        backgroundColor: _isTraining ? Colors.red : Colors.green,
-      ),
+      appBar: _buildAppBar(context),
+      body: _buildBody(context),
+      floatingActionButton: _buildFloatingActionButton(),
     );
 
     // Wrap with DebugOverlay if debug mode is enabled and overlay is visible
@@ -531,6 +241,157 @@ class _TrainingScreenState extends State<TrainingScreen>
     }
 
     return scaffold;
+  }
+
+  /// Build app bar with title and action buttons
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: const Text('Beatbox Trainer'),
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      actions: [
+        if (_debugModeEnabled)
+          IconButton(
+            icon: Icon(
+              _debugOverlayVisible
+                  ? Icons.bug_report
+                  : Icons.bug_report_outlined,
+            ),
+            onPressed: _toggleDebugOverlay,
+            tooltip: _debugOverlayVisible
+                ? 'Hide Debug Overlay'
+                : 'Show Debug Overlay',
+          ),
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () => context.go('/settings'),
+          tooltip: 'Settings',
+        ),
+      ],
+    );
+  }
+
+  /// Build main body content
+  Widget _buildBody(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildBpmDisplay(context),
+          const SizedBox(height: 16),
+          _buildBpmSlider(),
+          const SizedBox(height: 32),
+          Expanded(child: _buildClassificationArea()),
+        ],
+      ),
+    );
+  }
+
+  /// Build BPM display text
+  Widget _buildBpmDisplay(BuildContext context) {
+    return Text(
+      DisplayFormatters.formatBpm(widget.controller.currentBpm),
+      style: Theme.of(
+        context,
+      ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// Build BPM slider control
+  Widget _buildBpmSlider() {
+    final currentBpm = widget.controller.currentBpm;
+    return Slider(
+      value: currentBpm.toDouble(),
+      min: 40,
+      max: 240,
+      divisions: 200,
+      label: DisplayFormatters.formatBpm(currentBpm),
+      onChanged: (value) => _handleBpmChange(value.round()),
+    );
+  }
+
+  /// Build classification results area
+  Widget _buildClassificationArea() {
+    if (!widget.controller.isTraining) {
+      return _buildIdleState();
+    }
+
+    return StreamBuilder<ClassificationResult>(
+      stream: widget.controller.classificationStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingOverlay(message: 'Starting audio engine...');
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState(snapshot.error.toString());
+        }
+
+        if (snapshot.hasData) {
+          _currentResult = snapshot.data;
+          // Restart fade animation on each new result
+          _fadeAnimationController.forward(from: 0.0);
+          return _buildClassificationDisplay(_currentResult!);
+        }
+
+        // Waiting for first classification
+        return _buildWaitingForSoundState();
+      },
+    );
+  }
+
+  /// Build idle state (not training)
+  Widget _buildIdleState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.play_circle_outline, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Press Start to begin training',
+            style: TextStyle(fontSize: 24, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build waiting for sound state (training but no results yet)
+  Widget _buildWaitingForSoundState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.mic, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Make a beatbox sound!',
+            style: TextStyle(fontSize: 24, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build error state
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            'Stream error: $error',
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 
   /// Build classification result display widget with fade animation
@@ -579,16 +440,8 @@ class _TrainingScreenState extends State<TrainingScreen>
       result.timing.classification,
     );
 
-    // Format timing error with sign
     final errorMs = result.timing.errorMs;
-    String timingText;
-    if (errorMs > 0) {
-      timingText = '${DisplayFormatters.formatTimingError(errorMs)} LATE';
-    } else if (errorMs < 0) {
-      timingText = '${DisplayFormatters.formatTimingError(errorMs)} EARLY';
-    } else {
-      timingText = '${DisplayFormatters.formatTimingError(errorMs)} ON-TIME';
-    }
+    final timingText = _formatTimingText(errorMs);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -608,24 +461,21 @@ class _TrainingScreenState extends State<TrainingScreen>
     );
   }
 
+  /// Format timing error text with sign
+  String _formatTimingText(double errorMs) {
+    if (errorMs > 0) {
+      return '${DisplayFormatters.formatTimingError(errorMs)} LATE';
+    } else if (errorMs < 0) {
+      return '${DisplayFormatters.formatTimingError(errorMs)} EARLY';
+    } else {
+      return '${DisplayFormatters.formatTimingError(errorMs)} ON-TIME';
+    }
+  }
+
   /// Build confidence meter with color-coded progress bar
-  ///
-  /// Color coding:
-  /// - Green: >80% confidence
-  /// - Orange: 50-80% confidence
-  /// - Red: <50% confidence
   Widget _buildConfidenceMeter(ClassificationResult result) {
     final confidencePercentage = (result.confidence * 100).round();
-
-    // Determine color based on confidence level
-    Color confidenceColor;
-    if (result.confidence > 0.8) {
-      confidenceColor = Colors.green;
-    } else if (result.confidence >= 0.5) {
-      confidenceColor = Colors.orange;
-    } else {
-      confidenceColor = Colors.red;
-    }
+    final confidenceColor = _getConfidenceColor(result.confidence);
 
     return Container(
       width: 300,
@@ -637,39 +487,71 @@ class _TrainingScreenState extends State<TrainingScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Confidence',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                '$confidencePercentage%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: confidenceColor,
-                ),
-              ),
-            ],
-          ),
+          _buildConfidenceHeader(confidencePercentage, confidenceColor),
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: result.confidence,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(confidenceColor),
-              minHeight: 20,
-            ),
-          ),
+          _buildConfidenceBar(result.confidence, confidenceColor),
         ],
       ),
+    );
+  }
+
+  /// Get confidence color based on confidence level
+  Color _getConfidenceColor(double confidence) {
+    if (confidence > 0.8) {
+      return Colors.green;
+    } else if (confidence >= 0.5) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  /// Build confidence header row
+  Widget _buildConfidenceHeader(int percentage, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Confidence',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          '$percentage%',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build confidence progress bar
+  Widget _buildConfidenceBar(double confidence, Color color) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: LinearProgressIndicator(
+        value: confidence,
+        backgroundColor: Colors.grey[300],
+        valueColor: AlwaysStoppedAnimation<Color>(color),
+        minHeight: 20,
+      ),
+    );
+  }
+
+  /// Build floating action button for start/stop
+  Widget _buildFloatingActionButton() {
+    final isTraining = widget.controller.isTraining;
+    return FloatingActionButton.extended(
+      onPressed: isTraining ? _handleStopTraining : _handleStartTraining,
+      icon: Icon(isTraining ? Icons.stop : Icons.play_arrow),
+      label: Text(isTraining ? 'Stop' : 'Start'),
+      backgroundColor: isTraining ? Colors.red : Colors.green,
     );
   }
 }
