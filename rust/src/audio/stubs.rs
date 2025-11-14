@@ -71,7 +71,9 @@ impl AudioEngine {
     /// Start stub audio engine
     ///
     /// # Arguments
-    /// * `_calibration` - Calibration state (unused in stub)
+    /// * `_calibration_state` - Calibration state (unused in stub)
+    /// * `_calibration_procedure` - Optional calibration procedure reference (unused in stub)
+    /// * `_calibration_progress_tx` - Optional calibration progress broadcast channel (unused in stub)
     /// * `_result_sender` - Result broadcast channel (unused in stub)
     ///
     /// # Returns
@@ -81,8 +83,14 @@ impl AudioEngine {
     /// Returns AudioError::AlreadyRunning if engine is already started
     pub fn start(
         &mut self,
-        _calibration: std::sync::Arc<
+        _calibration_state: std::sync::Arc<
             std::sync::RwLock<crate::calibration::state::CalibrationState>,
+        >,
+        _calibration_procedure: std::sync::Arc<
+            std::sync::Mutex<Option<crate::calibration::procedure::CalibrationProcedure>>,
+        >,
+        _calibration_progress_tx: Option<
+            tokio::sync::broadcast::Sender<crate::calibration::CalibrationProgress>,
         >,
         _result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
     ) -> Result<(), AudioError> {
@@ -173,12 +181,19 @@ mod tests {
         let channels = BufferPool::new(DEFAULT_BUFFER_COUNT, DEFAULT_BUFFER_SIZE);
         let mut engine = AudioEngine::new(120, 48000, channels).unwrap();
 
-        let calibration = Arc::new(std::sync::RwLock::new(
+        let calibration_state = Arc::new(std::sync::RwLock::new(
             crate::calibration::state::CalibrationState::new_default(),
         ));
-        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let calibration_procedure = Arc::new(std::sync::Mutex::new(None));
+        let (progress_tx, _progress_rx) = tokio::sync::broadcast::channel(16);
+        let (result_tx, _result_rx) = tokio::sync::broadcast::channel(16);
 
-        let result = engine.start(calibration, tx);
+        let result = engine.start(
+            calibration_state,
+            calibration_procedure,
+            Some(progress_tx),
+            result_tx,
+        );
 
         assert!(result.is_ok());
         assert!(engine.is_running());
@@ -189,16 +204,30 @@ mod tests {
         let channels = BufferPool::new(DEFAULT_BUFFER_COUNT, DEFAULT_BUFFER_SIZE);
         let mut engine = AudioEngine::new(120, 48000, channels).unwrap();
 
-        let calibration = Arc::new(std::sync::RwLock::new(
+        let calibration_state = Arc::new(std::sync::RwLock::new(
             crate::calibration::state::CalibrationState::new_default(),
         ));
-        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let calibration_procedure = Arc::new(std::sync::Mutex::new(None));
+        let (progress_tx, _progress_rx) = tokio::sync::broadcast::channel(16);
+        let (result_tx, _result_rx) = tokio::sync::broadcast::channel(16);
 
         // Start first time - should succeed
-        engine.start(calibration.clone(), tx.clone()).unwrap();
+        engine
+            .start(
+                calibration_state.clone(),
+                calibration_procedure.clone(),
+                Some(progress_tx.clone()),
+                result_tx.clone(),
+            )
+            .unwrap();
 
         // Start second time - should fail
-        let result = engine.start(calibration, tx);
+        let result = engine.start(
+            calibration_state,
+            calibration_procedure,
+            Some(progress_tx),
+            result_tx,
+        );
 
         assert!(matches!(result, Err(AudioError::AlreadyRunning)));
     }
@@ -208,12 +237,21 @@ mod tests {
         let channels = BufferPool::new(DEFAULT_BUFFER_COUNT, DEFAULT_BUFFER_SIZE);
         let mut engine = AudioEngine::new(120, 48000, channels).unwrap();
 
-        let calibration = Arc::new(std::sync::RwLock::new(
+        let calibration_state = Arc::new(std::sync::RwLock::new(
             crate::calibration::state::CalibrationState::new_default(),
         ));
-        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let calibration_procedure = Arc::new(std::sync::Mutex::new(None));
+        let (progress_tx, _progress_rx) = tokio::sync::broadcast::channel(16);
+        let (result_tx, _result_rx) = tokio::sync::broadcast::channel(16);
 
-        engine.start(calibration, tx).unwrap();
+        engine
+            .start(
+                calibration_state,
+                calibration_procedure,
+                Some(progress_tx),
+                result_tx,
+            )
+            .unwrap();
         assert!(engine.is_running());
 
         let result = engine.stop();

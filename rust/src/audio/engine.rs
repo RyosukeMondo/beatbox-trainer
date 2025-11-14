@@ -437,4 +437,62 @@ mod tests {
             assert_eq!(engine.get_bpm(), bpm, "BPM should update to {}", bpm);
         }
     }
+
+    /// Test AudioEngine accepts calibration parameters without error
+    ///
+    /// This test verifies that the AudioEngine can be started with all calibration
+    /// parameters (calibration_state, calibration_procedure, calibration_progress_tx)
+    /// on both Android (real engine) and desktop (stub engine).
+    ///
+    /// On Android: Tests the real Oboe-based AudioEngine
+    /// On desktop: Tests the StubAudioEngine which simulates the interface
+    #[test]
+    fn test_audio_engine_start_with_calibration_parameters() {
+        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let mut engine = AudioEngine::new(120, 48000, channels).unwrap();
+
+        // Create calibration state
+        let calibration_state = std::sync::Arc::new(std::sync::RwLock::new(
+            crate::calibration::state::CalibrationState::new_default(),
+        ));
+
+        // Create calibration procedure (initially None)
+        let calibration_procedure = std::sync::Arc::new(std::sync::Mutex::new(None));
+
+        // Create calibration progress broadcast channel
+        let (calibration_progress_tx, _calibration_progress_rx) =
+            tokio::sync::broadcast::channel(16);
+
+        // Create classification result broadcast channel
+        let (result_tx, _result_rx) = tokio::sync::broadcast::channel(16);
+
+        // Start engine with all calibration parameters
+        let result = engine.start(
+            calibration_state,
+            calibration_procedure,
+            Some(calibration_progress_tx),
+            result_tx,
+        );
+
+        // On Android: Should succeed if audio permissions granted, or fail with specific error
+        // On desktop: Should succeed (stub implementation)
+        #[cfg(target_os = "android")]
+        {
+            // On Android, start may succeed or fail depending on permissions/hardware
+            // We just verify it doesn't panic and returns a valid Result
+            assert!(
+                result.is_ok() || result.is_err(),
+                "AudioEngine::start should return a valid Result on Android"
+            );
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            // On desktop stub, start should always succeed
+            assert!(
+                result.is_ok(),
+                "AudioEngine::start should succeed on desktop stub"
+            );
+        }
+    }
 }

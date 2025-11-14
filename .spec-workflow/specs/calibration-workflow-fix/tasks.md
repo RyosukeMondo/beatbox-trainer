@@ -66,7 +66,7 @@
   - _Requirements: Design Section 3.3_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust concurrency specialist | Task: Update spawn_analysis_thread_internal() in rust/src/audio/engine.rs (line 174) to accept and forward calibration_procedure and calibration_progress_tx parameters to spawn_analysis_thread(). Update the start() method body to pass these parameters through the call chain. Ensure all Arc references are properly cloned. Reference design document Section 3.3. | Restrictions: Must preserve existing thread spawning logic, must properly clone Arc references, must not introduce memory leaks, must maintain real-time safety guarantees | _Leverage: Existing Arc cloning patterns for frame_counter and bpm_ | Success: Parameters passed correctly through to analysis thread, no compilation errors, Arc cloning is correct, no functional changes to behavior | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (function modifications, parameter passing chain). Then mark as completed [x] in tasks.md_
 
-- [ ] 3.3. Add unit tests for AudioEngine parameter passing
+- [x] 3.3. Add unit tests for AudioEngine parameter passing
   - File: `rust/src/audio/engine.rs`
   - Add test_audio_engine_start_with_calibration_parameters() to existing test module
   - Verify AudioEngine accepts calibration parameters without error
