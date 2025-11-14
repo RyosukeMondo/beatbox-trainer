@@ -94,7 +94,7 @@
   - _Requirements: Design Section 3.4, Task 4.1_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust manager pattern specialist | Task: Update AudioEngineManager::start() in rust/src/managers/audio_engine_manager.rs to accept calibration_procedure and calibration_progress_tx parameters and forward them to AudioEngine::start(). Update documentation to describe new parameters. Reference design document Task 4.1. | Restrictions: Must maintain existing error handling, must preserve NotInitialized error case, must pass parameters correctly through to engine, must update doc comments | _Leverage: Existing start() method structure and error handling_ | Success: Parameters accepted and forwarded correctly, compiles successfully, documentation updated, error handling preserved | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (signature changes, parameter forwarding). Then mark as completed [x] in tasks.md_
 
-- [ ] 4.3. Update AppContext::start_audio() to pass calibration parameters
+- [x] 4.3. Update AppContext::start_audio() to pass calibration parameters
   - File: `rust/src/context.rs`
   - Modify start_audio() to retrieve calibration procedure via get_procedure_arc()
   - Retrieve optional calibration progress sender via get_calibration_sender()

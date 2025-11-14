@@ -88,9 +88,21 @@ impl AppContext {
             // Get calibration state for classification
             let calibration_state = self.calibration.get_state_arc();
 
+            // Get calibration procedure for analysis thread
+            let calibration_procedure = self.calibration.get_procedure_arc();
+
+            // Get optional calibration progress sender
+            let calibration_progress_tx = self.broadcasts.get_calibration_sender();
+
             // Start audio engine (delegates to AudioEngineManager)
             // Audio engine now sends directly to broadcast channel, eliminating mpsc → broadcast forwarding
-            self.audio.start(bpm, calibration_state, broadcast_tx)
+            self.audio.start(
+                bpm,
+                calibration_state,
+                calibration_procedure,
+                calibration_progress_tx,
+                broadcast_tx,
+            )
         }
     }
 
