@@ -304,7 +304,7 @@
   - _Requirements: US-10_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer with interface implementation expertise | Task: Update DebugServiceImpl to implement all three focused interfaces as specified in design document | Restrictions: Must implement all methods, maintain existing functionality, ensure composition pattern works | Success: DebugServiceImpl implements all three interfaces, all methods work correctly, no functional regressions_
 
-- [ ] 9.3. Update DI registration for split interfaces (Estimate: 1 hour, Priority: High)
+- [x] 9.3. Update DI registration for split interfaces (Estimate: 1 hour, Priority: High)
   - File: lib/di/service_locator.dart
   - Register DebugServiceImpl as all three interface types
   - Enable independent resolution of each interface

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:beatbox_trainer/di/service_locator.dart';
 import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
 import 'package:beatbox_trainer/services/debug/i_debug_service.dart';
+import 'package:beatbox_trainer/services/debug/i_audio_metrics_provider.dart';
+import 'package:beatbox_trainer/services/debug/i_onset_event_provider.dart';
+import 'package:beatbox_trainer/services/debug/i_log_exporter.dart';
 import 'package:beatbox_trainer/services/error_handler/error_handler.dart';
 import 'package:beatbox_trainer/services/navigation/i_navigation_service.dart';
 import 'package:beatbox_trainer/services/permission/i_permission_service.dart';
@@ -186,6 +189,108 @@ void main() {
       expect(settingsService, isNotNull);
       expect(storageService, isNotNull);
       expect(debugService, isNotNull);
+    });
+  });
+
+  group('Interface Segregation (ISP) - Split Debug Interfaces', () {
+    setUp(() async {
+      // Reset service locator before each test for isolation
+      await resetServiceLocator();
+    });
+
+    tearDown(() async {
+      // Clean up after each test
+      await resetServiceLocator();
+    });
+
+    test('all debug interfaces are registered', () async {
+      // Act
+      await setupServiceLocator(createTestRouter());
+
+      // Assert - verify all four debug interfaces are registered
+      expect(getIt.isRegistered<IDebugService>(), true);
+      expect(getIt.isRegistered<IAudioMetricsProvider>(), true);
+      expect(getIt.isRegistered<IOnsetEventProvider>(), true);
+      expect(getIt.isRegistered<ILogExporter>(), true);
+    });
+
+    test('all debug interfaces resolve to same instance', () async {
+      // Arrange
+      await setupServiceLocator(createTestRouter());
+
+      // Act - resolve all four debug interfaces
+      final debugService = getIt<IDebugService>();
+      final metricsProvider = getIt<IAudioMetricsProvider>();
+      final onsetProvider = getIt<IOnsetEventProvider>();
+      final logExporter = getIt<ILogExporter>();
+
+      // Assert - all should resolve to the same instance (singleton pattern)
+      expect(identical(debugService, metricsProvider), true);
+      expect(identical(debugService, onsetProvider), true);
+      expect(identical(debugService, logExporter), true);
+      expect(identical(metricsProvider, onsetProvider), true);
+      expect(identical(metricsProvider, logExporter), true);
+      expect(identical(onsetProvider, logExporter), true);
+    });
+
+    test('can resolve individual ISP interfaces independently', () async {
+      // Arrange
+      await setupServiceLocator(createTestRouter());
+
+      // Act - resolve each interface independently
+      final metricsProvider = getIt<IAudioMetricsProvider>();
+      final onsetProvider = getIt<IOnsetEventProvider>();
+      final logExporter = getIt<ILogExporter>();
+
+      // Assert - all should be non-null
+      expect(metricsProvider, isNotNull);
+      expect(onsetProvider, isNotNull);
+      expect(logExporter, isNotNull);
+    });
+
+    test('ISP interfaces support dependency injection', () async {
+      // Arrange
+      await setupServiceLocator(createTestRouter());
+
+      // Act - simulate component depending only on specific interface
+      // Components can now depend on only what they need (ISP)
+      final metricsProvider = getIt<IAudioMetricsProvider>();
+
+      // Assert - component receives correct interface
+      expect(metricsProvider, isA<IAudioMetricsProvider>());
+      expect(metricsProvider, isNotNull);
+    });
+
+    test('resetServiceLocator disposes debug service only once', () async {
+      // Arrange
+      await setupServiceLocator(createTestRouter());
+
+      // Verify all interfaces are registered
+      expect(getIt.isRegistered<IDebugService>(), true);
+      expect(getIt.isRegistered<IAudioMetricsProvider>(), true);
+      expect(getIt.isRegistered<IOnsetEventProvider>(), true);
+      expect(getIt.isRegistered<ILogExporter>(), true);
+
+      // Act - reset service locator (should dispose once, not four times)
+      await resetServiceLocator();
+
+      // Assert - all interfaces should be unregistered
+      expect(getIt.isRegistered<IDebugService>(), false);
+      expect(getIt.isRegistered<IAudioMetricsProvider>(), false);
+      expect(getIt.isRegistered<IOnsetEventProvider>(), false);
+      expect(getIt.isRegistered<ILogExporter>(), false);
+    });
+
+    test('legacy IDebugService interface still works', () async {
+      // Arrange - components using legacy interface should still work
+      await setupServiceLocator(createTestRouter());
+
+      // Act - resolve legacy interface
+      final debugService = getIt<IDebugService>();
+
+      // Assert - legacy interface resolves correctly
+      expect(debugService, isNotNull);
+      expect(debugService, isA<IDebugService>());
     });
   });
 }
