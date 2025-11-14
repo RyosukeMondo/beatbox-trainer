@@ -69,6 +69,17 @@ pub struct OnsetEvent {
 /// - Clear ownership and lifecycle management
 static APP_CONTEXT: Lazy<AppContext> = Lazy::new(AppContext::new);
 
+/// Initialize flutter_rust_bridge with Tokio runtime
+///
+/// This function creates a Tokio runtime for async operations (streams, spawn, etc.).
+/// It must be called before any async FFI functions are used.
+///
+/// flutter_rust_bridge will automatically call this during RustLib.init().
+#[flutter_rust_bridge::frb(init)]
+pub fn init_app() {
+    flutter_rust_bridge::setup_default_user_utils();
+}
+
 /// Initialize and greet from Rust
 ///
 /// This is a simple stub function to verify flutter_rust_bridge integration works.
@@ -181,13 +192,22 @@ pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
     // Subscribe to the classification broadcast channel
     let mut receiver = APP_CONTEXT.subscribe_classification();
 
-    // Spawn task to forward classification results to the stream sink
-    tokio::spawn(async move {
-        while let Some(result) = receiver.recv().await {
-            // Forward result to Dart via StreamSink
-            sink.add(result);
-        }
-        // Stream ends when receiver channel closes (audio engine stopped)
+    // Spawn a dedicated thread with its own Tokio runtime for async operations
+    // This avoids requiring a global Tokio runtime
+    std::thread::spawn(move || {
+        // Create a single-threaded Tokio runtime for this stream handler
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime for classification stream");
+
+        rt.block_on(async move {
+            while let Some(result) = receiver.recv().await {
+                // Forward result to Dart via StreamSink
+                sink.add(result);
+            }
+            // Stream ends when receiver channel closes (audio engine stopped)
+        });
     });
 }
 
@@ -257,13 +277,22 @@ pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
     // Subscribe to the calibration broadcast channel
     let mut receiver = APP_CONTEXT.subscribe_calibration();
 
-    // Spawn task to forward calibration progress to the stream sink
-    tokio::spawn(async move {
-        while let Some(progress) = receiver.recv().await {
-            // Forward progress to Dart via StreamSink
-            sink.add(progress);
-        }
-        // Stream ends when receiver channel closes (calibration finished)
+    // Spawn a dedicated thread with its own Tokio runtime for async operations
+    // This avoids requiring a global Tokio runtime
+    std::thread::spawn(move || {
+        // Create a single-threaded Tokio runtime for this stream handler
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime for calibration stream");
+
+        rt.block_on(async move {
+            while let Some(progress) = receiver.recv().await {
+                // Forward progress to Dart via StreamSink
+                sink.add(progress);
+            }
+            // Stream ends when receiver channel closes (calibration finished)
+        });
     });
 }
 
