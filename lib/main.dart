@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'bridge/api.dart/frb_generated.dart';
 import 'di/service_locator.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
@@ -10,6 +11,9 @@ import 'ui/screens/settings_screen.dart';
 void main() async {
   // Ensure Flutter bindings are initialized before async operations
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize flutter_rust_bridge before any FFI calls
+  await RustLib.init();
 
   // Setup dependency injection container with router before running the app
   await setupServiceLocator(_router);

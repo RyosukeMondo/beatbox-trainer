@@ -120,12 +120,20 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
 
   /// Initialize storage service and start calibration
   Future<void> _initializeAndStart() async {
+    print('[CalibrationScreen] Initializing and starting...');
     try {
       // Initialize storage service before any operations
+      print('[CalibrationScreen] Initializing storage service');
       await widget.storageService.init();
+      print('[CalibrationScreen] Storage service initialized');
+
       // Start calibration automatically when screen loads
+      print('[CalibrationScreen] About to start calibration');
       await _startCalibration();
-    } catch (e) {
+      print('[CalibrationScreen] Calibration start completed');
+    } catch (e, stackTrace) {
+      print('[CalibrationScreen] Error in _initializeAndStart: $e');
+      print('[CalibrationScreen] Stack trace: $stackTrace');
       setState(() {
         _errorMessage = 'Failed to initialize: $e';
         _isCalibrating = false;
@@ -148,12 +156,17 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
 
   /// Start calibration workflow
   Future<void> _startCalibration() async {
+    print('[CalibrationScreen] Starting calibration...');
     try {
       // Start calibration procedure
+      print('[CalibrationScreen] Calling audioService.startCalibration()');
       await widget.audioService.startCalibration();
+      print('[CalibrationScreen] startCalibration() completed successfully');
 
       // Subscribe to calibration progress stream
+      print('[CalibrationScreen] Getting calibration stream');
       final stream = widget.audioService.getCalibrationStream();
+      print('[CalibrationScreen] Got calibration stream');
 
       setState(() {
         _isCalibrating = true;
@@ -161,17 +174,26 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         _currentProgress = null;
         _errorMessage = null;
       });
+      print('[CalibrationScreen] State updated, calibration started');
     } on CalibrationServiceException catch (e) {
+      print('[CalibrationScreen] CalibrationServiceException: ${e.message}');
+      print('[CalibrationScreen] Error code: ${e.errorCode}');
+      print('[CalibrationScreen] Original error: ${e.originalError}');
       setState(() {
         _errorMessage = e.message;
         _isCalibrating = false;
       });
     } on AudioServiceException catch (e) {
+      print('[CalibrationScreen] AudioServiceException: ${e.message}');
+      print('[CalibrationScreen] Error code: ${e.errorCode}');
+      print('[CalibrationScreen] Original error: ${e.originalError}');
       setState(() {
         _errorMessage = e.message;
         _isCalibrating = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('[CalibrationScreen] Unexpected error: $e');
+      print('[CalibrationScreen] Stack trace: $stackTrace');
       setState(() {
         _errorMessage = 'Failed to start calibration: $e';
         _isCalibrating = false;
