@@ -172,7 +172,7 @@
   - _Requirements: US-5_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer specializing in state management and refactoring | Task: Extract CalibrationManager from AppContext implementing calibration workflow and state management as specified in design document | Restrictions: Must maintain thread safety, do not lose calibration data, ensure proper state transitions | Success: CalibrationManager compiles and works correctly, calibration workflow preserved, state management robust, proper error handling_
 
-- [ ] 5.3. Create BroadcastChannelManager (Estimate: 3 hours, Priority: High)
+- [x] 5.3. Create BroadcastChannelManager (Estimate: 3 hours, Priority: High)
   - File: rust/src/managers/broadcast_manager.rs
   - Extract broadcast channel setup from AppContext
   - Implement init_classification(), subscribe_classification(), init_calibration(), subscribe_calibration()
