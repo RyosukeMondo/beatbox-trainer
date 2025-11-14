@@ -1,3 +1,4 @@
+import '../../bridge/extensions/error_code_extensions.dart';
 import 'exceptions.dart';
 
 /// Utility class for translating Rust errors to user-friendly messages
@@ -28,13 +29,15 @@ class ErrorHandler {
   /// actionable, user-friendly error messages.
   ///
   /// Supported error codes:
-  /// - 1001: BpmInvalid - Invalid tempo value
-  /// - 1002: AlreadyRunning - Audio engine already active
-  /// - 1003: NotRunning - Audio engine not active
-  /// - 1004: HardwareError - Audio hardware issues
-  /// - 1005: PermissionDenied - Microphone permission denied
-  /// - 1006: StreamOpenFailed - Failed to open audio stream
-  /// - 1007: LockPoisoned - Internal synchronization error
+  /// - AudioErrorCodesExtension.bpmInvalid: Invalid tempo value
+  /// - AudioErrorCodesExtension.alreadyRunning: Audio engine already active
+  /// - AudioErrorCodesExtension.notRunning: Audio engine not active
+  /// - AudioErrorCodesExtension.hardwareError: Audio hardware issues
+  /// - AudioErrorCodesExtension.permissionDenied: Microphone permission denied
+  /// - AudioErrorCodesExtension.streamOpenFailed: Failed to open audio stream
+  /// - AudioErrorCodesExtension.lockPoisoned: Internal synchronization error
+  /// - AudioErrorCodesExtension.jniInitFailed: JNI initialization failed (Android)
+  /// - AudioErrorCodesExtension.contextNotInitialized: Android context not initialized
   ///
   /// For unknown errors, returns a generic fallback message.
   String translateAudioError(String rustError) {
@@ -42,26 +45,32 @@ class ErrorHandler {
 
     // Match by error code for precise handling
     switch (errorCode) {
-      case 1001: // BpmInvalid
+      case AudioErrorCodesExtension.bpmInvalid:
         return 'Please choose a tempo between 40 and 240 BPM.';
 
-      case 1002: // AlreadyRunning
+      case AudioErrorCodesExtension.alreadyRunning:
         return 'Audio is already active. Please stop it first.';
 
-      case 1003: // NotRunning
+      case AudioErrorCodesExtension.notRunning:
         return 'Audio engine is not running. Please start it first.';
 
-      case 1004: // HardwareError
+      case AudioErrorCodesExtension.hardwareError:
         return 'Audio hardware error occurred. Please check your device settings.';
 
-      case 1005: // PermissionDenied
+      case AudioErrorCodesExtension.permissionDenied:
         return 'Microphone access required. Please enable in settings.';
 
-      case 1006: // StreamOpenFailed
+      case AudioErrorCodesExtension.streamOpenFailed:
         return 'Unable to access audio hardware. Please check if another app is using the microphone.';
 
-      case 1007: // LockPoisoned
+      case AudioErrorCodesExtension.lockPoisoned:
         return 'Internal error occurred. Please restart the app.';
+
+      case AudioErrorCodesExtension.jniInitFailed:
+        return 'Audio initialization failed. Please restart the app.';
+
+      case AudioErrorCodesExtension.contextNotInitialized:
+        return 'Audio engine not properly initialized. Please restart the app.';
 
       default:
         // Fallback pattern matching on error text
@@ -103,11 +112,11 @@ class ErrorHandler {
   /// actionable, user-friendly error messages.
   ///
   /// Supported error codes:
-  /// - 2001: InsufficientSamples - Not enough samples collected
-  /// - 2002: InvalidFeatures - Poor quality audio samples
-  /// - 2003: NotComplete - Calibration incomplete
-  /// - 2004: AlreadyInProgress - Calibration already running
-  /// - 2005: StatePoisoned - Internal synchronization error
+  /// - CalibrationErrorCodesExtension.insufficientSamples: Not enough samples collected
+  /// - CalibrationErrorCodesExtension.invalidFeatures: Poor quality audio samples
+  /// - CalibrationErrorCodesExtension.notComplete: Calibration incomplete
+  /// - CalibrationErrorCodesExtension.alreadyInProgress: Calibration already running
+  /// - CalibrationErrorCodesExtension.statePoisoned: Internal synchronization error
   ///
   /// For unknown errors, returns a generic fallback message.
   String translateCalibrationError(String rustError) {
@@ -115,19 +124,19 @@ class ErrorHandler {
 
     // Match by error code for precise handling
     switch (errorCode) {
-      case 2001: // InsufficientSamples
+      case CalibrationErrorCodesExtension.insufficientSamples:
         return 'Not enough samples collected. Please continue making sounds.';
 
-      case 2002: // InvalidFeatures
+      case CalibrationErrorCodesExtension.invalidFeatures:
         return 'Sound quality too low. Please speak louder or move closer to the microphone.';
 
-      case 2003: // NotComplete
+      case CalibrationErrorCodesExtension.notComplete:
         return 'Calibration not finished. Please complete all steps.';
 
-      case 2004: // AlreadyInProgress
+      case CalibrationErrorCodesExtension.alreadyInProgress:
         return 'Calibration is already in progress. Please finish or cancel it first.';
 
-      case 2005: // StatePoisoned
+      case CalibrationErrorCodesExtension.statePoisoned:
         return 'Internal error occurred. Please restart the app.';
 
       default:

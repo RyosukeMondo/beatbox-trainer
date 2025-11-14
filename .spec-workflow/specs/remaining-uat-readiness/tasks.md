@@ -238,7 +238,7 @@
   - _Requirements: US-7_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with expertise in error handling and FFI | Task: Create error code constants in error.rs with FFI annotations exposing to Dart as specified in design document | Restrictions: Must maintain existing error enum functionality, ensure constants are FFI-compatible, follow naming conventions | Success: Error codes defined as constants, FFI annotations correct, code() method returns proper constants, no breaking changes_
 
-- [ ] 7.2. Expose error codes via FFI (Estimate: 1 hour, Priority: High)
+- [x] 7.2. Expose error codes via FFI (Estimate: 1 hour, Priority: High)
   - File: rust/src/error.rs
   - Run flutter_rust_bridge codegen to generate Dart constants
   - Verify generated AudioErrorCodes and CalibrationErrorCodes classes in Dart
@@ -246,7 +246,7 @@
   - _Requirements: US-7_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust/Dart Bridge Engineer with FFI expertise | Task: Run flutter_rust_bridge codegen and verify Dart error code constants are generated correctly | Restrictions: Do not manually write Dart constants, rely on codegen, verify all constants match Rust definitions | Success: Codegen completes successfully, Dart constants available, all error codes accessible from Dart_
 
-- [ ] 7.3. Update Dart error handling (Estimate: 2 hours, Priority: High)
+- [x] 7.3. Update Dart error handling (Estimate: 2 hours, Priority: High)
   - File: lib/services/error_handler/error_handler.dart
   - Replace magic number error codes with AudioErrorCodes.* constants
   - Update all error translation switch statements
