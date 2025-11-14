@@ -40,6 +40,14 @@ The Beatbox Trainer application is built with a layered, dependency-injected arc
 
 ## Core Architectural Patterns
 
+The application uses three main architectural patterns for code organization and testability:
+
+1. **[Dependency Injection](./architecture/dependency_injection.md)** - GetIt service locator in Dart
+2. **[Manager Pattern](./architecture/managers.md)** - Focused manager classes in Rust
+3. **[Controller Pattern](./architecture/controllers.md)** - Business logic separation in Dart
+
+See the linked documentation for comprehensive guides with examples and best practices.
+
 ### 1. Dependency Injection
 
 All components receive their dependencies via constructor injection, enabling:
@@ -47,41 +55,137 @@ All components receive their dependencies via constructor injection, enabling:
 - **Flexibility**: Swap implementations without code changes
 - **Clarity**: Explicit dependencies visible in constructor
 
-#### Example: Dart Service Injection
+**Full Documentation**: [Dependency Injection Pattern](./architecture/dependency_injection.md)
+
+#### Example: Dart Service Injection with GetIt
 
 ```dart
-class TrainingScreen extends StatefulWidget {
-  final IAudioService audioService;
-  final IPermissionService permissionService;
+// Service Locator Setup (lib/di/service_locator.dart)
+final getIt = GetIt.instance;
 
-  const TrainingScreen({
-    IAudioService? audioService,
-    IPermissionService? permissionService,
-    super.key,
-  }) : audioService = audioService ?? AudioServiceImpl(),
-       permissionService = permissionService ?? PermissionServiceImpl();
+Future<void> setupServiceLocator(GoRouter router) async {
+  getIt.registerLazySingleton<IAudioService>(
+    () => AudioServiceImpl(errorHandler: getIt<ErrorHandler>()),
+  );
+  getIt.registerLazySingleton<IPermissionService>(
+    () => PermissionServiceImpl(),
+  );
+  // ... other services
+}
+
+// Widget with Factory Constructors
+class TrainingScreen extends StatefulWidget {
+  final TrainingController controller;
+
+  // Private constructor (enforce factory usage)
+  const TrainingScreen._({required this.controller});
+
+  // Production factory: resolves from GetIt
+  factory TrainingScreen.create() {
+    return TrainingScreen._(
+      controller: TrainingController(
+        audioService: getIt<IAudioService>(),
+        permissionService: getIt<IPermissionService>(),
+        settingsService: getIt<ISettingsService>(),
+      ),
+    );
+  }
+
+  // Test factory: accepts mock controller
+  @visibleForTesting
+  factory TrainingScreen.test({
+    required TrainingController controller,
+  }) {
+    return TrainingScreen._(controller: controller);
+  }
 }
 ```
 
-#### Example: Rust AppContext
+#### Example: Rust AppContext (Facade Pattern)
 
 ```rust
+// AppContext composes focused managers (< 200 lines, down from 1495)
 pub struct AppContext {
-    audio_engine: Arc<Mutex<Option<AudioEngineState>>>,
-    calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
-    calibration_state: Arc<RwLock<CalibrationState>>,
-    // Broadcast channels for streams
+    audio: AudioEngineManager,
+    calibration: CalibrationManager,
+    broadcasts: BroadcastChannelManager,
 }
 
 impl AppContext {
-    pub fn new() -> Self { /* ... */ }
+    pub fn new() -> Self {
+        Self {
+            audio: AudioEngineManager::new(),
+            calibration: CalibrationManager::new(),
+            broadcasts: BroadcastChannelManager::new(),
+        }
+    }
 
-    #[cfg(test)]
-    pub fn new_test() -> Self { /* isolated test instance */ }
+    // Delegates to AudioEngineManager
+    pub fn start_audio(&self, bpm: u32) -> Result<(), AudioError> {
+        let broadcast_tx = self.broadcasts.init_classification();
+        let calibration_state = self.calibration.get_state_arc();
+        self.audio.start(bpm, calibration_state, broadcast_tx)
+    }
 }
 ```
 
-### 2. Typed Error Handling
+**Full Documentation**: [Manager Pattern in Rust](./architecture/managers.md)
+
+### 2. Controller Pattern (MVC Architecture)
+
+Separates business logic from UI rendering using dedicated controller classes:
+- **View (Screen)**: Renders UI, handles user interactions
+- **Controller**: Business logic, state management, service orchestration
+- **Model (Services)**: Data access, platform APIs
+
+**Full Documentation**: [Controller Pattern in Flutter](./architecture/controllers.md)
+
+#### Example: TrainingController
+
+```dart
+// Controller handles business logic
+class TrainingController {
+  final IAudioService _audioService;
+  final IPermissionService _permissionService;
+  bool _isTraining = false;
+
+  TrainingController({
+    required IAudioService audioService,
+    required IPermissionService permissionService,
+  }) : _audioService = audioService,
+       _permissionService = permissionService;
+
+  bool get isTraining => _isTraining;
+
+  Future<void> startTraining() async {
+    // Business logic: permission, audio startup, state management
+    final hasPermission = await _requestPermission();
+    if (!hasPermission) throw PermissionException('Denied');
+
+    await _audioService.startAudio(bpm: 120);
+    _isTraining = true;
+  }
+}
+
+// View delegates to controller
+class _TrainingScreenState extends State<TrainingScreen> {
+  Future<void> _handlePlayPress() async {
+    await widget.controller.startTraining(); // Delegate
+    if (mounted) setState(() {}); // Update UI
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // UI rendering only - no business logic
+    return ElevatedButton(
+      onPressed: _handlePlayPress,
+      child: Text(widget.controller.isTraining ? 'Stop' : 'Play'),
+    );
+  }
+}
+```
+
+### 3. Typed Error Handling
 
 Replaces stringly-typed errors with structured error types:
 
@@ -334,12 +438,18 @@ User sees: "Unable to access audio hardware..."
 ```
 rust/src/
 ├── error.rs              # Custom error types (AudioError, CalibrationError)
-├── context.rs            # AppContext DI container
+├── context.rs            # AppContext facade (< 200 lines, delegates to managers)
 ├── api.rs                # FFI bridge (thin wrappers calling AppContext)
+├── managers/             # Focused manager classes (SRP)
+│   ├── mod.rs            # Manager exports
+│   ├── audio_engine_manager.rs    # Audio lifecycle & BPM management
+│   ├── calibration_manager.rs     # Calibration workflow & state
+│   └── broadcast_manager.rs       # Tokio broadcast channel management
 ├── audio/
 │   ├── mod.rs
 │   ├── engine.rs         # AudioEngine (lock-free audio path)
-│   └── buffer_pool.rs    # Lock-free SPSC queues
+│   ├── buffer_pool.rs    # Lock-free SPSC queues
+│   └── stubs.rs          # StubAudioEngine for desktop testing
 ├── analysis/
 │   ├── mod.rs            # Pipeline coordinator
 │   ├── onset.rs          # OnsetDetector
@@ -363,33 +473,54 @@ rust/src/
 
 ```
 lib/
-├── main.dart
+├── main.dart             # App initialization, setupServiceLocator
 ├── bridge/
 │   └── api.dart          # FFI bridge (flutter_rust_bridge generated)
-├── services/             # Service layer (NEW)
+├── di/                   # Dependency injection (GetIt)
+│   └── service_locator.dart    # setupServiceLocator, resetServiceLocator
+├── controllers/          # Business logic controllers (MVC)
+│   └── training/
+│       └── training_controller.dart
+├── services/             # Service layer abstractions
 │   ├── audio/
 │   │   ├── i_audio_service.dart          # Interface
 │   │   └── audio_service_impl.dart       # FFI wrapper
 │   ├── permission/
 │   │   ├── i_permission_service.dart     # Interface
 │   │   └── permission_service_impl.dart  # permission_handler wrapper
+│   ├── settings/
+│   │   ├── i_settings_service.dart       # Interface
+│   │   └── settings_service_impl.dart    # SharedPreferences wrapper
+│   ├── storage/
+│   │   ├── i_storage_service.dart        # Interface
+│   │   └── storage_service_impl.dart     # Calibration data persistence
+│   ├── navigation/
+│   │   ├── i_navigation_service.dart     # Interface (testability)
+│   │   └── go_router_navigation_service.dart  # GoRouter wrapper
+│   ├── debug/
+│   │   ├── i_debug_service.dart          # Legacy interface
+│   │   ├── i_audio_metrics_provider.dart # ISP: metrics streaming
+│   │   ├── i_onset_event_provider.dart   # ISP: event streaming
+│   │   ├── i_log_exporter.dart           # ISP: log export
+│   │   └── debug_service_impl.dart       # Implementation
 │   └── error_handler/
 │       ├── error_handler.dart            # Error translation
 │       └── exceptions.dart               # Dart exception types
-├── models/               # Value objects (no changes)
+├── models/               # Value objects
 │   ├── classification_result.dart
 │   ├── timing_feedback.dart
 │   └── calibration_progress.dart
 └── ui/
     ├── screens/
-    │   ├── training_screen.dart          # Injects services
-    │   └── calibration_screen.dart       # Injects services
-    ├── widgets/          # Shared components (NEW)
+    │   ├── training_screen.dart          # Uses .create()/.test() factories
+    │   ├── calibration_screen.dart       # Uses .create()/.test() factories
+    │   └── settings_screen.dart          # Uses .create()/.test() factories
+    ├── widgets/          # Shared components
     │   ├── error_dialog.dart
     │   ├── loading_overlay.dart
-    │   ├── status_card.dart
-    │   └── permission_dialogs.dart
-    └── utils/            # Display utilities (NEW)
+    │   ├── debug_overlay.dart
+    │   └── status_card.dart
+    └── utils/            # Display utilities
         └── display_formatters.dart
 ```
 
@@ -407,24 +538,35 @@ lib/
 
 **Trade-off**: Less flexible than trait-based DI, but adequate for current needs
 
-### Why Constructor Injection with Default Factory?
+### Why GetIt Service Locator Instead of Provider/Riverpod?
 
-**Decision**: Optional parameters with default implementations
-
-```dart
-const TrainingScreen({
-  IAudioService? audioService,
-  super.key,
-}) : audioService = audioService ?? AudioServiceImpl();
-```
+**Decision**: GetIt for dependency injection with factory constructors
 
 **Rationale**:
-- Production code uses defaults (no boilerplate)
-- Tests inject mocks easily
-- No need for DI framework (GetIt, Provider, etc.)
-- Clear dependency contracts
+- Simple service locator pattern (no widget tree pollution)
+- Lazy singleton registration (services created on-demand)
+- Test-friendly (easy setup/teardown with `resetServiceLocator()`)
+- No runtime widget rebuilds (unlike Provider)
+- Clear separation from UI layer
 
-**Trade-off**: Slightly verbose constructors, but explicit dependencies
+**Trade-off**: Manual service registration vs. automatic discovery, but provides more control
+
+**See**: [Dependency Injection Pattern](./architecture/dependency_injection.md) for implementation details
+
+### Why Controller Pattern Instead of BLoC/Riverpod?
+
+**Decision**: Simple controller classes with constructor injection
+
+**Rationale**:
+- Business logic testable without widgets
+- No additional dependencies (BLoC, Riverpod)
+- Clear MVC separation (View, Controller, Model)
+- Works seamlessly with GetIt
+- Simpler than Streams/StateNotifiers for this app's complexity
+
+**Trade-off**: Manual state management vs. reactive frameworks, but adequate for current needs
+
+**See**: [Controller Pattern](./architecture/controllers.md) for implementation details
 
 ### Why Lock-Free Audio Path?
 
@@ -499,7 +641,15 @@ All phases complete. See `.spec-workflow/specs/code-quality-refactoring/` for de
 
 ## References
 
+### Architecture Pattern Documentation
+
+- **[Dependency Injection Pattern](./architecture/dependency_injection.md)** - GetIt service locator setup, factory constructors, testing patterns
+- **[Manager Pattern in Rust](./architecture/managers.md)** - Focused manager classes, facade pattern, SRP refactoring
+- **[Controller Pattern in Flutter](./architecture/controllers.md)** - MVC architecture, business logic separation, testing
+
+### Project Documentation
+
+- **[Testing Guide](./TESTING.md)** - Comprehensive testing patterns for unit, widget, and integration tests
 - **Steering Documents**: `.spec-workflow/steering/tech.md`, `structure.md`
-- **Design Document**: `.spec-workflow/specs/code-quality-refactoring/design.md`
-- **Implementation Logs**: `.spec-workflow/specs/code-quality-refactoring/Implementation Logs/`
-- **Test Documentation**: [TESTING.md](TESTING.md)
+- **UAT Readiness Spec**: `.spec-workflow/specs/remaining-uat-readiness/`
+- **Code Quality Refactoring**: `.spec-workflow/specs/code-quality-refactoring/`
