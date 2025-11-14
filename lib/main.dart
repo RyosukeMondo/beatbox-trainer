@@ -13,7 +13,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize flutter_rust_bridge before any FFI calls
-  await RustLib.init();
+  // Temporarily disable content hash check due to Rust rebuild issues
+  await RustLib.init(forceSameCodegenVersion: false);
 
   // Setup dependency injection container with router before running the app
   await setupServiceLocator(_router);
