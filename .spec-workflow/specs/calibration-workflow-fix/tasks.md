@@ -115,7 +115,7 @@
 
 ## Phase 5: Integration Testing
 
-- [ ] 5.1. Create end-to-end calibration workflow test
+- [x] 5.1. Create end-to-end calibration workflow test
   - File: `rust/tests/calibration_integration_test.rs`
   - Create test_full_calibration_workflow() with AppContext initialization
   - Test calibration start, procedure initialization, audio engine state
