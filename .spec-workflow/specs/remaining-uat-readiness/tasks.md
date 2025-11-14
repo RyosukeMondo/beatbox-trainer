@@ -163,7 +163,7 @@
   - _Requirements: US-5, US-8_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer specializing in refactoring and SOLID principles | Task: Extract AudioEngineManager from AppContext implementing start(), stop(), set_bpm() methods with Single Responsibility Principle and methods under 50 lines as specified in design document | Restrictions: Must maintain lock-free audio path, do not introduce performance regression, ensure thread safety with Arc/Mutex | Success: AudioEngineManager compiles and works correctly, all methods under 50 lines, maintains existing audio performance, proper error handling_
 
-- [ ] 5.2. Create CalibrationManager (Estimate: 3 hours, Priority: High)
+- [x] 5.2. Create CalibrationManager (Estimate: 3 hours, Priority: High)
   - File: rust/src/managers/calibration_manager.rs
   - Extract calibration workflow methods from AppContext
   - Implement start(), finish(), get_state(), load_state()
