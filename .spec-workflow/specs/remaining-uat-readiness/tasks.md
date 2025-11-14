@@ -276,7 +276,7 @@
   - _Requirements: US-8_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in clean code and refactoring | Task: Refactor _finishCalibration() and other large functions in CalibrationScreen extracting helpers following SLAP as specified in design document | Restrictions: Must maintain existing functionality, each function single abstraction level, use navigation service abstraction | Success: All functions under 50 lines, _finishCalibration() simplified to high-level steps, code more readable, no functional regressions_
 
-- [ ] 8.3. Refactor large functions in Rust managers (Estimate: 2 hours, Priority: High)
+- [x] 8.3. Refactor large functions in Rust managers (Estimate: 2 hours, Priority: High)
   - File: rust/src/managers/*.rs
   - Extract validation, setup, and cleanup helpers from manager methods
   - Ensure all manager methods under 50 lines
