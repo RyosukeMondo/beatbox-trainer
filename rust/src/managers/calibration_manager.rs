@@ -139,6 +139,22 @@ impl CalibrationManager {
         Arc::clone(&self.state)
     }
 
+    /// Get Arc reference to calibration procedure
+    ///
+    /// Returns an Arc reference to the calibration procedure for sharing with
+    /// audio engine or analysis thread. The Arc can be cloned and shared across
+    /// threads for concurrent access to the calibration procedure state.
+    ///
+    /// # Returns
+    /// `Arc<Mutex<Option<CalibrationProcedure>>>` - Thread-safe reference to calibration procedure
+    ///
+    /// # Thread Safety
+    /// The returned Arc can be safely cloned and shared across threads. Access to
+    /// the inner Option<CalibrationProcedure> is protected by a Mutex.
+    pub fn get_procedure_arc(&self) -> Arc<Mutex<Option<CalibrationProcedure>>> {
+        Arc::clone(&self.procedure)
+    }
+
     /// Load calibration state from persistent storage
     ///
     /// Updates the calibration state with values loaded from storage.
@@ -338,6 +354,34 @@ mod tests {
         let manager = CalibrationManager::default();
 
         let procedure_guard = manager.lock_procedure().unwrap();
+        assert!(procedure_guard.is_none());
+    }
+
+    #[test]
+    fn test_get_procedure_arc() {
+        let manager = CalibrationManager::new();
+        let (broadcast_tx, _) = broadcast::channel(100);
+
+        // Start calibration to initialize procedure
+        manager.start(broadcast_tx).ok();
+
+        // Get Arc reference
+        let procedure_arc = manager.get_procedure_arc();
+
+        // Verify Arc is Some after calibration started
+        let procedure_guard = procedure_arc.lock().unwrap();
+        assert!(procedure_guard.is_some());
+    }
+
+    #[test]
+    fn test_get_procedure_arc_when_not_started() {
+        let manager = CalibrationManager::new();
+
+        // Get Arc reference before starting calibration
+        let procedure_arc = manager.get_procedure_arc();
+
+        // Verify Arc is None when calibration not started
+        let procedure_guard = procedure_arc.lock().unwrap();
         assert!(procedure_guard.is_none());
     }
 }

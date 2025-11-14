@@ -279,9 +279,7 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
     // Get a direct subscription to the calibration broadcast channel
     // This avoids the tokio::spawn in subscribe_calibration()
-    let broadcast_rx = APP_CONTEXT
-        .broadcasts
-        .subscribe_calibration();
+    let broadcast_rx = APP_CONTEXT.broadcasts.subscribe_calibration();
 
     if let Some(mut broadcast_rx) = broadcast_rx {
         // Spawn a dedicated thread with its own Tokio runtime for async operations

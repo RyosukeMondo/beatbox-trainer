@@ -1,0 +1,12 @@
+{
+  "id": "approval_1763124639445_k2hb17rzp",
+  "title": "Calibration Workflow Tasks Document",
+  "filePath": ".spec-workflow/specs/calibration-workflow-fix/tasks.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2025-11-14T12:50:39.445Z",
+  "category": "spec",
+  "categoryName": "calibration-workflow-fix",
+  "response": "ダッシュボードから承認",
+  "respondedAt": "2025-11-14T12:55:45.237Z"
+}

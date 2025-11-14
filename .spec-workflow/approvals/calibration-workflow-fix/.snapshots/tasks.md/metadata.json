@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/calibration-workflow-fix/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-14T12:50:39.450Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763124639445_k2hb17rzp",
+      "approvalTitle": "Calibration Workflow Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-14T12:55:45.236Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763124639445_k2hb17rzp",
+      "approvalTitle": "Calibration Workflow Tasks Document"
+    }
+  ]
+}
