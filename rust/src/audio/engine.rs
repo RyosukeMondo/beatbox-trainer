@@ -320,10 +320,24 @@ impl AudioEngine {
     }
 }
 
-// Re-export stub implementation for non-Android platforms
-// The stub is defined in stubs.rs with proper state tracking and error handling
+// Platform abstraction layer for cross-platform testing
+//
+// On Android: Uses the full Oboe-based AudioEngine implementation
+// On desktop (Linux/macOS/Windows): Uses the StubAudioEngine from stubs.rs
+//
+// This allows cargo test to run on desktop without Android dependencies
+#[cfg(target_os = "android")]
+pub type PlatformAudioEngine = AudioEngine;
+
 #[cfg(not(target_os = "android"))]
-pub use super::stubs::AudioEngine;
+pub use super::stubs::AudioEngine as StubAudioEngine;
+
+#[cfg(not(target_os = "android"))]
+pub type PlatformAudioEngine = StubAudioEngine;
+
+// Re-export AudioEngine for backward compatibility on non-Android platforms
+#[cfg(not(target_os = "android"))]
+pub use StubAudioEngine as AudioEngine;
 
 #[cfg(test)]
 mod tests {
