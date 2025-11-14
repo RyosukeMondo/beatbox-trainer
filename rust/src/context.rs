@@ -201,7 +201,23 @@ impl AppContext {
         let broadcast_tx = self.broadcasts.init_calibration();
 
         // Start calibration (delegates to CalibrationManager)
-        self.calibration.start(broadcast_tx)
+        self.calibration.start(broadcast_tx)?;
+
+        // Start audio engine with default BPM (120) for calibration
+        // The audio engine will capture audio and detect onsets during calibration
+        #[cfg(target_os = "android")]
+        {
+            const DEFAULT_CALIBRATION_BPM: u32 = 120;
+            self.start_audio(DEFAULT_CALIBRATION_BPM)
+                .map_err(|audio_err| CalibrationError::AudioEngineError {
+                    details: format!(
+                        "Failed to start audio engine for calibration: {:?}",
+                        audio_err
+                    ),
+                })?;
+        }
+
+        Ok(())
     }
 
     /// Finish calibration and compute thresholds

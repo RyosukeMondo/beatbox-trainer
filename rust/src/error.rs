@@ -339,6 +339,9 @@ pub enum CalibrationError {
 
     /// Calibration state RwLock was poisoned
     StatePoisoned,
+
+    /// Audio engine error occurred during calibration
+    AudioEngineError { details: String },
 }
 
 impl ErrorCode for CalibrationError {
@@ -351,6 +354,7 @@ impl ErrorCode for CalibrationError {
             CalibrationError::NotComplete => CalibrationErrorCodes::NOT_COMPLETE,
             CalibrationError::AlreadyInProgress => CalibrationErrorCodes::ALREADY_IN_PROGRESS,
             CalibrationError::StatePoisoned => CalibrationErrorCodes::STATE_POISONED,
+            CalibrationError::AudioEngineError { .. } => 2006, // New error code
         }
     }
 
@@ -368,6 +372,9 @@ impl ErrorCode for CalibrationError {
             CalibrationError::NotComplete => "Calibration not complete".to_string(),
             CalibrationError::AlreadyInProgress => "Calibration already in progress".to_string(),
             CalibrationError::StatePoisoned => "Calibration state lock poisoned".to_string(),
+            CalibrationError::AudioEngineError { details } => {
+                format!("Audio engine error: {}", details)
+            }
         }
     }
 }

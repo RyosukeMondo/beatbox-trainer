@@ -19,8 +19,8 @@
 
 #[cfg(target_os = "android")]
 use oboe::{
-    AudioStream, AudioStreamAsync, AudioStreamBuilder, AudioStreamSync, Input, Output, PerformanceMode,
-    SharingMode,
+    AudioStream, AudioStreamAsync, AudioStreamBuilder, AudioStreamSync, Input, Output,
+    PerformanceMode, SharingMode,
 };
 #[cfg(target_os = "android")]
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
