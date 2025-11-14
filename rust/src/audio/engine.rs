@@ -22,10 +22,14 @@ use oboe::{
     AudioStreamAsync, AudioStreamBuilder, DataCallbackResult, Input, Output, PerformanceMode,
     SharingMode,
 };
+#[cfg(target_os = "android")]
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+#[cfg(target_os = "android")]
 use std::sync::Arc;
 
+#[cfg(target_os = "android")]
 use super::buffer_pool::BufferPoolChannels;
+#[cfg(target_os = "android")]
 use crate::error::AudioError;
 
 #[cfg(target_os = "android")]
@@ -316,70 +320,16 @@ impl AudioEngine {
     }
 }
 
-// Stub implementation for non-Android platforms (development/testing)
+// Re-export stub implementation for non-Android platforms
+// The stub is defined in stubs.rs with proper state tracking and error handling
 #[cfg(not(target_os = "android"))]
-pub struct AudioEngine {
-    frame_counter: Arc<AtomicU64>,
-    bpm: Arc<AtomicU32>,
-    #[allow(dead_code)]
-    sample_rate: u32,
-}
-
-#[cfg(not(target_os = "android"))]
-impl AudioEngine {
-    pub fn new(
-        bpm: u32,
-        sample_rate: u32,
-        _buffer_channels: BufferPoolChannels,
-    ) -> Result<Self, AudioError> {
-        Ok(AudioEngine {
-            frame_counter: Arc::new(AtomicU64::new(0)),
-            bpm: Arc::new(AtomicU32::new(bpm)),
-            sample_rate,
-        })
-    }
-
-    pub fn start(
-        &mut self,
-        _calibration: std::sync::Arc<
-            std::sync::RwLock<crate::calibration::state::CalibrationState>,
-        >,
-        _result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
-    ) -> Result<(), AudioError> {
-        log::warn!("AudioEngine::start() called on non-Android platform - no-op");
-        Ok(())
-    }
-
-    pub fn stop(&mut self) -> Result<(), AudioError> {
-        log::warn!("AudioEngine::stop() called on non-Android platform - no-op");
-        Ok(())
-    }
-
-    pub fn set_bpm(&self, new_bpm: u32) {
-        self.bpm.store(new_bpm, Ordering::Relaxed);
-    }
-
-    pub fn get_bpm(&self) -> u32 {
-        self.bpm.load(Ordering::Relaxed)
-    }
-
-    pub fn get_frame_counter(&self) -> u64 {
-        self.frame_counter.load(Ordering::Relaxed)
-    }
-
-    pub fn get_frame_counter_ref(&self) -> Arc<AtomicU64> {
-        Arc::clone(&self.frame_counter)
-    }
-
-    pub fn get_bpm_ref(&self) -> Arc<AtomicU32> {
-        Arc::clone(&self.bpm)
-    }
-}
+pub use super::stubs::AudioEngine;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::audio::buffer_pool::BufferPool;
+    use std::sync::atomic::Ordering;
 
     #[test]
     fn test_audio_engine_creation() {
