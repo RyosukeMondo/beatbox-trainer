@@ -85,7 +85,7 @@
   - _Requirements: Design Section 3.4, Task 4.4_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust API developer | Task: Add get_calibration_sender() method to BroadcastChannelManager in rust/src/managers/broadcast_manager.rs that returns Option<broadcast::Sender<CalibrationProgress>>. Method should acquire read lock on calibration channel and clone sender if available, return None otherwise. Add unit test verifying returns None before init and Some after init_calibration(). Reference design document Task 4.4. | Restrictions: Must use read lock (not write), must handle lock failure gracefully, must return cloned sender (not move), must include comprehensive documentation | _Leverage: Existing broadcast manager patterns and init_calibration() method_ | Success: Method returns correct Option type, handles uninitialized state correctly, unit test passes, documentation is clear | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (method implementation, test case, error handling). Then mark as completed [x] in tasks.md_
 
-- [ ] 4.2. Modify AudioEngineManager to accept calibration parameters
+- [x] 4.2. Modify AudioEngineManager to accept calibration parameters
   - File: `rust/src/managers/audio_engine_manager.rs`
   - Update AudioEngineManager::start() to accept calibration_procedure and calibration_progress_tx
   - Pass parameters through to AudioEngine::start()

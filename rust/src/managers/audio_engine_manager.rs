@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::broadcast;
 
 use crate::analysis::ClassificationResult;
-use crate::calibration::CalibrationState;
+use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
 use crate::error::{log_audio_error, AudioError};
 
 #[cfg(target_os = "android")]
@@ -37,7 +37,7 @@ struct AudioEngineState {
 /// # Example
 /// ```ignore
 /// let manager = AudioEngineManager::new();
-/// manager.start(120, calibration_state, classification_tx, broadcast_tx)?;
+/// manager.start(120, calibration_state, calibration_procedure, calibration_progress_tx, classification_tx)?;
 /// manager.set_bpm(140)?;
 /// manager.stop()?;
 /// ```
@@ -64,7 +64,9 @@ impl AudioEngineManager {
     ///
     /// # Arguments
     /// * `bpm` - Beats per minute (must be > 0)
-    /// * `calibration` - Calibration state for classification
+    /// * `calibration_state` - Calibration state for classification
+    /// * `calibration_procedure` - Optional calibration procedure for collecting training samples
+    /// * `calibration_progress_tx` - Optional broadcast channel for calibration progress updates
     /// * `broadcast_tx` - Broadcast channel for classification results
     ///
     /// # Returns
@@ -80,7 +82,9 @@ impl AudioEngineManager {
     pub fn start(
         &self,
         bpm: u32,
-        calibration: Arc<RwLock<CalibrationState>>,
+        calibration_state: Arc<RwLock<CalibrationState>>,
+        calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
+        calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>,
         broadcast_tx: broadcast::Sender<ClassificationResult>,
     ) -> Result<(), AudioError> {
         #[cfg(not(target_os = "android"))]
@@ -102,10 +106,17 @@ impl AudioEngineManager {
             let buffer_pool = self.create_buffer_pool();
             let mut engine = self.create_engine(bpm, buffer_pool)?;
 
-            engine.start(calibration, broadcast_tx).map_err(|err| {
-                log_audio_error(&err, "start_audio");
-                err
-            })?;
+            engine
+                .start(
+                    calibration_state,
+                    calibration_procedure,
+                    calibration_progress_tx,
+                    broadcast_tx,
+                )
+                .map_err(|err| {
+                    log_audio_error(&err, "start_audio");
+                    err
+                })?;
 
             *guard = Some(AudioEngineState { engine });
 
