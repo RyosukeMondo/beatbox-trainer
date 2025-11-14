@@ -373,7 +373,7 @@
   - _Requirements: All Phase 2 requirements_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Integration Test Engineer with end-to-end testing expertise | Task: Write integration tests verifying refactored architecture works end-to-end including managers, controllers, and navigation | Restrictions: Use real services where possible, minimal mocking, ensure tests run on CI/CD | Success: End-to-end workflows verified, refactored code works correctly integrated, tests run reliably in CI_
 
-- [ ] 12.4. Update widget tests for refactored screens (Estimate: 3 hours, Priority: High)
+- [x] 12.4. Update widget tests for refactored screens (Estimate: 3 hours, Priority: High)
   - File: test/ui/screens/training_screen_test.dart, test/ui/screens/calibration_screen_test.dart, test/ui/screens/settings_screen_test.dart
   - Update tests to use .test() factory constructors
   - Test UI renders correctly with mocked controller

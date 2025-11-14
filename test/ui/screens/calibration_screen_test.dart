@@ -111,8 +111,11 @@ void main() {
 
       await pumpCalibrationScreen(tester);
 
-      // Should show loading while stream is connecting
-      expect(find.text('Starting calibration...'), findsOneWidget);
+      // Should show loading while initializing or stream is connecting
+      expect(
+        find.textContaining('calibration...'),
+        findsOneWidget,
+      ); // Matches "Initializing calibration..." or "Starting calibration..."
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
@@ -585,8 +588,8 @@ void main() {
         );
 
         await pumpCalibrationScreen(tester);
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(); // Process stream data
+        await tester.pumpAndSettle(); // Let all async operations complete
 
         // Verify error is displayed
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
@@ -643,7 +646,10 @@ void main() {
 
         // Restart button should be disabled (null onPressed)
         final iconButton = tester.widget<IconButton>(
-          find.byIcon(Icons.restart_alt),
+          find.ancestor(
+            of: find.byIcon(Icons.restart_alt),
+            matching: find.byType(IconButton),
+          ),
         );
         expect(iconButton.onPressed, isNull);
       });
