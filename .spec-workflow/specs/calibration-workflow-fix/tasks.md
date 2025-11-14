@@ -151,7 +151,7 @@
   - _Requirements: Design Section 9, Task 6.1_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical documentation specialist with Rust expertise | Task: Update inline documentation for all modified functions in rust/src/analysis/mod.rs, rust/src/audio/engine.rs, rust/src/context.rs, and rust/src/managers/ using Rust doc comment conventions. Include function descriptions, parameter descriptions (# Arguments), return values (# Returns), error cases (# Errors), and thread safety notes (# Thread Safety) where applicable. Verify documentation builds correctly with cargo doc. Reference design document Section 9 for API changes requiring documentation. | Restrictions: Must use standard Rust doc comment format (///), must document all public functions, must include examples for complex functions, must verify cargo doc succeeds with no warnings, must follow existing documentation style | _Leverage: Existing doc comment patterns in codebase_ | Success: All modified public functions documented, cargo doc builds without warnings, documentation is clear and comprehensive, parameters and returns fully described, thread safety notes included | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (functions documented, cargo doc output, documentation coverage). Then mark as completed [x] in tasks.md_
 
-- [ ] 6.2. Update CHANGELOG.md
+- [x] 6.2. Update CHANGELOG.md
   - File: `CHANGELOG.md` (create if doesn't exist)
   - Add [Unreleased] section with Added/Changed/Fixed subsections
   - Document user-facing changes (calibration progress updates work)
