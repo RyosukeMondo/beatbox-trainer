@@ -189,26 +189,29 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 #[allow(unused_must_use)] // frb macro generates code that triggers this lint
 #[flutter_rust_bridge::frb]
 pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
-    // Subscribe to the classification broadcast channel
-    let mut receiver = APP_CONTEXT.subscribe_classification();
+    // Get a direct subscription to the classification broadcast channel
+    // This avoids the tokio::spawn in subscribe_classification()
+    let broadcast_rx = APP_CONTEXT.broadcasts.subscribe_classification();
 
-    // Spawn a dedicated thread with its own Tokio runtime for async operations
-    // This avoids requiring a global Tokio runtime
-    std::thread::spawn(move || {
-        // Create a single-threaded Tokio runtime for this stream handler
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create Tokio runtime for classification stream");
+    if let Some(mut broadcast_rx) = broadcast_rx {
+        // Spawn a dedicated thread with its own Tokio runtime for async operations
+        // This avoids requiring a global Tokio runtime
+        std::thread::spawn(move || {
+            // Create a single-threaded Tokio runtime for this stream handler
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime for classification stream");
 
-        rt.block_on(async move {
-            while let Some(result) = receiver.recv().await {
-                // Forward result to Dart via StreamSink
-                sink.add(result);
-            }
-            // Stream ends when receiver channel closes (audio engine stopped)
+            rt.block_on(async move {
+                while let Ok(result) = broadcast_rx.recv().await {
+                    // Forward result to Dart via StreamSink
+                    sink.add(result);
+                }
+                // Stream ends when receiver channel closes (audio engine stopped)
+            });
         });
-    });
+    }
 }
 
 /// Start calibration workflow
@@ -274,26 +277,31 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 #[allow(unused_must_use)] // frb macro generates code that triggers this lint
 #[flutter_rust_bridge::frb]
 pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
-    // Subscribe to the calibration broadcast channel
-    let mut receiver = APP_CONTEXT.subscribe_calibration();
+    // Get a direct subscription to the calibration broadcast channel
+    // This avoids the tokio::spawn in subscribe_calibration()
+    let broadcast_rx = APP_CONTEXT
+        .broadcasts
+        .subscribe_calibration();
 
-    // Spawn a dedicated thread with its own Tokio runtime for async operations
-    // This avoids requiring a global Tokio runtime
-    std::thread::spawn(move || {
-        // Create a single-threaded Tokio runtime for this stream handler
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create Tokio runtime for calibration stream");
+    if let Some(mut broadcast_rx) = broadcast_rx {
+        // Spawn a dedicated thread with its own Tokio runtime for async operations
+        // This avoids requiring a global Tokio runtime
+        std::thread::spawn(move || {
+            // Create a single-threaded Tokio runtime for this stream handler
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime for calibration stream");
 
-        rt.block_on(async move {
-            while let Some(progress) = receiver.recv().await {
-                // Forward progress to Dart via StreamSink
-                sink.add(progress);
-            }
-            // Stream ends when receiver channel closes (calibration finished)
+            rt.block_on(async move {
+                while let Ok(progress) = broadcast_rx.recv().await {
+                    // Forward progress to Dart via StreamSink
+                    sink.add(progress);
+                }
+                // Stream ends when receiver channel closes (calibration finished)
+            });
         });
-    });
+    }
 }
 
 /// Load calibration state from JSON

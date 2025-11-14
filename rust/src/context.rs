@@ -29,7 +29,7 @@ pub struct AppContext {
     #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     audio: AudioEngineManager,
     calibration: CalibrationManager,
-    broadcasts: BroadcastChannelManager,
+    pub(crate) broadcasts: BroadcastChannelManager,
 }
 
 impl AppContext {
