@@ -321,7 +321,7 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.go('/'),
             child: const Text('Cancel'),
           ),
         ],

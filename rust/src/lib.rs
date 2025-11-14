@@ -130,18 +130,33 @@ pub extern "system" fn Java_com_ryosukemondo_beatbox_1trainer_MainActivity_initi
 
     info!("Created global reference for application context");
 
-    // Initialize ndk-context with both JavaVM and Context parameters
-    // SAFETY: The JavaVM pointer is guaranteed to be valid by the Android runtime.
-    // The context jobject is a global reference that will remain valid for the
-    // lifetime of the process.
-    unsafe {
-        ndk_context::initialize_android_context(
-            vm.get_java_vm_pointer() as *mut _,
-            context_global.as_raw() as *mut _,
-        );
-    }
+    // Check if ndk-context is already initialized
+    // ndk_context::initialize_android_context can only be called once
+    // Calling it multiple times will cause a panic
+    #[cfg(target_os = "android")]
+    {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static CONTEXT_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-    info!("Android context initialized successfully with JavaVM and Context");
+        if CONTEXT_INITIALIZED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            // Initialize ndk-context with both JavaVM and Context parameters
+            // SAFETY: The JavaVM pointer is guaranteed to be valid by the Android runtime.
+            // The context jobject is a global reference that will remain valid for the
+            // lifetime of the process.
+            unsafe {
+                ndk_context::initialize_android_context(
+                    vm.get_java_vm_pointer() as *mut _,
+                    context_global.as_raw() as *mut _,
+                );
+            }
+            info!("Android context initialized successfully with JavaVM and Context");
+        } else {
+            info!("Android context already initialized, skipping re-initialization");
+        }
+    }
 }
 
 #[cfg(test)]
