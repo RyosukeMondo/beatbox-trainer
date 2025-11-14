@@ -3,6 +3,7 @@
 // This module defines custom error types for audio and calibration operations,
 // providing structured error handling with error codes suitable for FFI communication.
 
+use flutter_rust_bridge::frb;
 use log::error;
 use std::fmt;
 
@@ -17,6 +18,74 @@ pub trait ErrorCode {
 
     /// Get the human-readable error message
     fn message(&self) -> String;
+}
+
+/// Audio error code constants exposed to Dart via FFI
+///
+/// These constants provide a single source of truth for error codes
+/// shared between Rust and Dart. The flutter_rust_bridge will automatically
+/// generate corresponding Dart constants.
+///
+/// Error code range: 1001-1009
+#[frb]
+pub struct AudioErrorCodes;
+
+#[frb]
+impl AudioErrorCodes {
+    /// BPM value is invalid (must be > 0, typically 40-240)
+    pub const BPM_INVALID: i32 = 1001;
+
+    /// Audio engine is already running
+    pub const ALREADY_RUNNING: i32 = 1002;
+
+    /// Audio engine is not running
+    pub const NOT_RUNNING: i32 = 1003;
+
+    /// Hardware error occurred
+    pub const HARDWARE_ERROR: i32 = 1004;
+
+    /// Microphone permission denied
+    pub const PERMISSION_DENIED: i32 = 1005;
+
+    /// Failed to open audio stream
+    pub const STREAM_OPEN_FAILED: i32 = 1006;
+
+    /// Mutex/RwLock was poisoned
+    pub const LOCK_POISONED: i32 = 1007;
+
+    /// JNI initialization failed on Android
+    pub const JNI_INIT_FAILED: i32 = 1008;
+
+    /// Android context was not initialized before audio engine start
+    pub const CONTEXT_NOT_INITIALIZED: i32 = 1009;
+}
+
+/// Calibration error code constants exposed to Dart via FFI
+///
+/// These constants provide a single source of truth for error codes
+/// shared between Rust and Dart. The flutter_rust_bridge will automatically
+/// generate corresponding Dart constants.
+///
+/// Error code range: 2001-2005
+#[frb]
+pub struct CalibrationErrorCodes;
+
+#[frb]
+impl CalibrationErrorCodes {
+    /// Insufficient samples collected for calibration
+    pub const INSUFFICIENT_SAMPLES: i32 = 2001;
+
+    /// Invalid features extracted from samples
+    pub const INVALID_FEATURES: i32 = 2002;
+
+    /// Calibration not complete
+    pub const NOT_COMPLETE: i32 = 2003;
+
+    /// Calibration already in progress
+    pub const ALREADY_IN_PROGRESS: i32 = 2004;
+
+    /// Calibration state RwLock was poisoned
+    pub const STATE_POISONED: i32 = 2005;
 }
 
 /// Log an audio error with structured context
@@ -94,15 +163,15 @@ pub enum AudioError {
 impl ErrorCode for AudioError {
     fn code(&self) -> i32 {
         match self {
-            AudioError::BpmInvalid { .. } => 1001,
-            AudioError::AlreadyRunning => 1002,
-            AudioError::NotRunning => 1003,
-            AudioError::HardwareError { .. } => 1004,
-            AudioError::PermissionDenied => 1005,
-            AudioError::StreamOpenFailed { .. } => 1006,
-            AudioError::LockPoisoned { .. } => 1007,
-            AudioError::JniInitFailed { .. } => 1008,
-            AudioError::ContextNotInitialized => 1009,
+            AudioError::BpmInvalid { .. } => AudioErrorCodes::BPM_INVALID,
+            AudioError::AlreadyRunning => AudioErrorCodes::ALREADY_RUNNING,
+            AudioError::NotRunning => AudioErrorCodes::NOT_RUNNING,
+            AudioError::HardwareError { .. } => AudioErrorCodes::HARDWARE_ERROR,
+            AudioError::PermissionDenied => AudioErrorCodes::PERMISSION_DENIED,
+            AudioError::StreamOpenFailed { .. } => AudioErrorCodes::STREAM_OPEN_FAILED,
+            AudioError::LockPoisoned { .. } => AudioErrorCodes::LOCK_POISONED,
+            AudioError::JniInitFailed { .. } => AudioErrorCodes::JNI_INIT_FAILED,
+            AudioError::ContextNotInitialized => AudioErrorCodes::CONTEXT_NOT_INITIALIZED,
         }
     }
 
@@ -187,11 +256,13 @@ pub enum CalibrationError {
 impl ErrorCode for CalibrationError {
     fn code(&self) -> i32 {
         match self {
-            CalibrationError::InsufficientSamples { .. } => 2001,
-            CalibrationError::InvalidFeatures { .. } => 2002,
-            CalibrationError::NotComplete => 2003,
-            CalibrationError::AlreadyInProgress => 2004,
-            CalibrationError::StatePoisoned => 2005,
+            CalibrationError::InsufficientSamples { .. } => {
+                CalibrationErrorCodes::INSUFFICIENT_SAMPLES
+            }
+            CalibrationError::InvalidFeatures { .. } => CalibrationErrorCodes::INVALID_FEATURES,
+            CalibrationError::NotComplete => CalibrationErrorCodes::NOT_COMPLETE,
+            CalibrationError::AlreadyInProgress => CalibrationErrorCodes::ALREADY_IN_PROGRESS,
+            CalibrationError::StatePoisoned => CalibrationErrorCodes::STATE_POISONED,
         }
     }
 
@@ -233,39 +304,51 @@ mod tests {
 
     #[test]
     fn test_audio_error_codes() {
-        assert_eq!(AudioError::BpmInvalid { bpm: 0 }.code(), 1001);
-        assert_eq!(AudioError::AlreadyRunning.code(), 1002);
-        assert_eq!(AudioError::NotRunning.code(), 1003);
+        assert_eq!(
+            AudioError::BpmInvalid { bpm: 0 }.code(),
+            AudioErrorCodes::BPM_INVALID
+        );
+        assert_eq!(
+            AudioError::AlreadyRunning.code(),
+            AudioErrorCodes::ALREADY_RUNNING
+        );
+        assert_eq!(AudioError::NotRunning.code(), AudioErrorCodes::NOT_RUNNING);
         assert_eq!(
             AudioError::HardwareError {
                 details: "test".to_string()
             }
             .code(),
-            1004
+            AudioErrorCodes::HARDWARE_ERROR
         );
-        assert_eq!(AudioError::PermissionDenied.code(), 1005);
+        assert_eq!(
+            AudioError::PermissionDenied.code(),
+            AudioErrorCodes::PERMISSION_DENIED
+        );
         assert_eq!(
             AudioError::StreamOpenFailed {
                 reason: "test".to_string()
             }
             .code(),
-            1006
+            AudioErrorCodes::STREAM_OPEN_FAILED
         );
         assert_eq!(
             AudioError::LockPoisoned {
                 component: "test".to_string()
             }
             .code(),
-            1007
+            AudioErrorCodes::LOCK_POISONED
         );
         assert_eq!(
             AudioError::JniInitFailed {
                 reason: "test".to_string()
             }
             .code(),
-            1008
+            AudioErrorCodes::JNI_INIT_FAILED
         );
-        assert_eq!(AudioError::ContextNotInitialized.code(), 1009);
+        assert_eq!(
+            AudioError::ContextNotInitialized.code(),
+            AudioErrorCodes::CONTEXT_NOT_INITIALIZED
+        );
     }
 
     #[test]
@@ -276,18 +359,27 @@ mod tests {
                 collected: 5
             }
             .code(),
-            2001
+            CalibrationErrorCodes::INSUFFICIENT_SAMPLES
         );
         assert_eq!(
             CalibrationError::InvalidFeatures {
                 reason: "test".to_string()
             }
             .code(),
-            2002
+            CalibrationErrorCodes::INVALID_FEATURES
         );
-        assert_eq!(CalibrationError::NotComplete.code(), 2003);
-        assert_eq!(CalibrationError::AlreadyInProgress.code(), 2004);
-        assert_eq!(CalibrationError::StatePoisoned.code(), 2005);
+        assert_eq!(
+            CalibrationError::NotComplete.code(),
+            CalibrationErrorCodes::NOT_COMPLETE
+        );
+        assert_eq!(
+            CalibrationError::AlreadyInProgress.code(),
+            CalibrationErrorCodes::ALREADY_IN_PROGRESS
+        );
+        assert_eq!(
+            CalibrationError::StatePoisoned.code(),
+            CalibrationErrorCodes::STATE_POISONED
+        );
     }
 
     #[test]
@@ -320,10 +412,10 @@ mod tests {
     #[test]
     fn test_error_code_trait() {
         let audio_err: &dyn ErrorCode = &AudioError::BpmInvalid { bpm: 0 };
-        assert_eq!(audio_err.code(), 1001);
+        assert_eq!(audio_err.code(), AudioErrorCodes::BPM_INVALID);
 
         let cal_err: &dyn ErrorCode = &CalibrationError::NotComplete;
-        assert_eq!(cal_err.code(), 2003);
+        assert_eq!(cal_err.code(), CalibrationErrorCodes::NOT_COMPLETE);
     }
 
     #[test]
@@ -434,7 +526,7 @@ mod tests {
         let jni_error = AudioError::JniInitFailed {
             reason: "Failed to get application context".to_string(),
         };
-        assert_eq!(jni_error.code(), 1008);
+        assert_eq!(jni_error.code(), AudioErrorCodes::JNI_INIT_FAILED);
         assert!(jni_error.message().contains("JNI initialization failed"));
         assert!(jni_error
             .message()
@@ -447,7 +539,7 @@ mod tests {
     #[test]
     fn test_android_context_not_initialized_error() {
         let ctx_error = AudioError::ContextNotInitialized;
-        assert_eq!(ctx_error.code(), 1009);
+        assert_eq!(ctx_error.code(), AudioErrorCodes::CONTEXT_NOT_INITIALIZED);
         assert!(ctx_error
             .message()
             .contains("Android context not initialized"));
