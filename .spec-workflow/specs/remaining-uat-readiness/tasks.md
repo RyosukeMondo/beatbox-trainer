@@ -190,7 +190,7 @@
   - _Requirements: US-5_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Architect specializing in facade pattern and composition | Task: Refactor AppContext to facade pattern delegating to managers, reducing file to under 200 lines as specified in design document | Restrictions: Must maintain existing public API, ensure zero performance regression, preserve all functionality | Success: AppContext is under 200 lines, delegates to managers correctly, all existing functionality preserved, no breaking changes to public API_
 
-- [ ] 5.5. Create module exports for managers (Estimate: 0.5 hours, Priority: High)
+- [x] 5.5. Create module exports for managers (Estimate: 0.5 hours, Priority: High)
   - File: rust/src/managers/mod.rs
   - Export AudioEngineManager, CalibrationManager, BroadcastChannelManager
   - Document manager responsibilities
