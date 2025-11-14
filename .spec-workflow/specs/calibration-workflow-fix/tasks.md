@@ -77,7 +77,7 @@
 
 ## Phase 4: AppContext Integration
 
-- [ ] 4.1. Add BroadcastChannelManager::get_calibration_sender()
+- [x] 4.1. Add BroadcastChannelManager::get_calibration_sender()
   - File: `rust/src/managers/broadcast_manager.rs`
   - Add get_calibration_sender() method returning Option<broadcast::Sender<CalibrationProgress>>
   - Add unit test: test_get_calibration_sender()

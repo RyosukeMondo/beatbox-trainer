@@ -125,6 +125,26 @@ impl BroadcastChannelManager {
             .map(|tx| tx.subscribe())
     }
 
+    /// Get calibration sender for passing to audio engine
+    ///
+    /// Returns the calibration sender for forwarding to the audio engine/analysis thread.
+    /// This allows the analysis thread to broadcast calibration progress updates.
+    ///
+    /// # Returns
+    /// `Option<broadcast::Sender<CalibrationProgress>>` - Cloned sender or None if not initialized
+    ///
+    /// # Notes
+    /// - Returns None if init_calibration() not called yet
+    /// - Returns a cloned sender (does not move the stored sender)
+    /// - Safe to call from multiple threads
+    pub fn get_calibration_sender(&self) -> Option<broadcast::Sender<CalibrationProgress>> {
+        self.calibration
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|tx| tx.clone())
+    }
+
     // ========================================================================
     // AUDIO METRICS CHANNEL (DEBUG)
     // ========================================================================
@@ -265,6 +285,36 @@ mod tests {
         // Now subscription works
         let rx = manager.subscribe_calibration();
         assert!(rx.is_some());
+    }
+
+    #[test]
+    fn test_get_calibration_sender() {
+        use crate::calibration::CalibrationSound;
+
+        let manager = BroadcastChannelManager::new();
+
+        // Initially returns None when not initialized
+        assert!(manager.get_calibration_sender().is_none());
+
+        // Initialize calibration channel
+        let _tx = manager.init_calibration();
+
+        // Now get_calibration_sender returns Some
+        let sender = manager.get_calibration_sender();
+        assert!(sender.is_some());
+
+        // Verify sender is functional (can be used to send messages with subscriber)
+        let sender = sender.unwrap();
+        let mut _rx = manager.subscribe_calibration().unwrap(); // Need subscriber for broadcast
+
+        let progress = CalibrationProgress {
+            current_sound: CalibrationSound::Kick,
+            samples_collected: 5,
+            samples_needed: 10,
+        };
+
+        // Should succeed with subscriber present
+        assert!(sender.send(progress).is_ok());
     }
 
     #[test]
