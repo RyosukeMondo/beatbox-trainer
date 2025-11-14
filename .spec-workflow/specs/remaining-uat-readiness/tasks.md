@@ -354,7 +354,7 @@
   - _Requirements: US-5_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust QA Engineer with unit testing expertise | Task: Write comprehensive unit tests for all three managers covering success, error, and edge cases running on desktop | Restrictions: Must use stub engine, tests must run on desktop, ensure proper test isolation | Success: All manager methods tested, tests run on desktop with cargo test, 90%+ coverage for managers, tests are reliable_
 
-- [ ] 12.2. Write unit tests for TrainingController (Estimate: 3 hours, Priority: High)
+- [x] 12.2. Write unit tests for TrainingController (Estimate: 3 hours, Priority: High)
   - File: test/controllers/training/training_controller_test.dart
   - Test startTraining() with permission handling
   - Test stopTraining() lifecycle
@@ -364,7 +364,7 @@
   - _Requirements: US-6_
   - _Prompt: Implement the task for spec remaining-uat-readiness, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter QA Engineer with controller testing expertise | Task: Write comprehensive unit tests for TrainingController covering all business logic scenarios with mocked services | Restrictions: Must mock all service dependencies, test business logic in isolation, ensure deterministic tests | Success: All controller methods tested, permission flows verified, BPM validation tested, error handling covered, 90%+ coverage_
 
-- [ ] 12.3. Write integration tests for refactored code (Estimate: 4 hours, Priority: High)
+- [x] 12.3. Write integration tests for refactored code (Estimate: 4 hours, Priority: High)
   - File: test/integration/refactored_workflows_test.dart
   - Test end-to-end training workflow with TrainingController
   - Test AppContext facade delegates to managers correctly
