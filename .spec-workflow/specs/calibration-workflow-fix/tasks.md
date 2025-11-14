@@ -103,7 +103,7 @@
   - _Requirements: Design Section 3.4, Task 4.2_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust application architect | Task: Update AppContext::start_audio() in rust/src/context.rs to retrieve calibration_procedure via self.calibration.get_procedure_arc() and calibration_progress_tx via self.broadcasts.get_calibration_sender(), then pass both to self.audio.start(). Reference design document Task 4.2 for complete implementation pattern. | Restrictions: Must handle conditional compilation for Android, must retrieve calibration references before audio start, must pass all parameters correctly, must maintain existing error propagation | _Leverage: Existing calibration and broadcast manager access patterns_ | Success: Calibration parameters retrieved and passed correctly, compiles for Android and desktop, error handling preserved, no functional regression | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (code modifications, parameter retrieval, method calls). Then mark as completed [x] in tasks.md_
 
-- [ ] 4.4. Implement audio restart logic in start_calibration()
+- [x] 4.4. Implement audio restart logic in start_calibration()
   - File: `rust/src/context.rs`
   - Modify start_calibration() to call stop_audio() before starting calibration
   - Log stop errors as warnings but continue

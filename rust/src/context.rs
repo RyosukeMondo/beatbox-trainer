@@ -215,10 +215,19 @@ impl AppContext {
         // Start calibration (delegates to CalibrationManager)
         self.calibration.start(broadcast_tx)?;
 
-        // Start audio engine with default BPM (120) for calibration
-        // The audio engine will capture audio and detect onsets during calibration
+        // Restart audio engine to ensure analysis thread receives calibration procedure
         #[cfg(target_os = "android")]
         {
+            // Stop audio engine if currently running
+            // Log errors as warnings but don't fail - engine may not be running
+            if let Err(err) = self.stop_audio() {
+                eprintln!(
+                    "Warning: Failed to stop audio engine during calibration start: {:?}",
+                    err
+                );
+            }
+
+            // Start audio engine with calibration procedure active
             const DEFAULT_CALIBRATION_BPM: u32 = 120;
             self.start_audio(DEFAULT_CALIBRATION_BPM)
                 .map_err(|audio_err| CalibrationError::AudioEngineError {
