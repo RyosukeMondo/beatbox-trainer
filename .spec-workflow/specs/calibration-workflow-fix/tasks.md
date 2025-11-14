@@ -57,7 +57,7 @@
   - _Requirements: Design Section 3.3_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust audio engine developer | Task: Update AudioEngine::start() method signature in rust/src/audio/engine.rs (line 211) to accept calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>> and calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>. Rename existing calibration parameter to calibration_state. Update doc comments to describe new parameters and their purpose. Reference design document Section 3.3. | Restrictions: Must maintain existing functionality, must compile successfully, must update all internal calls to spawn_analysis_thread_internal, must include comprehensive documentation | _Leverage: Existing parameter patterns from spawn_analysis_thread_ | Success: Signature updated with new parameters, compiles successfully, documentation is clear, internal method calls updated | Instructions: Mark this task as in-progress in tasks.md before starting. After completion, use log-implementation tool with detailed artifacts (method signature, parameter types, call sites updated). Then mark as completed [x] in tasks.md_
 
-- [ ] 3.2. Update spawn_analysis_thread_internal()
+- [x] 3.2. Update spawn_analysis_thread_internal()
   - File: `rust/src/audio/engine.rs`
   - Modify spawn_analysis_thread_internal() (line 174) to accept new parameters
   - Pass calibration_procedure and calibration_progress_tx to spawn_analysis_thread()
