@@ -22,7 +22,7 @@
   - _Requirements: 1, 6_
   - _Prompt: Role: Rust tooling engineer specializing in CLI UX | Task: Build fixture-driven CLI harness meeting requirement 1 acceptance criteria and integrate into CI scripts | Constraints: Provide human-readable diff summaries, support headless desktop execution, reuse engine core without duplicating DSP logic | Success: `cargo run -p beatbox_cli classify --fixture=kick_slow` prints classification JSON and exits 0 when expectations met_
 
-- [ ] 3. Add HTTP debug/control server (debug feature flag)
+- [x] 3. Add HTTP debug/control server (debug feature flag)
   - Files: `rust/src/http/mod.rs`, `rust/src/http/routes.rs`, `rust/src/http/sse.rs`, `rust/src/lib.rs`, `flutter_rust_bridge.yaml` (feature flag toggle), `docs/TESTING.md` (API docs)
   - Actions:
     - Implement `axum` server spawned in debug builds exposing `/health`, `/metrics`, `/classification-stream` (SSE), `/params` endpoints with token auth + loopback binding.

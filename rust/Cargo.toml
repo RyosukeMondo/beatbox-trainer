@@ -3,6 +3,10 @@ name = "beatbox_trainer"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+debug_http = ["axum", "tower"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -17,7 +21,7 @@ rustfft = "6"
 log = "0.4"
 
 # Async runtime for Dart streams
-tokio = { version = "1", features = ["sync", "rt", "time", "macros"] }
+tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "time", "macros", "net", "signal"] }
 tokio-stream = "0.1"
 futures = "0.3"
 
@@ -38,6 +42,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4.5", features = ["derive"] }
 hound = "3.5"
+axum = { version = "0.7", optional = true, features = ["macros", "http1", "tokio"] }
+tower = { version = "0.4", optional = true, features = ["timeout"] }
 
 # Android-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]

@@ -58,6 +58,76 @@ flutter test && cd rust && cargo test
 - Dart HTML: `coverage/dart/index.html`
 - Unified Report: `coverage/COVERAGE_REPORT.md`
 
+## Debug HTTP Control Server (Feature `debug_http`)
+
+The Rust crate now exposes a loopback-only Axum server for diagnostics when the `debug_http` Cargo
+feature is enabled (the default for local builds via `flutter_rust_bridge.yaml`). The server only
+boots in debug builds and is guarded by a token to avoid accidental exposure.
+
+- **Bind address**: `127.0.0.1:8787` (override with `BEATBOX_DEBUG_HTTP_ADDR=127.0.0.1:9000`)
+- **Token**: `beatbox-debug` by default (override via `BEATBOX_DEBUG_TOKEN=<value>`)
+- **Feature flag**: disable entirely with `cargo build --no-default-features`
+- **Start-up**: automatically spawned from `init_app()` after flutter_rust_bridge initialization
+
+### Endpoints
+
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/health` | `GET` | Returns engine state (`engine_running`, `uptime_ms`, calibration flag) |
+| `/metrics` | `GET` | Provides the most recent `AudioMetrics` sample plus telemetry event |
+| `/classification-stream` | `GET` | SSE stream mirroring FRB classification payloads |
+| `/params` | `GET` | Lists supported live parameters + current calibration snapshot |
+| `/params` | `POST` | Applies a `ParamPatch` (`bpm`, `centroid_threshold`, `zcr_threshold`) |
+
+All endpoints accept the token via query (`?token=...`), header (`X-Debug-Token: ...`), or bearer auth.
+
+```bash
+curl "http://127.0.0.1:8787/health?token=beatbox-debug"
+curl -N -H "Accept:text/event-stream" \
+  -H "X-Debug-Token: beatbox-debug" \
+  http://127.0.0.1:8787/classification-stream
+curl -X POST http://127.0.0.1:8787/params \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer beatbox-debug" \
+  -d '{"bpm":110}'
+```
+
+### OpenAPI Snippet
+
+```yaml
+paths:
+  /health:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Engine status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  engine_running: { type: boolean }
+                  uptime_ms: { type: integer, format: int64 }
+                  calibrated: { type: boolean }
+  /params:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bpm: { type: integer, minimum: 40, maximum: 240 }
+                centroid_threshold: { type: number }
+                zcr_threshold: { type: number }
+      responses:
+        '200':
+          description: Patch accepted
+```
+
 ## Test Organization
 
 ### Rust Tests

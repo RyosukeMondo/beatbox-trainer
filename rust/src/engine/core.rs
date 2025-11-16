@@ -26,10 +26,13 @@ use crate::error::{AudioError, CalibrationError};
 use crate::managers::{BroadcastChannelManager, CalibrationManager};
 
 /// Patch describing parameter updates to apply to the running engine.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ParamPatch {
+    #[serde(default)]
     pub bpm: Option<u32>,
+    #[serde(default)]
     pub centroid_threshold: Option<f32>,
+    #[serde(default)]
     pub zcr_threshold: Option<f32>,
 }
 
@@ -61,6 +64,7 @@ pub struct EngineHandle {
     command_tx: mpsc::Sender<ParamPatch>,
     command_rx: Arc<Mutex<mpsc::Receiver<ParamPatch>>>,
     command_worker_started: AtomicBool,
+    engine_running: AtomicBool,
     time_source: Arc<dyn TimeSource>,
     start_instant: Instant,
 }
@@ -91,6 +95,7 @@ impl EngineHandle {
             command_tx,
             command_rx: Arc::new(Mutex::new(command_rx)),
             command_worker_started: AtomicBool::new(false),
+            engine_running: AtomicBool::new(false),
             time_source,
             start_instant: Instant::now(),
         }
@@ -228,6 +233,7 @@ impl EngineHandle {
         };
 
         self.backend.start(ctx)?;
+        self.engine_running.store(true, Ordering::SeqCst);
         self.emit_event(TelemetryEventKind::EngineStarted { bpm }, None);
         self.init_command_worker();
         Ok(())
@@ -236,6 +242,7 @@ impl EngineHandle {
     /// Stop the audio engine.
     pub fn stop_audio(&self) -> Result<(), AudioError> {
         self.backend.stop()?;
+        self.engine_running.store(false, Ordering::SeqCst);
         self.emit_event(TelemetryEventKind::EngineStopped, None);
         Ok(())
     }
@@ -372,6 +379,10 @@ impl EngineHandle {
         rx
     }
 
+    pub fn telemetry_receiver(&self) -> broadcast::Receiver<TelemetryEvent> {
+        self.telemetry_tx.subscribe()
+    }
+
     // ========================================================================
     // ASYNC STREAM ADAPTERS
     // ========================================================================
@@ -403,6 +414,19 @@ impl EngineHandle {
     /// Get a clone of the sender for ParamPatch commands.
     pub fn command_sender(&self) -> mpsc::Sender<ParamPatch> {
         self.command_tx.clone()
+    }
+
+    /// Check whether audio backend is running (best effort).
+    pub fn is_audio_running(&self) -> bool {
+        self.engine_running.load(Ordering::SeqCst)
+    }
+
+    /// Milliseconds elapsed since the handle was created (used for telemetry).
+    pub fn uptime_ms(&self) -> u64 {
+        self.time_source
+            .now()
+            .saturating_duration_since(self.start_instant)
+            .as_millis() as u64
     }
 
     /// Snapshot the current app configuration (desktop tooling helper).

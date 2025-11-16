@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use crate::analysis::ClassificationResult;
 use crate::bridge_generated::StreamSink;
 use crate::calibration::CalibrationProgress;
-use crate::context::AppContext;
+use crate::engine::core::EngineHandle;
 use crate::error::{AudioError, CalibrationError};
 
 // Re-export error code constants for FFI exposure
@@ -57,7 +57,7 @@ pub struct OnsetEvent {
     pub classification: Option<ClassificationResult>,
 }
 
-/// Global AppContext instance - Single dependency injection container
+/// Global engine handle instance - Single dependency injection container
 ///
 /// Consolidates all application state (audio engine, calibration, broadcast channels)
 /// into a single, testable context. This replaces 5 separate global statics.
@@ -67,7 +67,7 @@ pub struct OnsetEvent {
 /// - Testable with mock dependencies
 /// - Graceful error handling (no unwrap/expect)
 /// - Clear ownership and lifecycle management
-static APP_CONTEXT: Lazy<AppContext> = Lazy::new(AppContext::new);
+static ENGINE_HANDLE: Lazy<EngineHandle> = Lazy::new(EngineHandle::new);
 
 /// Initialize flutter_rust_bridge with Tokio runtime
 ///
@@ -78,6 +78,7 @@ static APP_CONTEXT: Lazy<AppContext> = Lazy::new(AppContext::new);
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
+    crate::http::spawn_if_enabled(&ENGINE_HANDLE);
 }
 
 /// Initialize and greet from Rust
@@ -124,7 +125,7 @@ pub fn get_version() -> Result<String> {
 /// - Lock poisoning on shared state
 #[flutter_rust_bridge::frb]
 pub fn start_audio(bpm: u32) -> Result<(), AudioError> {
-    APP_CONTEXT.start_audio(bpm)
+    ENGINE_HANDLE.start_audio(bpm)
 }
 
 /// Stop the audio engine
@@ -137,7 +138,7 @@ pub fn start_audio(bpm: u32) -> Result<(), AudioError> {
 /// * `Err(AudioError)` - Error if shutdown fails or lock poisoning
 #[flutter_rust_bridge::frb]
 pub fn stop_audio() -> Result<(), AudioError> {
-    APP_CONTEXT.stop_audio()
+    ENGINE_HANDLE.stop_audio()
 }
 
 /// Set BPM dynamically during audio playback
@@ -158,7 +159,7 @@ pub fn stop_audio() -> Result<(), AudioError> {
 /// - Lock poisoning on audio engine state
 #[flutter_rust_bridge::frb]
 pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
-    APP_CONTEXT.set_bpm(bpm)
+    ENGINE_HANDLE.set_bpm(bpm)
 }
 
 /// Stream of classification results
@@ -191,7 +192,7 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
 pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
     // Get a direct subscription to the classification broadcast channel
     // This avoids the tokio::spawn in subscribe_classification()
-    let broadcast_rx = APP_CONTEXT.broadcasts.subscribe_classification();
+    let broadcast_rx = ENGINE_HANDLE.broadcasts.subscribe_classification();
 
     if let Some(mut broadcast_rx) = broadcast_rx {
         // Spawn a dedicated thread with its own Tokio runtime for async operations
@@ -230,7 +231,7 @@ pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
 /// - Lock poisoning on calibration procedure state
 #[flutter_rust_bridge::frb]
 pub fn start_calibration() -> Result<(), CalibrationError> {
-    APP_CONTEXT.start_calibration()
+    ENGINE_HANDLE.start_calibration()
 }
 
 /// Finish calibration and compute thresholds
@@ -249,7 +250,7 @@ pub fn start_calibration() -> Result<(), CalibrationError> {
 /// - Lock poisoning on calibration state
 #[flutter_rust_bridge::frb]
 pub fn finish_calibration() -> Result<(), CalibrationError> {
-    APP_CONTEXT.finish_calibration()
+    ENGINE_HANDLE.finish_calibration()
 }
 
 /// Stream of calibration progress updates
@@ -279,7 +280,7 @@ pub fn finish_calibration() -> Result<(), CalibrationError> {
 pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
     // Get a direct subscription to the calibration broadcast channel
     // This avoids the tokio::spawn in subscribe_calibration()
-    let broadcast_rx = APP_CONTEXT.broadcasts.subscribe_calibration();
+    let broadcast_rx = ENGINE_HANDLE.broadcasts.subscribe_calibration();
 
     if let Some(mut broadcast_rx) = broadcast_rx {
         // Spawn a dedicated thread with its own Tokio runtime for async operations
@@ -337,8 +338,8 @@ pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
             reason: format!("Failed to deserialize calibration JSON: {}", e),
         })?;
 
-    // Load state into AppContext
-    APP_CONTEXT.load_calibration(state)?;
+    // Load state into EngineHandle
+    ENGINE_HANDLE.load_calibration(state)?;
 
     Ok(())
 }
@@ -368,8 +369,8 @@ pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
 /// ```
 #[flutter_rust_bridge::frb]
 pub fn get_calibration_state() -> Result<String, CalibrationError> {
-    // Get calibration state from AppContext
-    let state = APP_CONTEXT.get_calibration_state()?;
+    // Get calibration state from EngineHandle
+    let state = ENGINE_HANDLE.get_calibration_state()?;
 
     // Serialize to JSON
     serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {
@@ -400,7 +401,7 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
 /// ```
 #[flutter_rust_bridge::frb(ignore)]
 pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics> {
-    APP_CONTEXT.audio_metrics_stream().await
+    ENGINE_HANDLE.audio_metrics_stream().await
 }
 
 /// Stream of onset events for debug visualization
@@ -425,7 +426,7 @@ pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics>
 /// ```
 #[flutter_rust_bridge::frb(ignore)]
 pub async fn onset_events_stream() -> impl futures::Stream<Item = OnsetEvent> {
-    APP_CONTEXT.onset_events_stream().await
+    ENGINE_HANDLE.onset_events_stream().await
 }
 
 // Error code constant accessors for Dart/Flutter

@@ -14,6 +14,7 @@ pub mod context;
 pub mod engine;
 pub mod error;
 pub mod fixtures;
+pub mod http;
 pub mod managers;
 
 // Generated FFI bridge code (created by flutter_rust_bridge codegen)

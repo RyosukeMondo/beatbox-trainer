@@ -16,3 +16,7 @@ dart_format_line_length: 80
 
 # Enable error details during generation
 stop_on_error: false
+
+# Enable the debug HTTP server feature for dev builds (opt-out via --no-default-features)
+rust_features:
+  - debug_http
