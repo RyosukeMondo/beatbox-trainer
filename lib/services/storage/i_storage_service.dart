@@ -208,7 +208,10 @@ class CalibrationData {
       tKickZcr: thresholds['t_kick_zcr'] ?? 0.1,
       tSnareCentroid: thresholds['t_snare_centroid'] ?? 4000.0,
       tHihatZcr: thresholds['t_hihat_zcr'] ?? 0.3,
-      isCalibrated: false, // Default is false when loading manually
+      // Once calibration data is persisted we only call this helper while
+      // restoring thresholds on app launch, so the Rust engine must be told
+      // calibration is already complete.
+      isCalibrated: true,
     );
 
     return state.toJson();

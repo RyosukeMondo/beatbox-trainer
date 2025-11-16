@@ -286,7 +286,7 @@ This document breaks down the UAT Readiness design into atomic, implementable ta
   - _Leverage: Task 9.1 UAT scenarios document, Build APK: `flutter build apk --debug`, Install: `adb install build/app/outputs/flutter-apk/app-debug.apk`_
   - _Prompt: Role: QA Tester | Task: Execute all UAT scenarios on test devices. Test devices (minimum 3): 1. Pixel 9a (primary test device) 2. Another device (Samsung/OnePlus/Xiaomi) 3. Another device (different manufacturer). For each scenario: 1. Follow steps exactly 2. Record actual results 3. Mark Pass/Fail 4. Document any issues found 5. Measure performance metrics | Restrictions: Test on clean installs (uninstall/reinstall), Test with airplane mode for offline validation, Record any crashes or errors, Take screenshots of failures | Leverage: Task 9.1 UAT scenarios document, Build APK: `flutter build apk --debug`, Install: `adb install build/app/outputs/flutter-apk/app-debug.apk` | Requirements: US-6 (UAT execution) | Success: All scenarios executed on 3 devices, Results documented in UAT_TEST_SCENARIOS.md, Performance benchmarks measured, Issues documented with repro steps, Sign-off complete if all pass_
 
-- [ ] 9.3. Fix Critical UAT Issues (if any)
+- [x] 9.3. Fix Critical UAT Issues (if any)
   - File: Various (depends on issues)
   - Estimate: Variable (1-3 days) | Priority: Critical
   - Fix any critical bugs discovered during UAT
