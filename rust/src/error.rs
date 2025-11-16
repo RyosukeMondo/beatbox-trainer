@@ -26,7 +26,7 @@ pub trait ErrorCode {
 /// shared between Rust and Dart. The flutter_rust_bridge will automatically
 /// generate corresponding Dart constants.
 ///
-/// Error code range: 1001-1009
+/// Error code range: 1001-1010
 #[frb(unignore)]
 pub struct AudioErrorCodes {}
 
@@ -58,6 +58,9 @@ impl AudioErrorCodes {
 
     /// Android context was not initialized before audio engine start
     pub const CONTEXT_NOT_INITIALIZED: i32 = 1009;
+
+    /// Audio stream disconnected or channel closed unexpectedly
+    pub const STREAM_FAILURE: i32 = 1010;
 
     // Getter methods for FFI exposure (flutter_rust_bridge requires methods not const)
 
@@ -114,6 +117,12 @@ impl AudioErrorCodes {
     pub fn context_not_initialized() -> i32 {
         Self::CONTEXT_NOT_INITIALIZED
     }
+
+    /// Get STREAM_FAILURE error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn stream_failure() -> i32 {
+        Self::STREAM_FAILURE
+    }
 }
 
 /// Calibration error code constants exposed to Dart via FFI
@@ -122,7 +131,7 @@ impl AudioErrorCodes {
 /// shared between Rust and Dart. The flutter_rust_bridge will automatically
 /// generate corresponding Dart constants.
 ///
-/// Error code range: 2001-2005
+/// Error code range: 2001-2006
 #[frb(unignore)]
 pub struct CalibrationErrorCodes {}
 
@@ -142,6 +151,9 @@ impl CalibrationErrorCodes {
 
     /// Calibration state RwLock was poisoned
     pub const STATE_POISONED: i32 = 2005;
+
+    /// Calibration timed out waiting for engine coordination
+    pub const TIMEOUT: i32 = 2006;
 
     // Getter methods for FFI exposure (flutter_rust_bridge requires methods not const)
 
@@ -173,6 +185,12 @@ impl CalibrationErrorCodes {
     #[flutter_rust_bridge::frb(sync, getter)]
     pub fn state_poisoned() -> i32 {
         Self::STATE_POISONED
+    }
+
+    /// Get TIMEOUT error code
+    #[flutter_rust_bridge::frb(sync, getter)]
+    pub fn timeout() -> i32 {
+        Self::TIMEOUT
     }
 }
 
@@ -246,6 +264,9 @@ pub enum AudioError {
 
     /// Android context was not initialized before audio engine start
     ContextNotInitialized,
+
+    /// Stream channel disconnected unexpectedly
+    StreamFailure { reason: String },
 }
 
 impl ErrorCode for AudioError {
@@ -260,6 +281,7 @@ impl ErrorCode for AudioError {
             AudioError::LockPoisoned { .. } => AudioErrorCodes::LOCK_POISONED,
             AudioError::JniInitFailed { .. } => AudioErrorCodes::JNI_INIT_FAILED,
             AudioError::ContextNotInitialized => AudioErrorCodes::CONTEXT_NOT_INITIALIZED,
+            AudioError::StreamFailure { .. } => AudioErrorCodes::STREAM_FAILURE,
         }
     }
 
@@ -289,6 +311,9 @@ impl ErrorCode for AudioError {
             }
             AudioError::ContextNotInitialized => {
                 "Android context not initialized. This may indicate the native library was not loaded correctly or JNI_OnLoad failed.".to_string()
+            }
+            AudioError::StreamFailure { reason } => {
+                format!("Audio stream failure: {}", reason)
             }
         }
     }
@@ -340,8 +365,8 @@ pub enum CalibrationError {
     /// Calibration state RwLock was poisoned
     StatePoisoned,
 
-    /// Audio engine error occurred during calibration
-    AudioEngineError { details: String },
+    /// Calibration timed out waiting for native engine coordination
+    Timeout { reason: String },
 }
 
 impl ErrorCode for CalibrationError {
@@ -354,7 +379,7 @@ impl ErrorCode for CalibrationError {
             CalibrationError::NotComplete => CalibrationErrorCodes::NOT_COMPLETE,
             CalibrationError::AlreadyInProgress => CalibrationErrorCodes::ALREADY_IN_PROGRESS,
             CalibrationError::StatePoisoned => CalibrationErrorCodes::STATE_POISONED,
-            CalibrationError::AudioEngineError { .. } => 2006, // New error code
+            CalibrationError::Timeout { .. } => CalibrationErrorCodes::TIMEOUT,
         }
     }
 
@@ -372,8 +397,8 @@ impl ErrorCode for CalibrationError {
             CalibrationError::NotComplete => "Calibration not complete".to_string(),
             CalibrationError::AlreadyInProgress => "Calibration already in progress".to_string(),
             CalibrationError::StatePoisoned => "Calibration state lock poisoned".to_string(),
-            CalibrationError::AudioEngineError { details } => {
-                format!("Audio engine error: {}", details)
+            CalibrationError::Timeout { reason } => {
+                format!("Calibration timed out: {}", reason)
             }
         }
     }
@@ -444,6 +469,13 @@ mod tests {
             AudioError::ContextNotInitialized.code(),
             AudioErrorCodes::CONTEXT_NOT_INITIALIZED
         );
+        assert_eq!(
+            AudioError::StreamFailure {
+                reason: "closed".to_string()
+            }
+            .code(),
+            AudioErrorCodes::STREAM_FAILURE
+        );
     }
 
     #[test]
@@ -475,6 +507,13 @@ mod tests {
             CalibrationError::StatePoisoned.code(),
             CalibrationErrorCodes::STATE_POISONED
         );
+        assert_eq!(
+            CalibrationError::Timeout {
+                reason: "engine unresponsive".to_string()
+            }
+            .code(),
+            CalibrationErrorCodes::TIMEOUT
+        );
     }
 
     #[test]
@@ -502,6 +541,11 @@ mod tests {
 
         let err = CalibrationError::AlreadyInProgress;
         assert!(err.message().contains("already in progress"));
+
+        let timeout = CalibrationError::Timeout {
+            reason: "engine".to_string(),
+        };
+        assert!(timeout.message().contains("timed out"));
     }
 
     #[test]

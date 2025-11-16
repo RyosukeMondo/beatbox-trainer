@@ -16,6 +16,22 @@ class TimingFeedback {
 
   const TimingFeedback({required this.classification, required this.errorMs});
 
+  factory TimingFeedback.fromJson(Map<String, dynamic> json) {
+    return TimingFeedback(
+      classification: TimingClassificationParser.fromLabel(
+        json['classification'] as String? ?? 'onTime',
+      ),
+      errorMs: (json['error_ms'] as num? ?? 0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'classification': classification.name,
+      'error_ms': errorMs,
+    };
+  }
+
   /// Format error as string with sign (e.g., "+12.5ms", "-5.0ms", "0.0ms")
   String get formattedError {
     if (errorMs == 0.0) {
@@ -57,6 +73,22 @@ enum TimingClassification {
         return 'EARLY';
       case TimingClassification.late:
         return 'LATE';
+    }
+  }
+}
+
+abstract class TimingClassificationParser {
+  static TimingClassification fromLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'on_time':
+      case 'ontime':
+        return TimingClassification.onTime;
+      case 'early':
+        return TimingClassification.early;
+      case 'late':
+        return TimingClassification.late;
+      default:
+        return TimingClassification.onTime;
     }
   }
 }

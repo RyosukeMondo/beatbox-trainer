@@ -63,6 +63,9 @@ class ErrorHandler {
       case AudioErrorCodesExtension.streamOpenFailed:
         return 'Unable to access audio hardware. Please check if another app is using the microphone.';
 
+      case AudioErrorCodesExtension.streamFailure:
+        return 'Live audio stream disconnected. Please restart training to reconnect.';
+
       case AudioErrorCodesExtension.lockPoisoned:
         return 'Internal error occurred. Please restart the app.';
 
@@ -138,6 +141,9 @@ class ErrorHandler {
 
       case CalibrationErrorCodesExtension.statePoisoned:
         return 'Internal error occurred. Please restart the app.';
+
+      case CalibrationErrorCodesExtension.timeout:
+        return 'Calibration timed out. Please restart the calibration workflow.';
 
       default:
         // Fallback pattern matching on error text

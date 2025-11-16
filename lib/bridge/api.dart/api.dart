@@ -7,15 +7,18 @@ import 'analysis.dart';
 import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'calibration/progress.dart';
+import 'engine/core.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioMetrics`, `OnsetEvent`
+
+            // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioMetrics`, `OnsetEvent`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `onset_events_stream`
 
-/// Initialize and greet from Rust
+
+            /// Initialize and greet from Rust
 ///
 /// This is a simple stub function to verify flutter_rust_bridge integration works.
 /// Returns a greeting message.
@@ -23,8 +26,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// # Returns
 ///
 /// * `Result<String>` - Success message or error
-String greet({required String name}) =>
-    RustLib.instance.api.crateApiGreet(name: name);
+String  greet({required String name }) => RustLib.instance.api.crateApiGreet(name: name);
 
 /// Get the version of the audio engine
 ///
@@ -33,7 +35,7 @@ String greet({required String name}) =>
 /// # Returns
 ///
 /// * `Result<String>` - Version string
-String getVersion() => RustLib.instance.api.crateApiGetVersion();
+String  getVersion() => RustLib.instance.api.crateApiGetVersion();
 
 /// Start the audio engine with specified BPM
 ///
@@ -52,8 +54,7 @@ String getVersion() => RustLib.instance.api.crateApiGetVersion();
 /// - Audio engine already running (call stop_audio first)
 /// - Invalid BPM value (must be > 0)
 /// - Lock poisoning on shared state
-Future<void> startAudio({required int bpm}) =>
-    RustLib.instance.api.crateApiStartAudio(bpm: bpm);
+Future<void>  startAudio({required int bpm }) => RustLib.instance.api.crateApiStartAudio(bpm: bpm);
 
 /// Stop the audio engine
 ///
@@ -63,7 +64,7 @@ Future<void> startAudio({required int bpm}) =>
 /// # Returns
 /// * `Ok(())` - Audio engine stopped successfully or was not running
 /// * `Err(AudioError)` - Error if shutdown fails or lock poisoning
-Future<void> stopAudio() => RustLib.instance.api.crateApiStopAudio();
+Future<void>  stopAudio() => RustLib.instance.api.crateApiStopAudio();
 
 /// Set BPM dynamically during audio playback
 ///
@@ -81,8 +82,10 @@ Future<void> stopAudio() => RustLib.instance.api.crateApiStopAudio();
 /// - Audio engine not running
 /// - Invalid BPM value (must be > 0)
 /// - Lock poisoning on audio engine state
-Future<void> setBpm({required int bpm}) =>
-    RustLib.instance.api.crateApiSetBpm(bpm: bpm);
+Future<void>  setBpm({required int bpm }) => RustLib.instance.api.crateApiSetBpm(bpm: bpm);
+
+/// Apply parameter patch to running engine (BPM/threshold updates)
+Future<void>  applyParams({required ParamPatch patch }) => RustLib.instance.api.crateApiApplyParams(patch: patch);
 
 /// Stream of classification results
 ///
@@ -109,8 +112,7 @@ Future<void> setBpm({required int bpm}) =>
 /// - Rust function accepts `StreamSink<T>` parameter
 /// - Dart receives `Stream<T>` return type
 /// - Function can hold sink and emit results asynchronously
-Stream<ClassificationResult> classificationStream() =>
-    RustLib.instance.api.crateApiClassificationStream();
+Stream<ClassificationResult>  classificationStream() => RustLib.instance.api.crateApiClassificationStream();
 
 /// Start calibration workflow
 ///
@@ -126,8 +128,7 @@ Stream<ClassificationResult> classificationStream() =>
 /// # Errors
 /// - Calibration already in progress
 /// - Lock poisoning on calibration procedure state
-Future<void> startCalibration() =>
-    RustLib.instance.api.crateApiStartCalibration();
+Future<void>  startCalibration() => RustLib.instance.api.crateApiStartCalibration();
 
 /// Finish calibration and compute thresholds
 ///
@@ -143,8 +144,7 @@ Future<void> startCalibration() =>
 /// - Insufficient samples collected (need 10 per sound type)
 /// - Sample validation failed (out of range features)
 /// - Lock poisoning on calibration state
-Future<void> finishCalibration() =>
-    RustLib.instance.api.crateApiFinishCalibration();
+Future<void>  finishCalibration() => RustLib.instance.api.crateApiFinishCalibration();
 
 /// Stream of calibration progress updates
 ///
@@ -153,7 +153,7 @@ Future<void> finishCalibration() =>
 /// the number of samples collected (0-10).
 ///
 /// # Returns
-/// Stream of CalibrationProgress that yields progress updates
+/// Stream<CalibrationProgress> that yields progress updates
 ///
 /// # Usage
 /// ```dart
@@ -168,8 +168,7 @@ Future<void> finishCalibration() =>
 /// - Rust function accepts `StreamSink<T>` parameter
 /// - Dart receives `Stream<T>` return type
 /// - Function can hold sink and emit results asynchronously
-Stream<CalibrationProgress> calibrationStream() =>
-    RustLib.instance.api.crateApiCalibrationStream();
+Stream<CalibrationProgress>  calibrationStream() => RustLib.instance.api.crateApiCalibrationStream();
 
 /// Load calibration state from JSON
 ///
@@ -196,8 +195,7 @@ Stream<CalibrationProgress> calibrationStream() =>
 ///   print('Failed to load calibration: $e');
 /// }
 /// ```
-Future<void> loadCalibrationState({required String json}) =>
-    RustLib.instance.api.crateApiLoadCalibrationState(json: json);
+Future<void>  loadCalibrationState({required String json }) => RustLib.instance.api.crateApiLoadCalibrationState(json: json);
 
 /// Get current calibration state as JSON
 ///
@@ -222,13 +220,18 @@ Future<void> loadCalibrationState({required String json}) =>
 ///   print('Failed to get calibration state: $e');
 /// }
 /// ```
-Future<String> getCalibrationState() =>
-    RustLib.instance.api.crateApiGetCalibrationState();
+Future<String>  getCalibrationState() => RustLib.instance.api.crateApiGetCalibrationState();
+
+/// Stream of telemetry events for debug instrumentation
+///
+/// Emits engine lifecycle events (start/stop, BPM changes) and warnings.
+Stream<TelemetryEvent>  telemetryStream() => RustLib.instance.api.crateApiTelemetryStream();
 
 /// Get AudioErrorCodes as a structured object with all error code constants
-AudioErrorCodes getAudioErrorCodes() =>
-    RustLib.instance.api.crateApiGetAudioErrorCodes();
+AudioErrorCodes  getAudioErrorCodes() => RustLib.instance.api.crateApiGetAudioErrorCodes();
 
 /// Get CalibrationErrorCodes as a structured object with all error code constants
-CalibrationErrorCodes getCalibrationErrorCodes() =>
-    RustLib.instance.api.crateApiGetCalibrationErrorCodes();
+CalibrationErrorCodes  getCalibrationErrorCodes() => RustLib.instance.api.crateApiGetCalibrationErrorCodes();
+
+            
+            

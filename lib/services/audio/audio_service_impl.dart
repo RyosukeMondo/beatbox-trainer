@@ -1,11 +1,14 @@
-import '../../models/classification_result.dart';
 import '../../models/calibration_progress.dart';
+import '../../models/classification_result.dart';
+import '../../models/telemetry_event.dart';
 import '../../models/timing_feedback.dart';
 import '../../bridge/api.dart/api.dart' as api;
 import '../../bridge/api.dart/analysis.dart' as ffi_analysis;
 import '../../bridge/api.dart/analysis/classifier.dart' as ffi_classifier;
 import '../../bridge/api.dart/analysis/quantizer.dart' as ffi_quantizer;
 import '../../bridge/api.dart/calibration/progress.dart' as ffi_calibration;
+import '../../bridge/api.dart/engine/core.dart' as ffi_engine;
+import '../../bridge/extensions/error_code_extensions.dart';
 import '../error_handler/error_handler.dart';
 import '../error_handler/exceptions.dart';
 import 'i_audio_service.dart';
@@ -99,6 +102,20 @@ class AudioServiceImpl implements IAudioService {
           });
     } catch (e) {
       // Handle synchronous errors during stream creation
+      throw _errorHandler.createAudioException(e.toString());
+    }
+  }
+
+  @override
+  Stream<TelemetryEvent> getTelemetryStream() {
+    try {
+      return api
+          .telemetryStream()
+          .map(_mapFfiToTelemetryEvent)
+          .handleError((error) {
+            throw _errorHandler.createAudioException(error.toString());
+          });
+    } catch (e) {
       throw _errorHandler.createAudioException(e.toString());
     }
   }
@@ -209,6 +226,33 @@ class AudioServiceImpl implements IAudioService {
     }
   }
 
+  @override
+  Future<void> applyParamPatch({
+    int? bpm,
+    double? centroidThreshold,
+    double? zcrThreshold,
+  }) async {
+    if (bpm == null && centroidThreshold == null && zcrThreshold == null) {
+      throw AudioServiceException(
+        message: 'Provide at least one value to update.',
+        originalError: 'applyParamPatch invoked without any fields',
+        errorCode: AudioErrorCodesExtension.streamFailure,
+      );
+    }
+
+    try {
+      await api.applyParams(
+        patch: ffi_engine.ParamPatch(
+          bpm: bpm,
+          centroidThreshold: centroidThreshold,
+          zcrThreshold: zcrThreshold,
+        ),
+      );
+    } catch (e) {
+      throw _errorHandler.createAudioException(e.toString());
+    }
+  }
+
   /// Map FFI CalibrationProgress to model CalibrationProgress
   ///
   /// Converts flutter_rust_bridge generated types to application model types.
@@ -234,5 +278,43 @@ class AudioServiceImpl implements IAudioService {
       case ffi_calibration.CalibrationSound.hiHat:
         return CalibrationSound.hiHat;
     }
+  }
+
+  TelemetryEvent _mapFfiToTelemetryEvent(
+    ffi_engine.TelemetryEvent ffiEvent,
+  ) {
+    final timestamp = ffiEvent.timestampMs.toInt();
+    final detail = ffiEvent.detail;
+    final kind = ffiEvent.kind;
+
+    if (kind is ffi_engine.TelemetryEventKind_EngineStarted) {
+      return TelemetryEvent(
+        timestampMs: timestamp,
+        type: TelemetryEventType.engineStarted,
+        bpm: kind.bpm,
+        detail: detail,
+      );
+    }
+    if (kind is ffi_engine.TelemetryEventKind_BpmChanged) {
+      return TelemetryEvent(
+        timestampMs: timestamp,
+        type: TelemetryEventType.bpmChanged,
+        bpm: kind.bpm,
+        detail: detail,
+      );
+    }
+    if (kind is ffi_engine.TelemetryEventKind_EngineStopped) {
+      return TelemetryEvent(
+        timestampMs: timestamp,
+        type: TelemetryEventType.engineStopped,
+        detail: detail,
+      );
+    }
+
+    return TelemetryEvent(
+      timestampMs: timestamp,
+      type: TelemetryEventType.warning,
+      detail: detail,
+    );
   }
 }

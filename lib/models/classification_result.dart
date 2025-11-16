@@ -28,6 +28,26 @@ class ClassificationResult {
     required this.confidence,
   });
 
+  factory ClassificationResult.fromJson(Map<String, dynamic> json) {
+    return ClassificationResult(
+      sound: BeatboxHitParser.fromLabel(json['sound'] as String? ?? 'unknown'),
+      timing: TimingFeedback.fromJson(
+        Map<String, dynamic>.from(json['timing'] as Map),
+      ),
+      timestampMs: json['timestamp_ms'] as int? ?? 0,
+      confidence: (json['confidence'] as num? ?? 0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'sound': sound.displayName,
+      'timing': timing.toJson(),
+      'timestamp_ms': timestampMs,
+      'confidence': confidence,
+    };
+  }
+
   @override
   String toString() =>
       'ClassificationResult(sound: $sound, timing: $timing, timestampMs: $timestampMs, confidence: $confidence)';
@@ -78,6 +98,29 @@ enum BeatboxHit {
         return 'K-SNARE';
       case BeatboxHit.unknown:
         return 'UNKNOWN';
+    }
+  }
+}
+
+/// Helper utilities for converting between serialized beatbox hits and enums.
+abstract class BeatboxHitParser {
+  static BeatboxHit fromLabel(String value) {
+    switch (value.toUpperCase()) {
+      case 'KICK':
+        return BeatboxHit.kick;
+      case 'SNARE':
+        return BeatboxHit.snare;
+      case 'HI-HAT':
+      case 'HIHAT':
+        return BeatboxHit.hiHat;
+      case 'CLOSED HI-HAT':
+        return BeatboxHit.closedHiHat;
+      case 'OPEN HI-HAT':
+        return BeatboxHit.openHiHat;
+      case 'K-SNARE':
+        return BeatboxHit.kSnare;
+      default:
+        return BeatboxHit.unknown;
     }
   }
 }

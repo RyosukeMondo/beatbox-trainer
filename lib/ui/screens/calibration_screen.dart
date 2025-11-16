@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../bridge/api.dart/api.dart' as api;
 import '../../di/service_locator.dart';
 import '../../models/calibration_progress.dart';
+import '../../models/calibration_state.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/error_handler/exceptions.dart';
 import '../../services/storage/i_storage_service.dart';
@@ -226,7 +227,12 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     final calibrationStateJson = await api.getCalibrationState();
     final calibrationJson =
         jsonDecode(calibrationStateJson) as Map<String, dynamic>;
-    return CalibrationData.fromJson(calibrationJson);
+    final calibrationState = CalibrationState.fromJson(calibrationJson);
+    return CalibrationData(
+      level: calibrationState.level,
+      timestamp: DateTime.now(),
+      thresholds: calibrationState.toThresholdMap(),
+    );
   }
 
   /// Handle successful calibration completion

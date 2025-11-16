@@ -161,7 +161,7 @@ fn test_calibration_start_on_desktop() {
 
     // The exact behavior depends on implementation:
     // - If audio restart is conditional on Android, calibration should succeed
-    // - If audio restart always happens, it may fail with AudioEngineError
+    // - If audio restart always happens, it may fail with CalibrationTimeout
     //
     // Either way, we're testing that it doesn't panic
     match result {
@@ -170,9 +170,9 @@ fn test_calibration_start_on_desktop() {
             println!("Calibration started successfully on desktop");
             let _ = context.finish_calibration();
         }
-        Err(CalibrationError::AudioEngineError { .. }) => {
-            // Audio engine error (expected on desktop if restart is unconditional)
-            println!("Got expected AudioEngineError on desktop");
+        Err(CalibrationError::Timeout { .. }) => {
+            // Audio restart failed (expected on desktop if restart is unconditional)
+            println!("Got expected CalibrationTimeout on desktop");
         }
         Err(other) => {
             panic!("Unexpected error on desktop: {:?}", other);
@@ -221,7 +221,7 @@ fn test_calibration_procedure_initialization() {
 /// Test error propagation during audio restart
 ///
 /// This test verifies that errors during audio restart are properly
-/// propagated as CalibrationError::AudioEngineError.
+/// propagated as CalibrationError::Timeout.
 #[cfg(target_os = "android")]
 #[test]
 fn test_audio_restart_error_handling() {
@@ -231,16 +231,16 @@ fn test_audio_restart_error_handling() {
     // Or with audio hardware issues
     let result = context.start_calibration();
 
-    // On Android, if audio hardware is not available, we should get AudioEngineError
+    // On Android, if audio hardware is not available, we should get CalibrationTimeout
     match result {
         Ok(_) => {
             // Audio available - clean up
             let _ = context.finish_calibration();
             let _ = context.stop_audio();
         }
-        Err(CalibrationError::AudioEngineError { .. }) => {
+        Err(CalibrationError::Timeout { .. }) => {
             // Expected if audio hardware not available
-            println!("Got expected AudioEngineError when audio unavailable");
+            println!("Got expected CalibrationTimeout when audio unavailable");
         }
         Err(other) => {
             panic!("Unexpected error: {:?}", other);
@@ -285,12 +285,12 @@ fn test_concurrent_calibration_start() {
                 _already_in_progress_count += 1;
                 println!("Thread {} got AlreadyInProgress", thread_id);
             }
-            Err(CalibrationError::AudioEngineError { .. }) => {
+            Err(CalibrationError::Timeout { .. }) => {
                 // On desktop, audio engine errors are expected
                 #[cfg(not(target_os = "android"))]
                 {
                     println!(
-                        "Thread {} got AudioEngineError (expected on desktop)",
+                        "Thread {} got CalibrationTimeout (expected on desktop)",
                         thread_id
                     );
                 }
@@ -299,7 +299,7 @@ fn test_concurrent_calibration_start() {
                 #[cfg(target_os = "android")]
                 {
                     println!(
-                        "Thread {} got AudioEngineError (hardware unavailable)",
+                        "Thread {} got CalibrationTimeout (hardware unavailable)",
                         thread_id
                     );
                 }

@@ -1,3 +1,5 @@
+import '../../models/calibration_state.dart';
+
 /// Storage service interface for calibration and settings persistence.
 ///
 /// This interface abstracts persistent storage operations (via SharedPreferences),
@@ -114,6 +116,30 @@ class CalibrationData {
     required this.thresholds,
   });
 
+  /// Create CalibrationData with sensible default thresholds.
+  ///
+  /// Useful for skipping calibration during testing or for users who want
+  /// to try the app immediately. These defaults work reasonably well for
+  /// most users but personalized calibration is recommended.
+  ///
+  /// Default thresholds match Rust CalibrationState::new_default():
+  /// - t_kick_centroid = 1500 Hz
+  /// - t_kick_zcr = 0.1
+  /// - t_snare_centroid = 4000 Hz
+  /// - t_hihat_zcr = 0.3
+  factory CalibrationData.fromDefaults() {
+    return CalibrationData(
+      level: 1,
+      timestamp: DateTime.now(),
+      thresholds: {
+        't_kick_centroid': 1500.0,
+        't_kick_zcr': 0.1,
+        't_snare_centroid': 4000.0,
+        't_hihat_zcr': 0.3,
+      },
+    );
+  }
+
   /// Create CalibrationData from JSON map.
   ///
   /// Used when deserializing from SharedPreferences storage.
@@ -158,6 +184,34 @@ class CalibrationData {
       'timestamp': timestamp.toIso8601String(),
       'thresholds': thresholds,
     };
+  }
+
+  /// Convert CalibrationData to Rust CalibrationState JSON format.
+  ///
+  /// Flattens the thresholds map into top-level fields as expected by
+  /// Rust's CalibrationState struct.
+  ///
+  /// Returns:
+  /// - Map with 'level', 't_kick_centroid', 't_kick_zcr', 't_snare_centroid',
+  ///   't_hihat_zcr', and 'is_calibrated' keys
+  ///
+  /// Example:
+  /// ```dart
+  /// final rustJson = calibData.toRustJson();
+  /// final jsonString = jsonEncode(rustJson);
+  /// await audioService.loadCalibrationState(jsonString);
+  /// ```
+  Map<String, dynamic> toRustJson() {
+    final state = CalibrationState(
+      level: level,
+      tKickCentroid: thresholds['t_kick_centroid'] ?? 1500.0,
+      tKickZcr: thresholds['t_kick_zcr'] ?? 0.1,
+      tSnareCentroid: thresholds['t_snare_centroid'] ?? 4000.0,
+      tHihatZcr: thresholds['t_hihat_zcr'] ?? 0.3,
+      isCalibrated: false, // Default is false when loading manually
+    );
+
+    return state.toJson();
   }
 }
 

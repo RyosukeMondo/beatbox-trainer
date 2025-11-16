@@ -1,5 +1,6 @@
-import '../../models/classification_result.dart';
 import '../../models/calibration_progress.dart';
+import '../../models/classification_result.dart';
+import '../../models/telemetry_event.dart';
 
 /// Audio service interface for dependency injection and testing.
 ///
@@ -77,6 +78,12 @@ abstract class IAudioService {
   /// ```
   Stream<ClassificationResult> getClassificationStream();
 
+  /// Stream of telemetry events emitted by the Rust engine.
+  ///
+  /// Consumers can subscribe to receive engine start/stop notifications,
+  /// BPM adjustments, and warning signals for debug overlays.
+  Stream<TelemetryEvent> getTelemetryStream();
+
   /// Start calibration workflow.
   ///
   /// Begins the 3-step calibration process to learn user's beatbox sounds:
@@ -132,4 +139,14 @@ abstract class IAudioService {
   /// });
   /// ```
   Stream<CalibrationProgress> getCalibrationStream();
+
+  /// Apply parameter overrides to the running engine.
+  ///
+  /// Parameters are optional but at least one must be provided.
+  /// Throws [AudioServiceException] when the command queue rejects the patch.
+  Future<void> applyParamPatch({
+    int? bpm,
+    double? centroidThreshold,
+    double? zcrThreshold,
+  });
 }

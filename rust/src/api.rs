@@ -9,8 +9,9 @@ use once_cell::sync::Lazy;
 use crate::analysis::ClassificationResult;
 use crate::bridge_generated::StreamSink;
 use crate::calibration::CalibrationProgress;
-use crate::engine::core::EngineHandle;
+use crate::engine::core::{EngineHandle, ParamPatch, TelemetryEvent};
 use crate::error::{AudioError, CalibrationError};
+use tokio::sync::mpsc::error::TrySendError;
 
 // Re-export error code constants for FFI exposure
 pub use crate::error::{AudioErrorCodes, CalibrationErrorCodes};
@@ -162,6 +163,28 @@ pub fn set_bpm(bpm: u32) -> Result<(), AudioError> {
     ENGINE_HANDLE.set_bpm(bpm)
 }
 
+/// Apply parameter patch to running engine (BPM/threshold updates)
+#[flutter_rust_bridge::frb]
+pub fn apply_params(patch: ParamPatch) -> Result<(), AudioError> {
+    if patch.bpm.is_none() && patch.centroid_threshold.is_none() && patch.zcr_threshold.is_none() {
+        return Err(AudioError::StreamFailure {
+            reason: "at least one parameter must be provided".to_string(),
+        });
+    }
+
+    ENGINE_HANDLE
+        .command_sender()
+        .try_send(patch)
+        .map_err(|err| match err {
+            TrySendError::Full(_) => AudioError::StreamFailure {
+                reason: "parameter command queue is full".to_string(),
+            },
+            TrySendError::Closed(_) => AudioError::StreamFailure {
+                reason: "parameter command channel closed".to_string(),
+            },
+        })
+}
+
 /// Stream of classification results
 ///
 /// Returns a stream that yields ClassificationResult on each detected onset.
@@ -195,22 +218,33 @@ pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
     let broadcast_rx = ENGINE_HANDLE.broadcasts.subscribe_classification();
 
     if let Some(mut broadcast_rx) = broadcast_rx {
-        // Spawn a dedicated thread with its own Tokio runtime for async operations
-        // This avoids requiring a global Tokio runtime
         std::thread::spawn(move || {
-            // Create a single-threaded Tokio runtime for this stream handler
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .expect("Failed to create Tokio runtime for classification stream");
 
             rt.block_on(async move {
-                while let Ok(result) = broadcast_rx.recv().await {
-                    // Forward result to Dart via StreamSink
-                    sink.add(result);
+                loop {
+                    match broadcast_rx.recv().await {
+                        Ok(result) => {
+                            if sink.add(result).is_err() {
+                                break;
+                            }
+                        }
+                        Err(err) => {
+                            let _ = sink.add_error(AudioError::StreamFailure {
+                                reason: format!("classification channel closed: {}", err),
+                            });
+                            break;
+                        }
+                    }
                 }
-                // Stream ends when receiver channel closes (audio engine stopped)
             });
+        });
+    } else {
+        let _ = sink.add_error(AudioError::StreamFailure {
+            reason: "classification channel unavailable".to_string(),
         });
     }
 }
@@ -283,22 +317,33 @@ pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
     let broadcast_rx = ENGINE_HANDLE.broadcasts.subscribe_calibration();
 
     if let Some(mut broadcast_rx) = broadcast_rx {
-        // Spawn a dedicated thread with its own Tokio runtime for async operations
-        // This avoids requiring a global Tokio runtime
         std::thread::spawn(move || {
-            // Create a single-threaded Tokio runtime for this stream handler
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .expect("Failed to create Tokio runtime for calibration stream");
 
             rt.block_on(async move {
-                while let Ok(progress) = broadcast_rx.recv().await {
-                    // Forward progress to Dart via StreamSink
-                    sink.add(progress);
+                loop {
+                    match broadcast_rx.recv().await {
+                        Ok(progress) => {
+                            if sink.add(progress).is_err() {
+                                break;
+                            }
+                        }
+                        Err(err) => {
+                            let _ = sink.add_error(CalibrationError::Timeout {
+                                reason: format!("calibration channel interrupted: {}", err),
+                            });
+                            break;
+                        }
+                    }
                 }
-                // Stream ends when receiver channel closes (calibration finished)
             });
+        });
+    } else {
+        let _ = sink.add_error(CalibrationError::Timeout {
+            reason: "calibration channel unavailable".to_string(),
         });
     }
 }
@@ -402,6 +447,40 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
 #[flutter_rust_bridge::frb(ignore)]
 pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics> {
     ENGINE_HANDLE.audio_metrics_stream().await
+}
+
+/// Stream of telemetry events for debug instrumentation
+///
+/// Emits engine lifecycle events (start/stop, BPM changes) and warnings.
+#[allow(unused_must_use)]
+#[flutter_rust_bridge::frb]
+pub fn telemetry_stream(sink: StreamSink<TelemetryEvent>) {
+    let mut telemetry_rx = ENGINE_HANDLE.subscribe_telemetry();
+
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime for telemetry stream");
+
+        rt.block_on(async move {
+            loop {
+                match telemetry_rx.recv().await {
+                    Some(event) => {
+                        if sink.add(event).is_err() {
+                            break;
+                        }
+                    }
+                    None => {
+                        let _ = sink.add_error(AudioError::StreamFailure {
+                            reason: "telemetry channel closed".to_string(),
+                        });
+                        break;
+                    }
+                }
+            }
+        });
+    });
 }
 
 /// Stream of onset events for debug visualization

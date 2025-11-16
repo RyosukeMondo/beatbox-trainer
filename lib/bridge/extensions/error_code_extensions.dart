@@ -35,6 +35,9 @@ extension AudioErrorCodesExtension on AudioErrorCodes {
 
   /// Android context was not initialized before audio engine start
   static const int contextNotInitialized = 1009;
+
+  /// Live stream disconnected or command queue closed
+  static const int streamFailure = 1010;
 }
 
 /// Extension on CalibrationErrorCodes to provide constant accessors
@@ -55,4 +58,7 @@ extension CalibrationErrorCodesExtension on CalibrationErrorCodes {
 
   /// Calibration state RwLock was poisoned
   static const int statePoisoned = 2005;
+
+  /// Calibration timed out waiting for the engine
+  static const int timeout = 2006;
 }

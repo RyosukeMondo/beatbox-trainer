@@ -281,8 +281,8 @@ impl EngineHandle {
 
             const DEFAULT_CALIBRATION_BPM: u32 = 120;
             self.start_audio(DEFAULT_CALIBRATION_BPM)
-                .map_err(|audio_err| CalibrationError::AudioEngineError {
-                    details: format!(
+                .map_err(|audio_err| CalibrationError::Timeout {
+                    reason: format!(
                         "Failed to start audio engine for calibration: {:?}",
                         audio_err
                     ),

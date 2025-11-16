@@ -33,7 +33,7 @@
   - _Requirements: 2_
   - _Prompt: Role: Systems engineer with expertise in observability | Task: Build lightweight HTTP server for debug builds fulfilling requirement 2, ensuring SSE mirrors FRB payloads and param updates propagate within budget | Constraints: Feature-flag the server, secure with session token, avoid impacting release binaries | Success: `curl http://127.0.0.1:8787/health?token=...` returns engine status; SSE stream emits live JSON events_
 
-- [ ] 4. Implement FRB streams and param RPC end-to-end
+- [x] 4. Implement FRB streams and param RPC end-to-end
   - Files: `rust/src/api.rs`, `lib/bridge/api.dart` (regenerated), `lib/services/audio/audio_service_impl.dart`, `lib/models/classification_result.dart`, `lib/models/calibration_state.dart`, `lib/models/telemetry_event.dart`
   - Actions:
     - Extend FRB schema with `classification_stream`, `calibration_stream`, `telemetry_stream`, and `apply_params` RPC using EngineHandle.

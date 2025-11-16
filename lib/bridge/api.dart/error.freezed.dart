@@ -715,7 +715,7 @@ extension CalibrationErrorPatterns on CalibrationError {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult Function( CalibrationError_NotComplete value)?  notComplete,TResult Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult Function( CalibrationError_StatePoisoned value)?  statePoisoned,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult Function( CalibrationError_NotComplete value)?  notComplete,TResult Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult Function( CalibrationError_AudioEngineError value)?  audioEngineError,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
@@ -723,7 +723,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures() when i
 return invalidFeatures(_that);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete(_that);case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned(_that);case _:
+return statePoisoned(_that);case CalibrationError_AudioEngineError() when audioEngineError != null:
+return audioEngineError(_that);case _:
   return orElse();
 
 }
@@ -741,7 +742,7 @@ return statePoisoned(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CalibrationError_InsufficientSamples value)  insufficientSamples,required TResult Function( CalibrationError_InvalidFeatures value)  invalidFeatures,required TResult Function( CalibrationError_NotComplete value)  notComplete,required TResult Function( CalibrationError_AlreadyInProgress value)  alreadyInProgress,required TResult Function( CalibrationError_StatePoisoned value)  statePoisoned,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CalibrationError_InsufficientSamples value)  insufficientSamples,required TResult Function( CalibrationError_InvalidFeatures value)  invalidFeatures,required TResult Function( CalibrationError_NotComplete value)  notComplete,required TResult Function( CalibrationError_AlreadyInProgress value)  alreadyInProgress,required TResult Function( CalibrationError_StatePoisoned value)  statePoisoned,required TResult Function( CalibrationError_AudioEngineError value)  audioEngineError,}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples():
@@ -749,7 +750,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures():
 return invalidFeatures(_that);case CalibrationError_NotComplete():
 return notComplete(_that);case CalibrationError_AlreadyInProgress():
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned():
-return statePoisoned(_that);}
+return statePoisoned(_that);case CalibrationError_AudioEngineError():
+return audioEngineError(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -763,7 +765,7 @@ return statePoisoned(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult? Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult? Function( CalibrationError_NotComplete value)?  notComplete,TResult? Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult? Function( CalibrationError_StatePoisoned value)?  statePoisoned,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult? Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult? Function( CalibrationError_NotComplete value)?  notComplete,TResult? Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult? Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult? Function( CalibrationError_AudioEngineError value)?  audioEngineError,}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
@@ -771,7 +773,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures() when i
 return invalidFeatures(_that);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete(_that);case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned(_that);case _:
+return statePoisoned(_that);case CalibrationError_AudioEngineError() when audioEngineError != null:
+return audioEngineError(_that);case _:
   return null;
 
 }
@@ -788,14 +791,15 @@ return statePoisoned(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult Function( String reason)?  invalidFeatures,TResult Function()?  notComplete,TResult Function()?  alreadyInProgress,TResult Function()?  statePoisoned,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult Function( String reason)?  invalidFeatures,TResult Function()?  notComplete,TResult Function()?  alreadyInProgress,TResult Function()?  statePoisoned,TResult Function( String details)?  audioEngineError,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures() when invalidFeatures != null:
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete();case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress();case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned();case _:
+return statePoisoned();case CalibrationError_AudioEngineError() when audioEngineError != null:
+return audioEngineError(_that.details);case _:
   return orElse();
 
 }
@@ -813,14 +817,15 @@ return statePoisoned();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( BigInt required_,  BigInt collected)  insufficientSamples,required TResult Function( String reason)  invalidFeatures,required TResult Function()  notComplete,required TResult Function()  alreadyInProgress,required TResult Function()  statePoisoned,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( BigInt required_,  BigInt collected)  insufficientSamples,required TResult Function( String reason)  invalidFeatures,required TResult Function()  notComplete,required TResult Function()  alreadyInProgress,required TResult Function()  statePoisoned,required TResult Function( String details)  audioEngineError,}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples():
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures():
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete():
 return notComplete();case CalibrationError_AlreadyInProgress():
 return alreadyInProgress();case CalibrationError_StatePoisoned():
-return statePoisoned();}
+return statePoisoned();case CalibrationError_AudioEngineError():
+return audioEngineError(_that.details);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -834,14 +839,15 @@ return statePoisoned();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult? Function( String reason)?  invalidFeatures,TResult? Function()?  notComplete,TResult? Function()?  alreadyInProgress,TResult? Function()?  statePoisoned,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult? Function( String reason)?  invalidFeatures,TResult? Function()?  notComplete,TResult? Function()?  alreadyInProgress,TResult? Function()?  statePoisoned,TResult? Function( String details)?  audioEngineError,}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures() when invalidFeatures != null:
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete();case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress();case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned();case _:
+return statePoisoned();case CalibrationError_AudioEngineError() when audioEngineError != null:
+return audioEngineError(_that.details);case _:
   return null;
 
 }
@@ -1078,5 +1084,71 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class CalibrationError_AudioEngineError extends CalibrationError {
+  const CalibrationError_AudioEngineError({required this.details}): super._();
+  
+
+ final  String details;
+
+/// Create a copy of CalibrationError
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CalibrationError_AudioEngineErrorCopyWith<CalibrationError_AudioEngineError> get copyWith => _$CalibrationError_AudioEngineErrorCopyWithImpl<CalibrationError_AudioEngineError>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CalibrationError_AudioEngineError&&(identical(other.details, details) || other.details == details));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,details);
+
+@override
+String toString() {
+  return 'CalibrationError.audioEngineError(details: $details)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CalibrationError_AudioEngineErrorCopyWith<$Res> implements $CalibrationErrorCopyWith<$Res> {
+  factory $CalibrationError_AudioEngineErrorCopyWith(CalibrationError_AudioEngineError value, $Res Function(CalibrationError_AudioEngineError) _then) = _$CalibrationError_AudioEngineErrorCopyWithImpl;
+@useResult
+$Res call({
+ String details
+});
+
+
+
+
+}
+/// @nodoc
+class _$CalibrationError_AudioEngineErrorCopyWithImpl<$Res>
+    implements $CalibrationError_AudioEngineErrorCopyWith<$Res> {
+  _$CalibrationError_AudioEngineErrorCopyWithImpl(this._self, this._then);
+
+  final CalibrationError_AudioEngineError _self;
+  final $Res Function(CalibrationError_AudioEngineError) _then;
+
+/// Create a copy of CalibrationError
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? details = null,}) {
+  return _then(CalibrationError_AudioEngineError(
+details: null == details ? _self.details : details // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
 
 // dart format on
