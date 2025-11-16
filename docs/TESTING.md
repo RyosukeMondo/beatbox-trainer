@@ -128,6 +128,41 @@ paths:
           description: Patch accepted
 ```
 
+### Automated Smoke Checks & Evidence
+
+The HTTP server is exercised automatically before every commit:
+
+```bash
+cargo test --features debug_http http::routes::tests:: -- --nocapture
+```
+
+The smoke run prints the `/health`, `/metrics`, and `/params` JSON payloads so that
+`scripts/pre-commit` can persist an auditable trace in `logs/smoke/http_smoke.log`.
+Attach that log to UAT reports when demonstrating live telemetry and authorization.
+
+## CLI Fixture Harness (`beatbox_cli`)
+
+The CLI harness lets you drive the DSP pipeline deterministically from PCM fixtures:
+
+```bash
+# Classification with expectation diff + persisted report
+cargo run -p beatbox_cli -- classify \
+  --fixture basic_hits \
+  --expect fixtures/basic_hits.expect.json \
+  --output ../logs/smoke/classify_basic_hits.json
+
+# Stream fixture events to stdout
+cargo run -p beatbox_cli -- stream --fixture basic_hits --bpm 110
+
+# Enumerate available fixtures
+cargo run -p beatbox_cli dump-fixtures
+```
+
+`scripts/pre-commit` runs the three commands above and appends the raw stdout/stderr
+to `logs/smoke/cli_smoke.log`, ensuring every commit carries reproducible evidence
+for classification, streaming, and fixture management. The JSON report in
+`logs/smoke/classify_basic_hits.json` is referenced directly by UAT documentation.
+
 ## Test Organization
 
 ### Rust Tests
@@ -524,13 +559,15 @@ The coverage script enforces minimum thresholds:
 # Critical paths (90% minimum):
 # - rust/src/context.rs
 # - rust/src/error.rs
-# - lib/services/audio/audio_service_impl.dart
-# - lib/services/error_handler/error_handler.dart
+# - lib/services/audio/* (all implementations)
 
 # Overall (80% minimum):
 # - All non-generated code
 # - Excluding UI widgets (70% acceptable)
 ```
+
+Every coverage run now emits `logs/smoke/coverage_summary.json`, which records the
+overall percentages plus each critical file verdict for inclusion in UAT evidence.
 
 **Bypassing Thresholds** (use sparingly):
 
@@ -561,6 +598,11 @@ The pre-commit hook (`.git/hooks/pre-commit`) runs automatically before each com
 5. **Tests**:
    - All tests must pass: `flutter test && cargo test`
 
+6. **Deterministic Smoke + Bridge Hygiene**:
+   - CLI harness: `cargo run -p beatbox_cli` (classify, stream, dump-fixtures) with logs in `logs/smoke/cli_smoke.log`
+   - HTTP server: `cargo test --features debug_http http::routes::tests:: -- --nocapture` with traces in `logs/smoke/http_smoke.log`
+   - Stub scan: rejects `TODO`, `FIXME`, `todo!`, `unimplemented!`, or `UnimplementedError` across `lib/bridge/`, `lib/services/audio/`, and `rust/src/api.rs`
+
 ### Installing the Pre-Commit Hook
 
 ```bash
@@ -583,6 +625,8 @@ dart format --set-exit-if-changed lib/ test/
 flutter analyze
 cargo fmt -- --check
 cargo clippy -- -D warnings
+cargo run -p beatbox_cli -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json
+cargo test --features debug_http http::routes::tests:: -- --nocapture
 ```
 
 ### Bypassing Pre-Commit Hook

@@ -265,3 +265,115 @@ fn drain_broadcast<T: Clone>(rx: &mut broadcast::Receiver<T>) -> Option<T> {
     }
     latest
 }
+
+#[cfg(all(test, feature = "debug_http"))]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use axum::response::Response;
+    use futures::StreamExt;
+    use once_cell::sync::Lazy;
+    use serde_json::Value;
+    use tower::ServiceExt;
+
+    static TEST_HANDLE: Lazy<EngineHandle> = Lazy::new(EngineHandle::new);
+    const TOKEN: &str = "smoke-token";
+
+    fn make_router() -> Router {
+        let state = DebugHttpState::new(&TEST_HANDLE, TOKEN.to_string());
+        build_router(state)
+    }
+
+    async fn response_json(response: Response) -> (StatusCode, Value) {
+        let status = response.status();
+        let mut body = response.into_body();
+        let mut bytes = Vec::new();
+        while let Some(chunk) = body.next().await {
+            let chunk = chunk.expect("body chunk");
+            bytes.extend_from_slice(&chunk);
+        }
+        let json = serde_json::from_slice::<Value>(&bytes).expect("JSON body");
+        (status, json)
+    }
+
+    #[tokio::test]
+    async fn health_requires_token() {
+        let (status, json) = response_json(
+            make_router()
+                .oneshot(
+                    Request::builder()
+                        .uri("/health")
+                        .body(Body::empty())
+                        .expect("health request"),
+                )
+                .await
+                .expect("health call"),
+        )
+        .await;
+
+        println!("[HTTP Smoke] /health (no token) => {json}");
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert_eq!(json["error"], "missing or invalid token");
+    }
+
+    #[tokio::test]
+    async fn health_succeeds_with_token() {
+        let (status, json) = response_json(
+            make_router()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/health?token={TOKEN}"))
+                        .body(Body::empty())
+                        .expect("health request"),
+                )
+                .await
+                .expect("health call"),
+        )
+        .await;
+
+        println!("[HTTP Smoke] /health => {json}");
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(json["status"], "ok");
+    }
+
+    #[tokio::test]
+    async fn metrics_succeeds_with_token() {
+        let (status, json) = response_json(
+            make_router()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/metrics?token={TOKEN}"))
+                        .body(Body::empty())
+                        .expect("metrics request"),
+                )
+                .await
+                .expect("metrics call"),
+        )
+        .await;
+
+        println!("[HTTP Smoke] /metrics => {json}");
+        assert_eq!(status, StatusCode::OK);
+        assert!(json["latest_audio_metrics"].is_null() || json["latest_audio_metrics"].is_object());
+    }
+
+    #[tokio::test]
+    async fn params_support_listing() {
+        let (status, json) = response_json(
+            make_router()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/params?token={TOKEN}"))
+                        .body(Body::empty())
+                        .expect("params request"),
+                )
+                .await
+                .expect("params call"),
+        )
+        .await;
+
+        println!("[HTTP Smoke] /params => {json}");
+        assert_eq!(status, StatusCode::OK);
+        assert!(json["supported"].is_array());
+    }
+}

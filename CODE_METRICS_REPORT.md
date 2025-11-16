@@ -13,6 +13,23 @@ Summary:
   - Total violations: 29
 
 --------------------------------------------------------------------------------
+AUTOMATION & EVIDENCE PIPELINE
+--------------------------------------------------------------------------------
+
+- `scripts/pre-commit` now runs the deterministic CLI harness (`beatbox_cli classify`,
+  `stream`, and `dump-fixtures`), logging stdout/stderr to `logs/smoke/cli_smoke.log`
+  and persisting the JSON classification report at `logs/smoke/classify_basic_hits.json`.
+- HTTP debug-server smoke tests execute via `cargo test --features debug_http
+  http::routes::tests::`, with the captured `/health`, `/metrics`, and `/params`
+  payloads written to `logs/smoke/http_smoke.log` for traceability.
+- `scripts/coverage.sh` emits `logs/smoke/coverage_summary.json`, a machine-readable
+  snapshot of overall coverage plus the ≥90% critical-path verdicts
+  (`rust/src/context.rs`, `rust/src/error.rs`, and every file under `lib/services/audio/`).
+
+These artifacts are now referenced from `UAT_READINESS_REPORT.md` and `docs/TESTING.md`
+so QA can attach the exact evidence that satisfied each gate.
+
+--------------------------------------------------------------------------------
 VIOLATIONS
 --------------------------------------------------------------------------------
 

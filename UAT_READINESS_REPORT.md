@@ -77,6 +77,16 @@ Breakdown:
 
 **Conclusion**: Core business logic is thoroughly tested and reliable.
 
+**Deterministic Evidence Artifacts**:
+- CLI harness log: `logs/smoke/cli_smoke.log` (paired JSON report: `logs/smoke/classify_basic_hits.json`)
+  generated via `cargo run -p beatbox_cli classify/stream/dump-fixtures`.
+- HTTP debug server trace: `logs/smoke/http_smoke.log` produced by
+  `cargo test --features debug_http http::routes::tests:: -- --nocapture`
+  capturing `/health`, `/metrics`, and `/params` payloads.
+- Coverage snapshot: `logs/smoke/coverage_summary.json` consolidates overall values and the
+  ≥90 % critical-path verdicts for `rust/src/context.rs`, `rust/src/error.rs`,
+  and every file under `lib/services/audio/`.
+
 ---
 
 ## 3. Code Metrics Compliance
@@ -292,6 +302,11 @@ if (bpm < 40 || bpm > 240) {
    - All validation steps documented
    - Deployment instructions
    - Known limitations
+
+5. **Testing Playbook Updates**: ✅ docs/TESTING.md
+   - CLI fixture harness workflow (`beatbox_cli` commands + log paths)
+   - HTTP debug-server smoke instructions with `logs/smoke/http_smoke.log` trace guidance
+   - Coverage summary artifact reference (`logs/smoke/coverage_summary.json`)
 
 ---
 

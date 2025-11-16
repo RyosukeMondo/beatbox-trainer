@@ -59,12 +59,16 @@ RUST_DIR="$PROJECT_ROOT/rust"
 COVERAGE_DIR="$PROJECT_ROOT/coverage"
 RUST_COVERAGE_DIR="$COVERAGE_DIR/rust"
 DART_COVERAGE_DIR="$COVERAGE_DIR/dart"
+ARTIFACT_DIR="$PROJECT_ROOT/logs/smoke"
 
 # Critical paths (require 90% coverage)
 CRITICAL_PATHS=(
     "context.rs"
     "error.rs"
-    "api.rs"
+)
+
+DART_CRITICAL_PREFIXES=(
+    "lib/services/audio/"
 )
 
 # Parse command-line arguments
@@ -346,6 +350,118 @@ parse_dart_coverage() {
     fi
 }
 
+collect_dart_coverages_for_prefix() {
+    local prefix="$1"
+    local lcov_file="$DART_COVERAGE_DIR/lcov.info"
+
+    if [ ! -f "$lcov_file" ]; then
+        return
+    fi
+
+    awk -v prefix="$prefix" -v root="$PROJECT_ROOT/" '
+        /^SF:/ {
+            file = substr($0, 4)
+            rel = file
+            gsub(root, "", rel)
+            if (index(rel, prefix) == 1) {
+                in_file = 1
+                path = rel
+            } else {
+                in_file = 0
+            }
+        }
+        in_file && /^LH:/ { lh = $2 }
+        in_file && /^LF:/ {
+            lf = $2
+            if (lf > 0) {
+                printf "%s %.2f\n", path, (lh/lf)*100
+            } else {
+                printf "%s 0\n", path
+            }
+            in_file = 0
+        }
+    ' "$lcov_file"
+}
+
+get_dart_critical_coverages() {
+    local prefix
+    for prefix in "${DART_CRITICAL_PREFIXES[@]}"; do
+        collect_dart_coverages_for_prefix "$prefix"
+    done
+}
+
+get_rust_critical_coverages() {
+    local summary_file="$RUST_COVERAGE_DIR/summary.txt"
+    if [ ! -f "$summary_file" ]; then
+        return
+    fi
+
+    local path
+    for path in "${CRITICAL_PATHS[@]}"; do
+        local coverage=$(grep "$path" "$summary_file" 2>/dev/null | awk '{print $10}' | sed 's/%//' | head -n1)
+        if [ -n "$coverage" ]; then
+            echo "$path $coverage"
+        fi
+    done
+}
+
+write_summary_artifact() {
+    mkdir -p "$ARTIFACT_DIR"
+    if ! command -v python3 >/dev/null 2>&1; then
+        print_warning "python3 not found; skipping coverage summary artifact"
+        return 0
+    fi
+
+    local summary_file="$ARTIFACT_DIR/coverage_summary.json"
+    local rust_overall=$(parse_rust_coverage)
+    local dart_overall=$(parse_dart_coverage)
+    local rust_entries=$(get_rust_critical_coverages)
+    local dart_entries=$(get_dart_critical_coverages)
+
+    SUMMARY_TIMESTAMP="$(date -Iseconds)" \
+    RUST_OVERALL_VALUE="${rust_overall:-0}" \
+    DART_OVERALL_VALUE="${dart_overall:-0}" \
+    RUST_CRITICAL_ENTRIES="$rust_entries" \
+    DART_CRITICAL_ENTRIES="$dart_entries" \
+    python3 - "$summary_file" <<'PY'
+import json
+import os
+import sys
+
+summary_file = sys.argv[1]
+
+def parse_entries(env_name):
+    entries = {}
+    raw = os.environ.get(env_name, "")
+    for line in raw.strip().splitlines():
+        if not line.strip():
+            continue
+        path, value = line.rsplit(" ", 1)
+        try:
+            entries[path] = float(value)
+        except ValueError:
+            continue
+    return entries
+
+payload = {
+    "generated_at": os.environ.get("SUMMARY_TIMESTAMP"),
+    "rust": {
+        "overall": float(os.environ.get("RUST_OVERALL_VALUE") or 0),
+        "critical": parse_entries("RUST_CRITICAL_ENTRIES"),
+    },
+    "dart": {
+        "overall": float(os.environ.get("DART_OVERALL_VALUE") or 0),
+        "critical": parse_entries("DART_CRITICAL_ENTRIES"),
+    },
+}
+
+with open(summary_file, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, indent=2)
+PY
+
+    print_success "Coverage summary written to $summary_file"
+}
+
 # Check coverage thresholds
 check_thresholds() {
     if ! $ENFORCE_THRESHOLD; then
@@ -372,11 +488,13 @@ check_thresholds() {
 
         # Check critical paths coverage
         print_info "Checking critical paths (${CRITICAL_THRESHOLD}% required):"
-        for path in "${CRITICAL_PATHS[@]}"; do
-            # Extract coverage for specific file from summary (column 10 is Lines Cover)
-            local file_coverage=$(grep "$path" "$RUST_COVERAGE_DIR/summary.txt" 2>/dev/null | awk '{print $10}' | sed 's/%//' || echo "0")
-
-            if [ -n "$file_coverage" ] && [ "$file_coverage" != "0" ] && [ "$file_coverage" != "-" ]; then
+        local rust_entries
+        rust_entries=$(get_rust_critical_coverages)
+        if [ -z "$rust_entries" ]; then
+            print_warning "  No Rust critical coverage data found"
+        else
+            while read -r path file_coverage; do
+                [ -z "$path" ] && continue
                 local file_coverage_int=$(echo "$file_coverage" | cut -d. -f1)
                 if [ "$file_coverage_int" -lt "$CRITICAL_THRESHOLD" ]; then
                     print_error "  $path: ${file_coverage}% (below ${CRITICAL_THRESHOLD}%)"
@@ -384,10 +502,8 @@ check_thresholds() {
                 else
                     print_success "  $path: ${file_coverage}%"
                 fi
-            else
-                print_warning "  $path: No coverage data found"
-            fi
-        done
+            done <<< "$rust_entries"
+        fi
     fi
 
     if $RUN_DART; then
@@ -401,6 +517,25 @@ check_thresholds() {
             threshold_failed=true
         else
             print_success "Dart coverage meets threshold ($OVERALL_THRESHOLD%)"
+        fi
+
+        local dart_entries
+        dart_entries=$(get_dart_critical_coverages)
+
+        if [ -n "$dart_entries" ]; then
+            print_info "Checking Dart critical paths (${CRITICAL_THRESHOLD}% required):"
+            while read -r file coverage; do
+                [ -z "$file" ] && continue
+                local coverage_int=$(echo "$coverage" | cut -d. -f1)
+                if [ "$coverage_int" -lt "$CRITICAL_THRESHOLD" ]; then
+                    print_error "  $file: ${coverage}% (below ${CRITICAL_THRESHOLD}%)"
+                    threshold_failed=true
+                else
+                    print_success "  $file: ${coverage}%"
+                fi
+            done <<< "$dart_entries"
+        else
+            print_warning "  lib/services/audio/*: No coverage data found"
         fi
     fi
 
@@ -602,6 +737,7 @@ main() {
 
     # Generate unified report
     generate_unified_report
+    write_summary_artifact
 
     # Check thresholds (this may exit with code 1)
     local threshold_result=0

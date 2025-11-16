@@ -66,7 +66,7 @@
   - _Requirements: 2, 3, 5_
   - _Prompt: Role: Flutter UI engineer with observability focus | Task: Implement Debug Lab fulfilling requirement 5, integrating FRB + HTTP data, enabling parameter tweaks with latency feedback | Constraints: Keep file <500 lines by splitting widgets, respect Material accessibility | Success: QA can open Debug Lab, view live metrics, adjust thresholds and see confirmations_
 
-- [ ] 7. Expand scripts, coverage gates, and CI evidence
+- [x] 7. Expand scripts, coverage gates, and CI evidence
   - Files: `scripts/pre-commit`, `scripts/coverage.sh`, `CODE_METRICS_REPORT.md`, `UAT_READINESS_REPORT.md`, `docs/TESTING.md`
   - Actions:
     - Integrate CLI harness + HTTP smoke checks into pre-commit (fail on stubs/TODOs in bridged layers).

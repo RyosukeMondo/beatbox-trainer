@@ -19,6 +19,11 @@ NC='\033[0m' # No Color
 MAX_FILE_LINES=500
 MAX_FUNCTION_LINES=50
 TIMEOUT=60
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+ARTIFACT_DIR="$PROJECT_ROOT/logs/smoke"
+CLI_SMOKE_LOG="$ARTIFACT_DIR/cli_smoke.log"
+HTTP_SMOKE_LOG="$ARTIFACT_DIR/http_smoke.log"
+CLI_SMOKE_REPORT="$ARTIFACT_DIR/classify_basic_hits.json"
 
 # Track overall status
 FAILED=0
@@ -368,6 +373,82 @@ run_tests() {
     return 0
 }
 
+run_cli_smoke_tests() {
+    print_header "Running CLI fixture harness smoke tests"
+    mkdir -p "$ARTIFACT_DIR"
+    : > "$CLI_SMOKE_LOG"
+    echo "[CLI smoke] $(date -Iseconds)" >> "$CLI_SMOKE_LOG"
+
+    local classify_cmd=(cargo run -p beatbox_cli -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output "$CLI_SMOKE_REPORT")
+    local stream_cmd=(cargo run -p beatbox_cli -- stream --fixture basic_hits --bpm 110)
+    local dump_cmd=(cargo run -p beatbox_cli dump-fixtures)
+
+    if (
+        cd "$PROJECT_ROOT/rust" &&
+            "${classify_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
+            "${stream_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
+            "${dump_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1
+    ); then
+        print_success "CLI harness smoke tests passed (logs: $CLI_SMOKE_LOG)"
+        if [ -f "$CLI_SMOKE_REPORT" ]; then
+            echo "Classification report stored at $CLI_SMOKE_REPORT"
+        fi
+    else
+        print_error "CLI harness smoke tests failed (see $CLI_SMOKE_LOG)"
+        return 1
+    fi
+}
+
+run_http_smoke_checks() {
+    print_header "Running HTTP debug server smoke tests"
+    mkdir -p "$ARTIFACT_DIR"
+    : > "$HTTP_SMOKE_LOG"
+    echo "[HTTP smoke] $(date -Iseconds)" >> "$HTTP_SMOKE_LOG"
+
+    if (
+        cd "$PROJECT_ROOT/rust" &&
+            cargo test --features debug_http http::routes::tests:: -- --nocapture >>"$HTTP_SMOKE_LOG" 2>&1
+    ); then
+        print_success "HTTP smoke tests passed (logs: $HTTP_SMOKE_LOG)"
+    else
+        print_error "HTTP smoke tests failed (see $HTTP_SMOKE_LOG)"
+        return 1
+    fi
+}
+
+check_bridge_stubs() {
+    print_header "Scanning bridge layers for TODO/FIXME stubs"
+    local paths=(
+        "$PROJECT_ROOT/lib/bridge"
+        "$PROJECT_ROOT/lib/services/audio"
+        "$PROJECT_ROOT/rust/src/api.rs"
+    )
+    local pattern='TODO|FIXME|UnimplementedError|unimplemented!|todo!'
+    local findings=""
+
+    for path in "${paths[@]}"; do
+        if [ -e "$path" ]; then
+            local result=""
+            if command_exists rg; then
+                result=$(rg --no-heading --line-number --color=never -E "$pattern" "$path" || true)
+            else
+                result=$(grep -RInE "$pattern" "$path" || true)
+            fi
+            if [ -n "$result" ]; then
+                findings+=$'\n'"$result"
+            }
+        fi
+    done
+
+    if [ -n "$findings" ]; then
+        print_error "Stub markers detected in bridge layers:"
+        echo "$findings"
+        return 1
+    else
+        print_success "No stub markers found in bridge layers"
+    fi
+}
+
 # Main execution
 main() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -395,6 +476,9 @@ main() {
     check_rust_format || true
     check_clippy || true
     run_tests || true
+    run_cli_smoke_tests || true
+    run_http_smoke_checks || true
+    check_bridge_stubs || true
 
     # End timer
     local end_time=$(date +%s)
