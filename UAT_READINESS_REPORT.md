@@ -307,6 +307,16 @@ if (bpm < 40 || bpm > 240) {
    - CLI fixture harness workflow (`beatbox_cli` commands + log paths)
    - HTTP debug-server smoke instructions with `logs/smoke/http_smoke.log` trace guidance
    - Coverage summary artifact reference (`logs/smoke/coverage_summary.json`)
+6. **Diagnostics & DI Guide**: ✅ README.md
+   - New "Diagnostics & Observability Tooling" section detailing CLI, HTTP, and Debug Lab entry points
+   - "Dependency Injection Patterns" walkthrough describing `setupServiceLocator`, widget injection, and mock overrides
+7. **Bridge Contracts**: ✅ docs/bridge_contracts.md
+   - Canonical JSON payloads for FRB streams and HTTP endpoints (classification, calibration, telemetry, ParamPatch)
+   - Error code lookup table plus parity checklist linking CLI ↔ HTTP ↔ Flutter
+8. **Troubleshooting Knowledge Base**: ✅ docs/TESTING.md
+   - Stream + token issues table with actionable fixes for QA/support teams
+9. **UAT Scenario Refresh**: ✅ UAT_TEST_SCENARIOS.md
+   - Adds Debug Lab verification and deterministic fixture evidence capture so support can follow the same scripts
 
 ---
 

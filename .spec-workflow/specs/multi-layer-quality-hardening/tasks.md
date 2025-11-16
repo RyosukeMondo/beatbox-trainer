@@ -77,7 +77,7 @@
   - _Requirements: 1, 2, 3, 5, 6_
   - _Prompt: Role: DevOps/test engineer | Task: Enhance tooling per requirement 6 ensuring CI fails on coverage/stub gaps and documentation captures evidence | Constraints: Keep scripts POSIX-compliant, avoid flakiness, ensure reports are concise | Success: `./scripts/pre-commit` runs CLI + coverage, fails when thresholds unmet, documentation updated_
 
-- [ ] 8. Documentation & knowledge base updates
+- [x] 8. Documentation & knowledge base updates
   - Files: `docs/TESTING.md`, `docs/bridge_contracts.md`, `UAT_READINESS_REPORT.md`, `UAT_TEST_SCENARIOS.md`, `README.md`
   - Actions:
     - Document CLI usage, HTTP API (OpenAPI snippet), Debug Lab instructions, DI injection patterns.

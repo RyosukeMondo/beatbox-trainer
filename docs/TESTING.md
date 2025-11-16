@@ -126,6 +126,17 @@ paths:
       responses:
         '200':
           description: Patch accepted
+  /classification-stream:
+    get:
+      summary: Server-sent events mirroring FRB classification payloads
+      responses:
+        '200':
+          description: Continuous stream of `ClassificationResult`
+          headers:
+            Content-Type:
+              schema:
+                type: string
+              example: text/event-stream
 ```
 
 ### Automated Smoke Checks & Evidence
@@ -162,6 +173,49 @@ cargo run -p beatbox_cli dump-fixtures
 to `logs/smoke/cli_smoke.log`, ensuring every commit carries reproducible evidence
 for classification, streaming, and fixture management. The JSON report in
 `logs/smoke/classify_basic_hits.json` is referenced directly by UAT documentation.
+
+### Fixture Layout & Expectation Files
+
+- **Audio fixtures** live in `rust/fixtures/*.wav` and must be mono, 48 kHz PCM.
+- **Expectation files** live next to the WAV with the suffix `.expect.json` and
+  contain the ordered list of `ClassificationResult` payloads produced by
+  `beatbox_cli classify --dump-expect`. Always regenerate these files after
+  tweaking DSP heuristics so CI diffs remain meaningful.
+- **Evidence artifacts**: When `--output` is provided, the CLI emits a full
+  transcript (`classification`, `calibration`, telemetry) saved under
+  `logs/smoke/`. Attach those artifacts to UAT tickets to prove deterministic
+  parity between the CLI and runtime builds.
+
+### Debug Lab Workflows
+
+The Flutter Debug Lab screen (Settings ▸ tap build number 5×) is the canonical
+UI for correlating FRB streams, HTTP SSE, and CLI fixtures.
+
+1. Activate Debug Lab from Settings ▸ Advanced ▸ "Enable Debug Lab".
+2. Provide the HTTP token (default `beatbox-debug`) in the banner; the app will
+   reuse the same token for FRB stream retries.
+3. Start `beatbox_cli stream --fixture=<name>` if you need deterministic input,
+   or enable "Synthetic Input" to feed internal sine bursts.
+4. Watch the **Classification Stream** panel; every entry should match what you
+   see over `curl -N /classification-stream`.
+5. Use the **Parameter Sliders** to send `ParamPatch` commands; verify the
+   confirmation toast references the HTTP `/params` echo payload.
+
+See [README.md](../README.md#diagnostics--observability-tooling) for quick
+navigation tips and bridging diagrams.
+
+## Stream & Token Troubleshooting
+
+| Symptom | Likely Cause | Resolution |
+| --- | --- | --- |
+| `AudioError.StreamFailure: parameter command queue is full` | Too many Debug Lab slider updates queued | Pause gesture spam, wait 500 ms before reapplying, or restart engine via Debug Lab toggle |
+| Debug Lab shows "Token rejected" banner | Token mismatch between HTTP server and app | Export `BEATBOX_DEBUG_TOKEN`, restart app (FRB caches token on init), verify `curl /health?token=...` succeeds |
+| CLI succeeds but HTTP `/classification-stream` is silent | SSE client not authenticated or server disabled | Ensure `debug_http` feature is on (default), include `X-Debug-Token`, and run app in debug/profile build |
+| Flutter UI streams emit stale data | Engine not running or FRB stream closed | Confirm `beatbox_cli` or Training screen started the engine; tap "Restart Engine" in Debug Lab to reopen channels |
+
+When in doubt, inspect `logs/smoke/http_smoke.log` and
+`logs/smoke/cli_smoke.log` before retrying on-device—they capture the last
+successful payloads and tokens.
 
 ## Test Organization
 
