@@ -147,6 +147,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildBpmSetting(),
                 const Divider(),
                 _buildDebugModeSetting(),
+                if (_debugMode) ...[
+                  const Divider(),
+                  _buildDebugLabEntry(),
+                ],
                 const Divider(),
                 _buildClassifierLevelSetting(),
                 const Divider(),
@@ -232,6 +236,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _showErrorDialog('Failed to save debug mode: $e');
         }
       },
+    );
+  }
+
+  /// Build entry point for the Debug Lab screen.
+  Widget _buildDebugLabEntry() {
+    return ListTile(
+      leading: const Icon(Icons.science),
+      title: const Text('Debug Lab'),
+      subtitle: const Text(
+        'Open diagnostics workspace with charts and SSE streaming.',
+      ),
+      onTap: () => context.go('/debug'),
+      trailing: const Icon(Icons.chevron_right),
     );
   }
 

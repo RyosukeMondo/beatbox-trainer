@@ -55,7 +55,7 @@
   - _Requirements: 4_
   - _Prompt: Role: Flutter architect focused on DI | Task: Implement service locator + widget injection per requirement 4, ensuring tests can supply mocks and router overrides | Constraints: Maintain two-space style, avoid global singletons except DI container, update tests accordingly | Success: `TrainingScreenTest` builds with fake AudioService, app boot uses locator factory_
 
-- [ ] 6. Build Debug Lab UI & SSE integration
+- [x] 6. Build Debug Lab UI & SSE integration
   - Files: `lib/ui/screens/debug_lab_screen.dart`, `lib/ui/widgets/debug/*.dart`, `lib/services/debug/debug_service.dart`, `lib/routes/app_routes.dart`
   - Actions:
     - Create Debug Lab screen with log view, telemetry charts, parameter sliders, synthetic input toggles; feed data from FRB streams and optional HTTP SSE client (for remote sessions).

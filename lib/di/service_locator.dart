@@ -109,6 +109,7 @@ Future<void> setupServiceLocator(GoRouter router) async {
   // - IOnsetEventProvider (ISP: onset event streaming)
   // - ILogExporter (ISP: log export functionality)
   final debugServiceInstance = DebugServiceImpl();
+  await debugServiceInstance.init();
 
   // Register the same instance under all four interfaces
   getIt.registerSingleton<IDebugService>(debugServiceInstance);

@@ -7,6 +7,7 @@ import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/calibration_screen.dart';
 import 'ui/screens/training_screen.dart';
 import 'ui/screens/settings_screen.dart';
+import 'ui/screens/debug_lab_screen.dart';
 import 'services/settings/i_settings_service.dart';
 import 'services/storage/i_storage_service.dart';
 
@@ -72,6 +73,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => SettingsScreen.create(),
+    ),
+    GoRoute(
+      path: '/debug',
+      builder: (context, state) => DebugLabScreen.create(),
     ),
   ],
 );
