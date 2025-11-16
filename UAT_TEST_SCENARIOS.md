@@ -917,7 +917,7 @@ UAT is considered complete when ALL of the following criteria are met:
 - **SNARE**: Vocal snare sound (mid-high frequency, sharp attack)
 - **HI-HAT**: Vocal cymbal sound (high frequency, short duration)
 
-### Scenario 11: Debug Lab Telemetry & Param Control
+### Scenario 17: Debug Lab Telemetry & Param Control
 
 **User Story**: US-5 (Diagnostics & Support Tools)
 **Priority**: High
@@ -955,7 +955,7 @@ UAT is considered complete when ALL of the following criteria are met:
 
 ---
 
-### Scenario 12: Fixture Evidence Capture via beatbox_cli
+### Scenario 18: Fixture Evidence Capture via beatbox_cli
 
 **User Story**: US-6 (Deterministic QA Tooling)
 **Priority**: Medium
