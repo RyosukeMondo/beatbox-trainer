@@ -44,7 +44,7 @@
   - _Requirements: 3, 6_
   - _Prompt: Role: Cross-language FFI engineer | Task: Wire FRB streams per requirement 3 ensuring payload parity with HTTP/CLI outputs, update Dart services to consume them, and add error handling | Constraints: Keep stream decoding efficient, ensure no blocking on UI thread, align models with docs | Success: Training screen receives live data; integration tests confirm FRB streams emit events within latency target_
 
-- [ ] 5. Introduce Dart service locator & router injection
+- [x] 5. Introduce Dart service locator & router injection
   - Files: `lib/di/service_locator.dart`, `lib/main.dart`, `lib/ui/screens/*.dart` (Training/Calibration/Settings), `test/mocks/*.dart`
   - Actions:
     - Choose DI lib (`get_it` or Riverpod) and register all `I*Service` implementations at startup; provide `.create()` factories for production use.

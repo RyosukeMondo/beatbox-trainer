@@ -161,8 +161,10 @@ Future<void> resetServiceLocator() async {
   // Note: DebugServiceImpl is registered as four interfaces, but we only
   // need to dispose it once. Check for IDebugService which is always registered.
   if (getIt.isRegistered<IDebugService>()) {
-    final debugService = getIt<IDebugService>() as DebugServiceImpl;
-    debugService.dispose();
+    final debugService = getIt<IDebugService>();
+    if (debugService is DebugServiceImpl) {
+      debugService.dispose();
+    }
   }
 
   // Reset the GetIt instance (unregisters all services)
