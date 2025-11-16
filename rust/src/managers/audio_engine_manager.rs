@@ -8,6 +8,7 @@ use tokio::sync::broadcast;
 
 use crate::analysis::ClassificationResult;
 use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
+use crate::config::{AudioConfig, OnsetDetectionConfig};
 use crate::error::{log_audio_error, AudioError};
 
 #[cfg(target_os = "android")]
@@ -36,7 +37,11 @@ struct AudioEngineState {
 ///
 /// # Example
 /// ```ignore
-/// let manager = AudioEngineManager::new();
+/// let manager = AudioEngineManager::new(
+///     AudioConfig::default(),
+///     OnsetDetectionConfig::default(),
+///     100,
+/// );
 /// manager.start(120, calibration_state, calibration_procedure, calibration_progress_tx, classification_tx)?;
 /// manager.set_bpm(140)?;
 /// manager.stop()?;
@@ -44,6 +49,9 @@ struct AudioEngineState {
 #[allow(dead_code)] // Methods will be used when integrated into AppContext (task 5.4)
 pub struct AudioEngineManager {
     engine: Arc<Mutex<Option<AudioEngineState>>>,
+    audio_config: AudioConfig,
+    onset_config: OnsetDetectionConfig,
+    log_every_n_buffers: u64,
 }
 
 #[allow(dead_code)] // Methods will be used when integrated into AppContext (task 5.4)
@@ -51,9 +59,16 @@ impl AudioEngineManager {
     /// Create a new AudioEngineManager
     ///
     /// Initializes with no audio engine running.
-    pub fn new() -> Self {
+    pub fn new(
+        audio_config: AudioConfig,
+        onset_config: OnsetDetectionConfig,
+        log_every_n_buffers: u64,
+    ) -> Self {
         Self {
             engine: Arc::new(Mutex::new(None)),
+            audio_config,
+            onset_config,
+            log_every_n_buffers,
         }
     }
 
@@ -112,6 +127,8 @@ impl AudioEngineManager {
                     calibration_procedure,
                     calibration_progress_tx,
                     broadcast_tx,
+                    self.onset_config.clone(),
+                    self.log_every_n_buffers,
                 )
                 .map_err(|err| {
                     log_audio_error(&err, "start_audio");
@@ -261,7 +278,10 @@ impl AudioEngineManager {
     /// BufferPoolChannels with 16 buffers of 2048 samples each
     #[cfg(target_os = "android")]
     fn create_buffer_pool(&self) -> BufferPoolChannels {
-        BufferPool::new(16, 2048)
+        BufferPool::new(
+            self.audio_config.buffer_pool_size,
+            self.audio_config.buffer_size,
+        )
     }
 
     /// Create audio engine instance
@@ -289,7 +309,7 @@ impl AudioEngineManager {
 
 impl Default for AudioEngineManager {
     fn default() -> Self {
-        Self::new()
+        Self::new(AudioConfig::default(), OnsetDetectionConfig::default(), 100)
     }
 }
 
@@ -297,9 +317,13 @@ impl Default for AudioEngineManager {
 mod tests {
     use super::*;
 
+    fn create_manager() -> AudioEngineManager {
+        AudioEngineManager::new(AudioConfig::default(), OnsetDetectionConfig::default(), 100)
+    }
+
     #[test]
     fn test_validate_bpm_rejects_zero() {
-        let manager = AudioEngineManager::new();
+        let manager = create_manager();
         let result = manager.validate_bpm(0);
         assert!(result.is_err());
         assert!(matches!(
@@ -310,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_validate_bpm_accepts_valid() {
-        let manager = AudioEngineManager::new();
+        let manager = create_manager();
         assert!(manager.validate_bpm(120).is_ok());
         assert!(manager.validate_bpm(1).is_ok());
         assert!(manager.validate_bpm(240).is_ok());
@@ -318,14 +342,14 @@ mod tests {
 
     #[test]
     fn test_new_creates_empty_engine() {
-        let manager = AudioEngineManager::new();
+        let manager = create_manager();
         let guard = manager.engine.lock().unwrap();
         assert!(guard.is_none());
     }
 
     #[test]
     fn test_check_not_running_passes_when_empty() {
-        let manager = AudioEngineManager::new();
+        let manager = create_manager();
         let result = manager.check_not_running(&None);
         assert!(result.is_ok());
     }

@@ -9,6 +9,7 @@ pub mod analysis;
 pub mod api;
 pub mod audio;
 pub mod calibration;
+pub mod config;
 pub mod context;
 pub mod error;
 pub mod managers;

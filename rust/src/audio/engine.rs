@@ -30,6 +30,8 @@ use std::sync::Arc;
 #[cfg(target_os = "android")]
 use super::buffer_pool::BufferPoolChannels;
 #[cfg(target_os = "android")]
+use crate::config::OnsetDetectionConfig;
+#[cfg(target_os = "android")]
 use crate::error::AudioError;
 
 #[cfg(target_os = "android")]
@@ -65,6 +67,10 @@ pub struct AudioEngine {
     output_stream: Option<AudioStreamAsync<Output, OutputCallback>>,
     /// Input audio stream (slave - read by output callback)
     input_stream: Option<AudioStreamSync<Input, (f32, oboe::Mono)>>,
+    /// Arc-wrapped input stream for sharing with callback
+    input_stream_arc: Arc<std::sync::Mutex<Option<AudioStreamSync<Input, (f32, oboe::Mono)>>>>,
+    /// Arc-wrapped audio channels for sharing with callback
+    audio_channels_arc: Arc<std::sync::Mutex<Option<super::buffer_pool::AudioThreadChannels>>>,
     /// Atomic frame counter for sample-accurate timing
     frame_counter: Arc<AtomicU64>,
     /// Atomic BPM for dynamic tempo changes
@@ -104,6 +110,8 @@ impl AudioEngine {
         Ok(AudioEngine {
             output_stream: None,
             input_stream: None,
+            input_stream_arc: Arc::new(std::sync::Mutex::new(None)),
+            audio_channels_arc: Arc::new(std::sync::Mutex::new(None)),
             frame_counter: Arc::new(AtomicU64::new(0)),
             bpm: Arc::new(AtomicU32::new(bpm)),
             sample_rate,
@@ -149,6 +157,8 @@ impl AudioEngine {
             self.sample_rate,
             Arc::clone(&self.click_samples),
             Arc::clone(&self.click_position),
+            Arc::clone(&self.input_stream_arc),
+            Arc::clone(&self.audio_channels_arc),
         );
 
         AudioStreamBuilder::default()
@@ -173,6 +183,8 @@ impl AudioEngine {
     /// * `calibration_procedure` - Optional calibration procedure for collecting training samples
     /// * `calibration_progress_tx` - Optional broadcast channel for calibration progress updates
     /// * `result_sender` - Tokio broadcast channel for sending classification results to UI
+    /// * `onset_config` - Runtime configuration for onset detector parameters
+    /// * `log_every_n_buffers` - Frequency for analysis-side debug logging
     fn spawn_analysis_thread_internal(
         &self,
         buffer_channels: BufferPoolChannels,
@@ -183,9 +195,11 @@ impl AudioEngine {
             std::sync::Mutex<Option<crate::calibration::procedure::CalibrationProcedure>>,
         >,
         calibration_progress_tx: Option<
-            tokio::sync::broadcast::Sender<crate::calibration::procedure::CalibrationProgress>,
+            tokio::sync::broadcast::Sender<crate::calibration::CalibrationProgress>,
         >,
         result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
+        onset_config: OnsetDetectionConfig,
+        log_every_n_buffers: u64,
     ) {
         let (_, analysis_channels) = buffer_channels.split_for_threads();
 
@@ -201,6 +215,8 @@ impl AudioEngine {
             bpm_clone,
             self.sample_rate,
             result_sender,
+            onset_config,
+            log_every_n_buffers,
         );
     }
 
@@ -231,30 +247,13 @@ impl AudioEngine {
             std::sync::Mutex<Option<crate::calibration::procedure::CalibrationProcedure>>,
         >,
         calibration_progress_tx: Option<
-            tokio::sync::broadcast::Sender<crate::calibration::procedure::CalibrationProgress>,
+            tokio::sync::broadcast::Sender<crate::calibration::CalibrationProgress>,
         >,
         result_sender: tokio::sync::broadcast::Sender<crate::analysis::ClassificationResult>,
+        onset_config: OnsetDetectionConfig,
+        log_every_n_buffers: u64,
     ) -> Result<(), AudioError> {
-        // Create and open audio streams
-        let mut input_stream = self.create_input_stream()?;
-        let mut output_stream = self.create_output_stream()?;
-
-        // Start streams (input first, then output as master)
-        input_stream
-            .start()
-            .map_err(|e| AudioError::HardwareError {
-                details: format!("Failed to start input stream: {:?}", e),
-            })?;
-        output_stream
-            .start()
-            .map_err(|e| AudioError::HardwareError {
-                details: format!("Failed to start output stream: {:?}", e),
-            })?;
-
-        self.input_stream = Some(input_stream);
-        self.output_stream = Some(output_stream);
-
-        // Split buffer channels for audio and analysis threads
+        // Split buffer channels BEFORE creating streams
         // Take ownership of buffer_channels temporarily
         let buffer_channels = std::mem::replace(
             &mut self.buffer_channels,
@@ -267,13 +266,59 @@ impl AudioEngine {
             },
         );
 
-        // Spawn analysis thread
+        // Split channels for audio and analysis threads
+        let (audio_channels, analysis_channels) = buffer_channels.split_for_threads();
+
+        // Store audio_channels in Arc for sharing with callback
+        {
+            let mut audio_channels_guard = self.audio_channels_arc.lock().unwrap();
+            *audio_channels_guard = Some(audio_channels);
+        }
+
+        // Create and open audio streams
+        let mut input_stream = self.create_input_stream()?;
+
+        // Start input stream
+        input_stream
+            .start()
+            .map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to start input stream: {:?}", e),
+            })?;
+
+        // Store input stream in Arc for sharing with callback AFTER starting
+        {
+            let mut input_stream_guard = self.input_stream_arc.lock().unwrap();
+            *input_stream_guard = Some(input_stream);
+        }
+
+        // Create output stream (callback will now have access to started input stream)
+        let mut output_stream = self.create_output_stream()?;
+
+        // Start output stream
+        output_stream
+            .start()
+            .map_err(|e| AudioError::HardwareError {
+                details: format!("Failed to start output stream: {:?}", e),
+            })?;
+
+        // Store output stream (input stream is already in Arc, no local copy needed)
+        self.input_stream = None; // Input stream is now managed by Arc only
+        self.output_stream = Some(output_stream);
+
+        // Spawn analysis thread (buffer_channels already split)
         self.spawn_analysis_thread_internal(
-            buffer_channels,
+            BufferPoolChannels {
+                data_producer: rtrb::RingBuffer::new(1).0, // Dummy - already split
+                data_consumer: analysis_channels.data_consumer,
+                pool_producer: analysis_channels.pool_producer,
+                pool_consumer: rtrb::RingBuffer::new(1).1, // Dummy - already split
+            },
             calibration_state,
             calibration_procedure,
             calibration_progress_tx,
             result_sender,
+            onset_config,
+            log_every_n_buffers,
         );
 
         Ok(())
@@ -294,11 +339,20 @@ impl AudioEngine {
             })?;
         }
 
-        // Then stop input stream (slave)
-        if let Some(mut stream) = self.input_stream.take() {
-            stream.stop().map_err(|e| AudioError::HardwareError {
-                details: format!("Failed to stop input stream: {:?}", e),
-            })?;
+        // Then stop input stream (slave) - retrieve from Arc
+        {
+            let mut input_stream_guard = self.input_stream_arc.lock().unwrap();
+            if let Some(mut stream) = input_stream_guard.take() {
+                stream.stop().map_err(|e| AudioError::HardwareError {
+                    details: format!("Failed to stop input stream: {:?}", e),
+                })?;
+            }
+        }
+
+        // Clear audio channels Arc
+        {
+            let mut audio_channels_guard = self.audio_channels_arc.lock().unwrap();
+            *audio_channels_guard = None;
         }
 
         Ok(())
@@ -375,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_audio_engine_creation() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let engine = AudioEngine::new(120, 48000, channels);
         assert!(engine.is_ok(), "AudioEngine creation should succeed");
 
@@ -390,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_set_bpm() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let engine = AudioEngine::new(120, 48000, channels).unwrap();
 
         engine.set_bpm(140);
@@ -402,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_frame_counter_ref() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let engine = AudioEngine::new(120, 48000, channels).unwrap();
 
         let frame_ref = engine.get_frame_counter_ref();
@@ -415,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_bpm_ref() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let engine = AudioEngine::new(120, 48000, channels).unwrap();
 
         let bpm_ref = engine.get_bpm_ref();
@@ -428,7 +482,7 @@ mod tests {
 
     #[test]
     fn test_multiple_bpm_updates() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let engine = AudioEngine::new(120, 48000, channels).unwrap();
 
         let bpm_values = vec![60, 80, 100, 120, 140, 160, 180, 200, 240];
@@ -448,7 +502,7 @@ mod tests {
     /// On desktop: Tests the StubAudioEngine which simulates the interface
     #[test]
     fn test_audio_engine_start_with_calibration_parameters() {
-        let channels = BufferPool::new(16, DEFAULT_BUFFER_SIZE);
+        let channels = BufferPool::new(64, DEFAULT_BUFFER_SIZE);
         let mut engine = AudioEngine::new(120, 48000, channels).unwrap();
 
         // Create calibration state

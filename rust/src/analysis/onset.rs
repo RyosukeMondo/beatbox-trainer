@@ -16,11 +16,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-/// Onset detection parameters
-const WINDOW_SIZE: usize = 256;
-const HOP_SIZE: usize = 64; // 75% overlap
-const MEDIAN_WINDOW_HALFSIZE: usize = 50; // Window = 100 frames for median
-const THRESHOLD_OFFSET: f32 = 0.1; // Added to median for adaptive threshold
+use crate::config::OnsetDetectionConfig;
 
 /// OnsetDetector uses spectral flux algorithm to detect sound onsets
 pub struct OnsetDetector {
@@ -31,6 +27,8 @@ pub struct OnsetDetector {
     sample_rate: u32,
     window_size: usize,
     hop_size: usize,
+    median_window_halfsize: usize,
+    threshold_offset: f32,
     // Windowing function (Hann window)
     window: Vec<f32>,
     // Sample counter for timestamp tracking (deprecated, use frames_processed)
@@ -46,8 +44,15 @@ impl OnsetDetector {
     /// # Arguments
     /// * `sample_rate` - Audio sample rate in Hz (e.g., 48000)
     pub fn new(sample_rate: u32) -> Self {
-        let window_size = WINDOW_SIZE;
-        let hop_size = HOP_SIZE;
+        Self::with_config(sample_rate, OnsetDetectionConfig::default())
+    }
+
+    /// Create a detector with explicit configuration parameters
+    pub fn with_config(sample_rate: u32, config: OnsetDetectionConfig) -> Self {
+        let window_size = config.window_size.max(2);
+        let hop_size = config.hop_size.max(1);
+        let median_window_halfsize = config.median_window_halfsize.max(1);
+        let threshold_offset = config.threshold_offset;
 
         // Pre-compute Hann window to reduce spectral leakage
         let window = (0..window_size)
@@ -60,10 +65,12 @@ impl OnsetDetector {
         Self {
             fft_planner: Arc::new(Mutex::new(FftPlanner::new())),
             prev_spectrum: vec![0.0; window_size / 2 + 1],
-            flux_signal: VecDeque::with_capacity(MEDIAN_WINDOW_HALFSIZE * 2 + 100),
+            flux_signal: VecDeque::with_capacity(median_window_halfsize * 2 + 100),
             sample_rate,
             window_size,
             hop_size,
+            median_window_halfsize,
+            threshold_offset,
             window,
             sample_offset: 0,
             frames_processed: 0,
@@ -82,8 +89,9 @@ impl OnsetDetector {
         let frames_before = self.frames_processed;
 
         // Calculate the offset in the flux buffer (due to pop_front operations)
-        let flux_buffer_offset = if self.flux_signal.len() >= MEDIAN_WINDOW_HALFSIZE * 2 + 100 {
-            self.frames_processed - (MEDIAN_WINDOW_HALFSIZE * 2 + 100) as u64
+        let flux_buffer_capacity = self.median_window_halfsize * 2 + 100;
+        let flux_buffer_offset = if self.flux_signal.len() >= flux_buffer_capacity {
+            self.frames_processed - flux_buffer_capacity as u64
         } else {
             0
         };
@@ -101,7 +109,7 @@ impl OnsetDetector {
             self.flux_signal.push_back(flux);
 
             // Keep flux signal buffer size manageable
-            if self.flux_signal.len() > MEDIAN_WINDOW_HALFSIZE * 2 + 100 {
+            if self.flux_signal.len() > self.median_window_halfsize * 2 + 100 {
                 self.flux_signal.pop_front();
             }
 
@@ -114,11 +122,7 @@ impl OnsetDetector {
 
         // Detect peaks in flux signal with adaptive thresholding
         // Only check new frames added in this call
-        let start_check = if frames_before > flux_buffer_offset {
-            (frames_before - flux_buffer_offset) as usize
-        } else {
-            0
-        };
+        let start_check = frames_before.saturating_sub(flux_buffer_offset) as usize;
 
         let peaks = self.pick_peaks_in_range(start_check, self.flux_signal.len());
 
@@ -187,18 +191,18 @@ impl OnsetDetector {
     /// # Returns
     /// Adaptive threshold value
     fn adaptive_threshold(&self, index: usize) -> f32 {
-        let start = index.saturating_sub(MEDIAN_WINDOW_HALFSIZE);
-        let end = (index + MEDIAN_WINDOW_HALFSIZE).min(self.flux_signal.len());
+        let start = index.saturating_sub(self.median_window_halfsize);
+        let end = (index + self.median_window_halfsize).min(self.flux_signal.len());
 
         if start >= end {
-            return THRESHOLD_OFFSET;
+            return self.threshold_offset;
         }
 
         // Extract window and compute median
         let mut window: Vec<f32> = self.flux_signal.range(start..end).copied().collect();
 
         if window.is_empty() {
-            return THRESHOLD_OFFSET;
+            return self.threshold_offset;
         }
 
         // Sort to find median
@@ -211,7 +215,7 @@ impl OnsetDetector {
             window[window.len() / 2]
         };
 
-        median + THRESHOLD_OFFSET
+        median + self.threshold_offset
     }
 
     /// Pick peaks in flux signal where flux > adaptive threshold

@@ -149,7 +149,12 @@ impl CalibrationProcedure {
             });
         }
 
-        CalibrationState::from_samples(&self.kick_samples, &self.snare_samples, &self.hihat_samples)
+        CalibrationState::from_samples(
+            &self.kick_samples,
+            &self.snare_samples,
+            &self.hihat_samples,
+            self.samples_needed as usize,
+        )
     }
 
     /// Reset the calibration procedure

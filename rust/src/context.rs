@@ -6,12 +6,14 @@
 // - CalibrationManager: Calibration workflow and state persistence
 // - BroadcastChannelManager: Tokio broadcast channel management
 
+use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::analysis::ClassificationResult;
 use crate::api::{AudioMetrics, OnsetEvent};
 use crate::calibration::{CalibrationProgress, CalibrationState};
+use crate::config::AppConfig;
 use crate::error::{AudioError, CalibrationError};
 use crate::managers::{AudioEngineManager, BroadcastChannelManager, CalibrationManager};
 
@@ -26,6 +28,8 @@ use crate::managers::{AudioEngineManager, BroadcastChannelManager, CalibrationMa
 /// - Clear separation of concerns
 /// - Reduced complexity (< 200 lines vs 1495 lines)
 pub struct AppContext {
+    #[allow(dead_code)]
+    config: Arc<RwLock<AppConfig>>,
     #[cfg_attr(not(target_os = "android"), allow(dead_code))]
     audio: AudioEngineManager,
     calibration: CalibrationManager,
@@ -41,10 +45,34 @@ impl AppContext {
     /// - Default calibration state
     /// - No broadcast channels active
     pub fn new() -> Self {
+        let initial_config = Self::load_platform_config();
+        let config = Arc::new(RwLock::new(initial_config.clone()));
+
+        let audio = AudioEngineManager::new(
+            initial_config.audio.clone(),
+            initial_config.onset_detection.clone(),
+            initial_config.calibration.log_every_n_buffers,
+        );
+
+        let calibration = CalibrationManager::new(initial_config.calibration.clone());
+
         Self {
-            audio: AudioEngineManager::new(),
-            calibration: CalibrationManager::new(),
+            config,
+            audio,
+            calibration,
             broadcasts: BroadcastChannelManager::new(),
+        }
+    }
+
+    fn load_platform_config() -> AppConfig {
+        #[cfg(target_os = "android")]
+        {
+            AppConfig::load_android()
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            AppConfig::load()
         }
     }
 

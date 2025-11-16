@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::broadcast;
 
 use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
+use crate::config::CalibrationConfig;
 use crate::error::{log_calibration_error, CalibrationError};
 
 /// Manages calibration workflow and state persistence
@@ -22,7 +23,7 @@ use crate::error::{log_calibration_error, CalibrationError};
 ///
 /// # Example
 /// ```ignore
-/// let manager = CalibrationManager::new();
+/// let manager = CalibrationManager::new(CalibrationConfig::default());
 /// manager.start(broadcast_tx)?;
 /// // ... collect samples ...
 /// manager.finish()?;
@@ -32,6 +33,7 @@ use crate::error::{log_calibration_error, CalibrationError};
 pub struct CalibrationManager {
     procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
     state: Arc<RwLock<CalibrationState>>,
+    calibration_config: CalibrationConfig,
 }
 
 #[allow(dead_code)] // Methods will be used when integrated into AppContext (task 5.4)
@@ -39,17 +41,19 @@ impl CalibrationManager {
     /// Create a new CalibrationManager
     ///
     /// Initializes with no calibration in progress and default calibration state.
-    pub fn new() -> Self {
+    pub fn new(calibration_config: CalibrationConfig) -> Self {
         Self {
             procedure: Arc::new(Mutex::new(None)),
             state: Arc::new(RwLock::new(CalibrationState::new_default())),
+            calibration_config,
         }
     }
 
     /// Start calibration workflow
     ///
     /// Begins collecting samples for calibration. The system will detect onsets
-    /// and extract features without classifying. Collect 10 samples per sound type.
+    /// and extract features without classifying. Collects the configured number of
+    /// samples per sound type (default: 10).
     ///
     /// Calibration sequence: KICK → SNARE → HI-HAT
     ///
@@ -71,7 +75,8 @@ impl CalibrationManager {
 
         self.check_not_in_progress(&procedure_guard)?;
 
-        let procedure = CalibrationProcedure::new_default();
+        let samples_needed = self.samples_per_sound();
+        let procedure = CalibrationProcedure::new(samples_needed);
         *procedure_guard = Some(procedure);
 
         Ok(())
@@ -182,6 +187,20 @@ impl CalibrationManager {
     // HELPER METHODS - Lock management and validation
     // ========================================================================
 
+    /// Determine configured sample count per sound, clamped to [1, u8::MAX]
+    fn samples_per_sound(&self) -> u8 {
+        let raw = self.calibration_config.samples_per_sound;
+        let clamped = raw.clamp(1, u8::MAX as usize);
+        if raw != clamped {
+            log::warn!(
+                "[CalibrationManager] samples_per_sound={} is out of u8 range, clamped to {}",
+                raw,
+                clamped
+            );
+        }
+        clamped as u8
+    }
+
     /// Safely acquire lock on calibration procedure
     fn lock_procedure(
         &self,
@@ -234,7 +253,7 @@ impl CalibrationManager {
 
 impl Default for CalibrationManager {
     fn default() -> Self {
-        Self::new()
+        Self::new(CalibrationConfig::default())
     }
 }
 
@@ -242,9 +261,13 @@ impl Default for CalibrationManager {
 mod tests {
     use super::*;
 
+    fn create_manager() -> CalibrationManager {
+        CalibrationManager::new(CalibrationConfig::default())
+    }
+
     #[test]
     fn test_new() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         // Verify initial state
         let procedure_guard = manager.lock_procedure().unwrap();
@@ -256,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_start_calibration() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
         let (broadcast_tx, _) = broadcast::channel(100);
 
         // Start calibration
@@ -270,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_start_calibration_already_in_progress() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
         let (broadcast_tx, _) = broadcast::channel(100);
 
         // First start succeeds
@@ -283,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_finish_without_start() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         // Try to finish without starting
         let result = manager.finish();
@@ -292,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_finish_with_insufficient_samples() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
         let (broadcast_tx, _) = broadcast::channel(100);
 
         // Start calibration
@@ -305,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_get_state() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         let state = manager.get_state();
         assert!(state.is_ok());
@@ -314,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_load_state() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         // Create a calibrated state
         let mut new_state = CalibrationState::new_default();
@@ -333,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_state_persistence_across_operations() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         // Load a calibrated state
         let mut calibrated_state = CalibrationState::new_default();
@@ -359,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_get_procedure_arc() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
         let (broadcast_tx, _) = broadcast::channel(100);
 
         // Start calibration to initialize procedure
@@ -375,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_get_procedure_arc_when_not_started() {
-        let manager = CalibrationManager::new();
+        let manager = create_manager();
 
         // Get Arc reference before starting calibration
         let procedure_arc = manager.get_procedure_arc();

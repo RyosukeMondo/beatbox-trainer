@@ -1,0 +1,18 @@
+{
+  "onset_detection": {
+    "threshold_offset": 0.01,
+    "window_size": 256,
+    "hop_size": 64,
+    "median_window_halfsize": 50,
+    "min_buffer_size": 512
+  },
+  "calibration": {
+    "samples_per_sound": 10,
+    "enable_debug_overlay": true,
+    "log_every_n_buffers": 100
+  },
+  "audio": {
+    "buffer_pool_size": 64,
+    "buffer_size": 2048
+  }
+}

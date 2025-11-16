@@ -17,6 +17,7 @@ use crate::audio::buffer_pool::AnalysisThreadChannels;
 use crate::calibration::procedure::CalibrationProcedure;
 use crate::calibration::progress::CalibrationProgress;
 use crate::calibration::state::CalibrationState;
+use crate::config::OnsetDetectionConfig;
 
 pub mod classifier;
 pub mod features;
@@ -87,15 +88,28 @@ pub fn spawn_analysis_thread(
     bpm: Arc<AtomicU32>,
     sample_rate: u32,
     result_sender: tokio::sync::broadcast::Sender<ClassificationResult>,
+    onset_config: OnsetDetectionConfig,
+    log_every_n_buffers: u64,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         // Initialize DSP components (all allocations happen here, not in loop)
-        let mut onset_detector = OnsetDetector::new(sample_rate);
+        let mut onset_detector = OnsetDetector::with_config(sample_rate, onset_config.clone());
         let feature_extractor = FeatureExtractor::new(sample_rate);
         let classifier = Classifier::new(Arc::clone(&calibration_state));
         let quantizer = Quantizer::new(Arc::clone(&frame_counter), Arc::clone(&bpm), sample_rate);
 
         // Main analysis loop - runs until sender is dropped (audio engine stops)
+        log::info!("[AnalysisThread] Starting analysis loop");
+
+        // Accumulation buffer for combining small buffers into larger chunks
+        let min_buffer_size = onset_config.min_buffer_size.max(64);
+        let mut accumulator: Vec<f32> = Vec::with_capacity(min_buffer_size.max(2048));
+        let log_interval = if log_every_n_buffers == 0 {
+            None
+        } else {
+            Some(log_every_n_buffers)
+        };
+
         loop {
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
             let buffer = match analysis_channels.data_consumer.pop() {
@@ -108,17 +122,64 @@ pub fn spawn_analysis_thread(
                 }
             };
 
-            // Process buffer through onset detection
-            let onsets = onset_detector.process(&buffer);
+            // Accumulate small buffers into larger chunks
+            accumulator.extend_from_slice(&buffer);
+
+            // Return buffer to pool immediately
+            if analysis_channels.pool_producer.push(buffer).is_err() {
+                log::warn!("[AnalysisThread] Pool queue full, dropping buffer");
+            }
+
+            // Only process when we have enough samples
+            if accumulator.len() < min_buffer_size {
+                continue;
+            }
+
+            // Check if buffer contains non-zero samples
+            static mut NON_ZERO_CHECK: u64 = 0;
+            unsafe {
+                NON_ZERO_CHECK += 1;
+                if let Some(interval) = log_interval {
+                    if interval > 0 && NON_ZERO_CHECK % interval == 0 {
+                        let max_amplitude =
+                            accumulator.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+                        log::info!(
+                            "[AnalysisThread] Max amplitude in accumulated buffer: {}",
+                            max_amplitude
+                        );
+                    }
+                }
+            }
+
+            // Process accumulated buffer through onset detection
+            let onsets = onset_detector.process(&accumulator);
+
+            if !onsets.is_empty() {
+                log::info!("[AnalysisThread] Detected {} onsets", onsets.len());
+            }
 
             // For each detected onset, run pipeline (calibration or classification mode)
+            // IMPORTANT: Process onsets BEFORE clearing accumulator!
             for onset_timestamp in onsets {
                 // Extract 1024-sample window starting at onset
-                // Note: We need to handle the case where onset is near the end of buffer
-                let onset_idx = (onset_timestamp % buffer.len() as u64) as usize;
+                // onset_timestamp is relative to when the audio engine started
+                // We need to find it within the current accumulator
+                let onset_idx = (onset_timestamp % accumulator.len() as u64) as usize;
 
-                if onset_idx + 1024 <= buffer.len() {
-                    let onset_window = &buffer[onset_idx..onset_idx + 1024];
+                log::info!(
+                    "[AnalysisThread] Onset at timestamp={}, accumulator_len={}, onset_idx={}",
+                    onset_timestamp,
+                    accumulator.len(),
+                    onset_idx
+                );
+
+                if onset_idx + 1024 <= accumulator.len() {
+                    log::info!(
+                        "[AnalysisThread] Extracting onset window from idx {} to {}",
+                        onset_idx,
+                        onset_idx + 1024
+                    );
+                    let onset_window = &accumulator[onset_idx..onset_idx + 1024];
 
                     // Extract DSP features (always needed for both modes)
                     let features = feature_extractor.extract(onset_window);
@@ -133,6 +194,7 @@ pub fn spawn_analysis_thread(
 
                     if calibration_active {
                         // ====== CALIBRATION MODE ======
+                        log::info!("[AnalysisThread] CALIBRATION MODE: Processing onset");
                         // Forward features to calibration procedure
                         if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                             if let Some(ref mut procedure) = *procedure_guard {
@@ -140,6 +202,10 @@ pub fn spawn_analysis_thread(
                                     Ok(()) => {
                                         // Sample accepted - broadcast progress
                                         let progress = procedure.get_progress();
+                                        log::info!(
+                                            "[AnalysisThread] Sample accepted: {:?}",
+                                            progress
+                                        );
 
                                         if let Some(ref tx) = calibration_progress_tx {
                                             let _ = tx.send(progress);
@@ -147,7 +213,7 @@ pub fn spawn_analysis_thread(
                                     }
                                     Err(err) => {
                                         // Sample rejected (validation error)
-                                        eprintln!("Calibration sample rejected: {:?}", err);
+                                        log::warn!("[AnalysisThread] Sample rejected: {:?}", err);
                                         // Continue processing without crashing
                                     }
                                 }
@@ -186,16 +252,19 @@ pub fn spawn_analysis_thread(
                         // Broadcast channels don't fail on send, they just drop messages if no one is listening
                         let _ = result_sender.send(result);
                     }
+                } else {
+                    log::warn!(
+                        "[AnalysisThread] Onset window incomplete: need {} samples but only {} available from idx {}",
+                        1024,
+                        accumulator.len() - onset_idx,
+                        onset_idx
+                    );
                 }
                 // If onset is too close to end of buffer, skip it (will be caught in next buffer)
             }
 
-            // Return buffer to POOL_QUEUE for reuse
-            if analysis_channels.pool_producer.push(buffer).is_err() {
-                // Pool queue is full (shouldn't happen with proper sizing)
-                // Drop the buffer (will be reallocated if needed)
-                eprintln!("Warning: POOL_QUEUE full, dropping buffer");
-            }
+            // Clear accumulator for next batch (AFTER processing all onsets!)
+            accumulator.clear();
         }
     })
 }
@@ -245,6 +314,8 @@ mod tests {
             bpm,
             48000,
             result_tx,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         // Give thread time to initialize
@@ -277,6 +348,8 @@ mod tests {
             bpm,
             48000,
             result_tx,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         // Give thread time to initialize
@@ -310,6 +383,8 @@ mod tests {
             bpm,
             48000,
             result_tx,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         // Give thread time to run its processing loop
@@ -343,6 +418,8 @@ mod tests {
             bpm1,
             48000,
             result_tx1,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         // Spawn with None
@@ -364,6 +441,8 @@ mod tests {
             bpm2,
             48000,
             result_tx2,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         thread::sleep(Duration::from_millis(50));
@@ -399,6 +478,8 @@ mod tests {
             bpm,
             48000,
             result_tx,
+            OnsetDetectionConfig::default(),
+            100,
         );
 
         // Hold lock on procedure to simulate contention
