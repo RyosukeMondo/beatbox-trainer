@@ -1,0 +1,6 @@
+{
+  "fixture": "basic_hits",
+  "events": [
+    { "sound": "Snare", "offset_ms": 100.0, "tolerance_ms": 10.0 }
+  ]
+}

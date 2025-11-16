@@ -11,7 +11,9 @@ pub mod audio;
 pub mod calibration;
 pub mod config;
 pub mod context;
+pub mod engine;
 pub mod error;
+pub mod fixtures;
 pub mod managers;
 
 // Generated FFI bridge code (created by flutter_rust_bridge codegen)
