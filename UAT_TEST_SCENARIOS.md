@@ -126,6 +126,45 @@ F adb     : main.cpp:167 could not install *smartsocket* listener: Operation not
 adb: failed to check server version: cannot connect to daemon
 ```
 
+### Sandbox Attempt #4 (2025-11-17 00:57 UTC)
+
+To rule out transient cache issues, the CLI reran the entire workflow with the in-repo Flutter SDK (`.flutter-sdk/flutter`), the redirected `HOME`, `PUB_CACHE`, and `GRADLE_USER_HOME` folders, and all analytics/update checks disabled. The behavior remains unchanged:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages offline | `flutter pub get --offline` | ✅ Completes successfully thanks to the cached artifacts copied into `.pub-cache`. |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Dart VM still cannot open the server socket (`OS Error: Operation not permitted, errno = 1`). |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle wrapper still needs outbound sockets; Java throws `java.net.SocketException: 許可されていない操作です`. |
+| Detect devices | `adb devices` | ❌ Daemon startup immediately fails because libusb cannot be initialized and the smartsocket listener cannot be installed. |
+
+```
+$ flutter pub get --offline
+Resolving dependencies...
+Got dependencies!
+
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:01 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:02 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:03 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:04 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:05 +0: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart
+00:05 +0 -1: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart [E]
+  Failed to load "/home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart": Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
+
+$ flutter build apk --debug --no-pub
+Exception in thread "main" java.net.SocketException: 許可されていない操作です
+    at java.base/sun.nio.ch.Net.socket0(Native Method)
+    ...
+    at org.gradle.wrapper.Install.createDist(Install.java:48)
+
+$ adb devices
+* daemon not running; starting now at tcp:5037
+W adb     : usb_libusb_hotplug.cpp:257 failed to initialize libusb: LIBUSB_ERROR_OTHER
+F adb     : main.cpp:167 could not install *smartsocket* listener: Operation not permitted
+adb: failed to check server version: cannot connect to daemon
+```
+
 **Action Items for Physical QA**
 1. Re-run `flutter_rust_bridge_codegen generate` (network required) so Rust/Dart bindings are synchronized.
 2. Re-run `dart run build_runner build --delete-conflicting-outputs` after regenerating the bridge.
