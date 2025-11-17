@@ -43,7 +43,7 @@ adb install build/app/outputs/flutter-apk/app-debug.apk
 
 | Device | Android Version | Install State | Execution Status | Notes / Next Action |
 | --- | --- | --- | --- | --- |
-| Pixel 9a (device id `4C041JEBF15065`) | Android 16 | Not installed | ❌ Blocked | Device is visible over ADB, but manual touch/audio input is required for calibration yet unavailable inside the Codex CLI. Run scenarios physically on the handset following this guide. |
+| Pixel 9a (device id `4C041JEBF15065`) | Android 16 | Not installed | ❌ Blocked | Device is visible over ADB, but the CLI lacks physical tap/microphone access. Even after cloning the Flutter SDK locally (2025-11-17 09:50 UTC), integration tests still fail to open a VM socket, Gradle cannot download the wrapper, and the ADB daemon crashes (libusb). Execute the scenarios on the handset outside the sandbox following this guide. |
 
 > **Why not executed?** Although the Pixel 9a above is detected (`adb devices` → `4C041JEBF15065`), this CLI session has no way to perform manual gestures or provide microphone input demanded by the calibration-driven UAT steps. Execute locally with physical access, then expand the table with any additional connected devices as needed.
 
@@ -54,21 +54,20 @@ To eliminate the original Flutter cache permission error, the SDK was cloned int
 | Step | Command | Result |
 | --- | --- | --- |
 | Fetch packages | `flutter pub get --offline` | ✅ Uses cached packages |
-| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Compilation halts immediately because FRB/Freezed outputs never generated constructors such as `AudioError_StreamFailure` and `CalibrationError_Timeout`. |
-| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle fails with `Could not determine a usable wildcard IP for this machine.` so no APK exists for sideloading. |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Still blocked because the sandbox refuses to open a Dart VM server socket (`OS Error: Operation not permitted, errno = 1`). |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle wrapper download requires outbound sockets; sandbox returns `java.net.SocketException: Operation not permitted`, so no APK is produced. |
 
 ```
 $ flutter test --no-pub test/integration/calibration_flow_test.dart
-lib/bridge/api.dart/error.dart:38:74: Error: Couldn't find constructor 'AudioError_StreamFailure'.
-lib/bridge/api.dart/frb_generated.dart:600:16: Error: The method 'CalibrationError_Timeout' isn't defined for the type 'RustLibApiImpl'.
+00:00 +0 -1: loading ... calibration_flow_test.dart [E]
+  Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
 
 $ flutter build apk --debug --no-pub
-FAILURE: Build failed with an exception.
-* What went wrong:
-Could not determine a usable wildcard IP for this machine.
+Exception in thread "main" java.net.SocketException: Operation not permitted
+... (Gradle wrapper cannot download distributions inside the sandbox)
 ```
 
-**Action required:** Manual UAT must still occur on a workstation with physical Android hardware. Before that run, regenerate the flutter_rust_bridge outputs so the Freezed constructors exist, then retry the commands above on the workstation (outside the sandbox) to capture APKs and device telemetry.
+**Action required:** Manual UAT must still occur on a workstation with physical Android hardware. Before that run, regenerate the flutter_rust_bridge outputs and rerun `dart run build_runner build --delete-conflicting-outputs`, then retry the commands above (outside the sandbox) to capture APKs and device telemetry.
 
 ### Sandbox Attempt #2 (2025-11-17 00:36 UTC)
 
@@ -99,15 +98,46 @@ $ flutter test --no-pub test/integration/calibration_flow_test.dart
   Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
 ```
 
+### Sandbox Attempt #3 (2025-11-17 09:50 UTC)
+
+With the regenerated Freezed files in place, the CLI copied the Flutter SDK into `.flutter-sdk/` again, reused the same environment overrides, and executed the tooling end-to-end to capture deterministic logs for the blockers that remain:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Dart VM still cannot bind to `127.0.0.1:0`, so the harness aborts immediately with `Failed to create server socket (OS Error: Operation not permitted, errno = 1)`. |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle wrapper cannot reach `services.gradle.org` due to sandboxed outbound sockets, so Java throws `java.net.SocketException: Operation not permitted`. |
+| Detect devices | `adb devices` | ❌ Daemon startup fails (`failed to initialize libusb`, `could not install *smartsocket* listener: Operation not permitted`), so no attached phones can be enumerated even if connected. |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0 -1: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart [E]
+  Failed to load "...": Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
+
+$ flutter build apk --debug --no-pub
+Exception in thread "main" java.net.SocketException: 許可されていない操作です
+    at java.base/sun.nio.ch.Net.socket0(Native Method)
+    ...
+    at org.gradle.wrapper.Install.createDist(Install.java:48)
+
+$ adb devices
+* daemon not running; starting now at tcp:5037
+W adb     : usb_libusb_hotplug.cpp:257 failed to initialize libusb: LIBUSB_ERROR_OTHER
+F adb     : main.cpp:167 could not install *smartsocket* listener: Operation not permitted
+adb: failed to check server version: cannot connect to daemon
+```
+
 **Action Items for Physical QA**
 1. Re-run `flutter_rust_bridge_codegen generate` (network required) so Rust/Dart bindings are synchronized.
 2. Re-run `dart run build_runner build --delete-conflicting-outputs` after regenerating the bridge.
 3. Execute `flutter test --no-pub test/integration/calibration_flow_test.dart` on a workstation to confirm the harness now passes.
-4. Build the APK (`flutter build apk --debug`) and install it via `adb install` on each physical Android device.
-5. Run every scenario below, capture Pass/Fail per device, and attach screenshots/logcat for any anomalies.
-6. Populate the **Scenario Execution Tracker** before requesting sign-off.
+4. Build the APK (`flutter build apk --debug`) on a workstation **and** verify `adb devices` lists every handset (capture `adb -s <id> shell getprop ro.product.model` + Android version) before installing.
+5. Install the APK via `adb install` on each physical Android device.
+6. Run every scenario below, capture Pass/Fail per device, and attach screenshots/logcat for any anomalies.
+7. Populate the **Scenario Execution Tracker** before requesting sign-off.
 
 ### Scenario Execution Tracker
+
+> Status entries remain `☐ Pending` because the CLI cannot interact with a physical handset. QA engineers running on hardware should replace each entry with ✅/❌ and link evidence per device.
 
 | Scenario | Device | Status | Evidence | Notes |
 | --- | --- | --- | --- | --- |
@@ -129,6 +159,14 @@ $ flutter test --no-pub test/integration/calibration_flow_test.dart
 | 16 – Accessibility (TalkBack) | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Optional if time allows |
 | 17 – Crash Recovery / Error Surfaces | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Force failures via debug mode |
 | 18 – Sign-Off & Evidence Packaging | _Pending assignment_ | ☐ Pending | _Add report link_ | Complete once above rows filled |
+
+#### Evidence Template
+
+Use the template below for each device to keep the attachments consistent:
+
+| Device | Scenario | Result | Evidence Link | Notes |
+| --- | --- | --- | --- | --- |
+| `<model> (Android <version>)` | `<Scenario # – Title>` | ☐ Pass ☐ Fail | Screenshot / Logcat / Video URL | Observations, metrics, reproduction steps |
 
 ---
 
