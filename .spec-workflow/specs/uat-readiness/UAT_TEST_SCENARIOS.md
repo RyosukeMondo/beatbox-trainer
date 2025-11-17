@@ -108,6 +108,79 @@ $ flutter test --no-pub test/integration/calibration_flow_test.dart
 5. Execute every scenario below on each device, logging Pass/Fail plus evidence (screenshots, metrics, log files).
 6. Update the tracker table below and attach artifacts prior to sign-off.
 
+### Sandbox Attempt #3 (2025-11-17 09:50 UTC)
+
+Replayed the offline, redirected toolchain to capture deterministic evidence for QA review.
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Run integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Immediately fails because the sandbox blocks the Dart VM from creating its server socket (`OS Error: Operation not permitted, errno = 1`). |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle wrapper attempts to fetch artifacts over HTTPS and aborts with `java.net.SocketException: Operation not permitted`, leaving no APK behind. |
+| Detect Android devices | `adb devices` | ❌ Daemon cannot even start since libusb hotplug initialization fails and the `*smartsocket*` listener is rejected (`Operation not permitted`). |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0 -1: loading ... calibration_flow_test.dart [E]
+  Failed to create server socket (OS Error: Operation not permitted, errno = 1)
+
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+java.net.SocketException: Operation not permitted
+
+$ adb devices
+failed to initialize libusb: LIBUSB_ERROR_OTHER
+could not install *smartsocket* listener: Operation not permitted
+```
+
+### Sandbox Attempt #4 (2025-11-17 00:57 UTC / 09:57 JST)
+
+Retried with the same redirected environment variables plus a freshly copied `.flutter-sdk/` directory to ensure no stale cache artifacts remained.
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages | `flutter pub get --offline` | ✅ Uses relocated `.pub-cache`, confirming the offline toolchain works. |
+| Run integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Sandbox blocks VM socket creation again, so no widget/integration tests execute. |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle exits with `java.net.SocketException: 許可されていない操作です` (Operation not permitted) while trying to download wrapper dependencies. |
+| Detect Android devices | `adb devices` | ❌ Daemon start fails because libusb cannot initialize and the smartsocket listener cannot be installed. |
+
+```
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+java.net.SocketException: 許可されていない操作です
+
+$ adb devices
+failed to initialize libusb: LIBUSB_ERROR_OTHER
+could not install *smartsocket* listener: Operation not permitted
+```
+
+### Sandbox Attempt #5 (2025-11-17 10:06 UTC)
+
+Re-synced the Flutter SDK, caches, and redirected environment variables yet again to confirm the failures are deterministic and not tied to stale artifacts.
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages | `flutter pub get --offline` | ✅ Completes via hydrated cache. |
+| Run integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Still fails instantly because the Dart VM cannot create the server socket (errno = 1). |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Aborts with `Could not determine a usable wildcard IP for this machine.` before Gradle can start compiling. |
+| Detect Android devices | `ADB_TRACE=all adb devices` | ❌ libusb initialization fails, so the daemon never launches and the smartsocket listener install is rejected. |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0 -1: loading ... calibration_flow_test.dart [E]
+  Failed to create server socket (OS Error: Operation not permitted, errno = 1)
+
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine a usable wildcard IP for this machine.
+
+$ ADB_TRACE=all adb devices
+failed to initialize libusb: LIBUSB_ERROR_OTHER
+could not install *smartsocket* listener: Operation not permitted
+```
+
 ### Sandbox Attempt #6 (2025-11-17 10:20 UTC)
 
 Re-synced the Flutter SDK plus cached tool directories into the workspace (`.flutter-sdk`, `.home`, `.pub-cache`, `.gradle`) and retried the entire CLI-only workflow with the exported environment variables listed above (`FLUTTER_ROOT`, `HOME`, `PUB_CACHE`, etc.).
@@ -140,26 +213,26 @@ could not install *smartsocket* listener: Operation not permitted
 
 | Scenario | Device(s) | Status | Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| 1 – First-Time Onboarding | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Run on Pixel/Samsung/Other |
-| 2 – Complete Calibration | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Capture calibration duration |
-| 3 – Calibration Persistence | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Verify storage across relaunch |
-| 4 – Real-Time Classification | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Record latency metrics |
-| 5 – Debug Mode Overlay | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Video overlay behaviour |
-| 6 – Debug Log Export | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Attach exported JSON |
-| 7 – Default BPM | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Stopwatch BPM |
-| 8 – Classifier Level Toggle | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Document recalibration dialog |
-| 9 – Recalibrate Button | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Confirm wipe + new data |
-| 10 – Settings Navigation | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Back stack on all OEMs |
-| 11 – Offline Behaviour | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Airplane mode validation |
-| 12 – Microphone Denied | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Capture permission path |
-| 13 – Performance Benchmarks | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Run `tools/performance_validation.py` |
-| 14 – Background/Foreground | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Document session continuity |
-| 15 – Settings Persistence | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Include uninstall/reinstall |
-| 16 – Accessibility (TalkBack) | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Optional but recommended |
-| 17 – Error Recovery | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Force failure scenarios |
-| 18 – Sign-Off & Packaging | _Pending assignments_ | ☐ Pending | _Add report link_ | Complete after all devices tested |
+| 1 – First-Time Onboarding | _Unassigned – physical hardware required_ | **Blocked** | _Attach screenshot/log once executed_ | Needs Pixel/Samsung/alt OEM coverage |
+| 2 – Complete Calibration | _Unassigned – physical hardware required_ | **Blocked** | _Attach calibration timing_ | Capture duration + waveform stability |
+| 3 – Calibration Persistence | _Unassigned – physical hardware required_ | **Blocked** | _Attach relaunch video/log_ | Validate storage survives relaunch |
+| 4 – Real-Time Classification | _Unassigned – physical hardware required_ | **Blocked** | _Attach latency metrics_ | Requires actual microphone input |
+| 5 – Debug Mode Overlay | _Unassigned – physical hardware required_ | **Blocked** | _Attach overlay recording_ | Confirm overlay toggles + values |
+| 6 – Debug Log Export | _Unassigned – physical hardware required_ | **Blocked** | _Attach exported JSON_ | Verify share intent + filesystem write |
+| 7 – Default BPM | _Unassigned – physical hardware required_ | **Blocked** | _Attach stopwatch measurements_ | Confirm BPM persists after restart |
+| 8 – Classifier Level Toggle | _Unassigned – physical hardware required_ | **Blocked** | _Attach recalibration dialog photo_ | Check prompts + persistence |
+| 9 – Recalibrate Button | _Unassigned – physical hardware required_ | **Blocked** | _Attach before/after logs_ | Ensure old calibration cleared |
+| 10 – Settings Navigation | _Unassigned – physical hardware required_ | **Blocked** | _Attach nav stack capture_ | Validate back stack and state |
+| 11 – Offline Behaviour | _Unassigned – physical hardware required_ | **Blocked** | _Attach airplane mode video_ | Toggle airplane mode + retest |
+| 12 – Microphone Denied | _Unassigned – physical hardware required_ | **Blocked** | _Attach permission screenshot_ | Capture denial path + fallback UI |
+| 13 – Performance Benchmarks | _Unassigned – physical hardware required_ | **Blocked** | _Attach profiler trace_ | Requires on-device profiling |
+| 14 – Background/Foreground | _Unassigned – physical hardware required_ | **Blocked** | _Attach timeline capture_ | Validate resuming training session |
+| 15 – Settings Persistence | _Unassigned – physical hardware required_ | **Blocked** | _Attach uninstall/reinstall log_ | Confirm persistence expectations |
+| 16 – Accessibility (TalkBack) | _Unassigned – physical hardware required_ | **Blocked** | _Attach TalkBack video_ | Optional but recommended |
+| 17 – Error Recovery | _Unassigned – physical hardware required_ | **Blocked** | _Attach logcat excerpt_ | Force failure and recovery path |
+| 18 – Sign-Off & Packaging | _Unassigned – physical hardware required_ | **Blocked** | _Attach signed report_ | Complete once scenarios executed |
 
-> **Status note:** All rows remain in a `Pending` state because physical Android devices are unreachable inside the Codex sandbox. Update each entry with Pass/Fail once the scenarios run on hardware.
+> **Status note:** Entries stay `Blocked` because the Codex sandbox cannot reach physical Android hardware. As soon as QA executes a scenario on-device, replace the status with Pass/Fail and attach evidence links.
 
 ### Manual Execution Checklist (Physical QA Hand-off)
 
@@ -169,6 +242,19 @@ could not install *smartsocket* listener: Operation not permitted
 4. **Installation & reset** – For each device and each scenario requiring a clean slate, run `adb uninstall com.beatbox.trainer` followed by `adb install build/app/outputs/flutter-apk/app-debug.apk`. Confirm microphone permissions are reset where applicable.
 5. **Scenario execution** – Follow every numbered step in the scenarios section, record Pass/Fail in the tracker table, capture screenshots or screen recordings for anomalies, and log measured metrics (latency, BPM drift, performance numbers, etc.).
 6. **Evidence & sign-off** – Attach exported debug logs, performance benchmark outputs, and any crash logs. Update `UAT_TEST_SCENARIOS.md`, `UAT_SIGN_OFF_REPORT.md`, and `UAT_READINESS_REPORT.md` with the collected data, then obtain product/QA sign-off.
+
+### Device Inventory Template
+
+Document the exact hardware used for UAT before executing scenarios.
+
+| Device ID | Manufacturer / Model | Android Version | Build Number | Connectivity Notes |
+| --- | --- | --- | --- | --- |
+| Device A |  |  |  | e.g., Wi-Fi only / LTE |
+| Device B |  |  |  |  |
+| Device C |  |  |  |  |
+| Extra Devices |  |  |  | Optional: wearables, tablets |
+
+Record any accessories (USB-C headset adapters, external microphones), known OEM quirks, or debugging flags in the Notes column so the execution tracker and bug reports can reference the exact hardware mix.
 
 ---
 
