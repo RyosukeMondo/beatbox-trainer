@@ -37,7 +37,9 @@ adb uninstall com.beatbox.trainer  # Adjust package name as needed
 adb install build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-### Execution Attempt (2025-11-17 - Codex CLI)
+### Execution Attempt Log (2025-11-17 - Codex CLI)
+
+### Baseline Attempt (pre-workspace Flutter)
 | Step | Command | Result |
 | --- | --- | --- |
 | Build debug APK | `flutter build apk --debug` | FAILED – Flutter SDK inside the sandbox cannot write to `/home/rmondo/flutter/bin/cache/engine.stamp` (`Permission denied`). Without a compiled APK there is nothing to sideload. |
@@ -45,6 +47,29 @@ adb install build/app/outputs/flutter-apk/app-debug.apk
 | Install + run scenarios | _Blocked_ | Both prerequisites above failed. The CLI session has no ability to interact with touch or microphone hardware even if the device were visible, so manual calibration-guided flows remain impossible here. |
 
 **Next Action for QA:** Run the suite on a workstation with physical access to an Android handset. Re-run the commands above until both succeed, then proceed with the per-scenario steps below. Attach screenshots/logs for any failures.
+
+### Workspace-Local Flutter Retry (2025-11-17 09:15 UTC)
+
+To remove the cache permission blocker, the Flutter SDK was copied into the repo (`.flutter-sdk/`) and commands were executed with `HOME`, `PUB_CACHE`, and `GRADLE_USER_HOME` redirected to workspace folders. This allowed the CLI to run Flutter tooling offline, but the flow still cannot complete:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages | `flutter pub get --offline` | ✅ Uses cached packages copied from `/home/rmondo/.pub-cache` |
+| Run integration test harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Dart analysis fails before tests run: generated FRB stubs still reference `AudioError_StreamFailure` / `CalibrationError_Timeout`, but the corresponding `*_freezed.dart` constructors were never regenerated. |
+| Assemble APK | `flutter build apk --debug --no-pub` | ❌ Gradle launches but aborts immediately with `Could not determine a usable wildcard IP for this machine.` before any APK artifacts are emitted. |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+lib/bridge/api.dart/error.dart:38:74: Error: Couldn't find constructor 'AudioError_StreamFailure'.
+lib/bridge/api.dart/frb_generated.dart:600:16: Error: The method 'CalibrationError_Timeout' isn't defined for the type 'RustLibApiImpl'.
+
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine a usable wildcard IP for this machine.
+```
+
+**Implication:** Even after working around the cache permissions, no Flutter artifacts or test evidence can be produced inside this CLI session. Manual, on-device execution is still required, and FRB/freezed outputs must be regenerated so tests compile before attempting UAT on real hardware.
 
 ---
 

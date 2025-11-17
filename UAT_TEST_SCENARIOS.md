@@ -47,6 +47,29 @@ adb install build/app/outputs/flutter-apk/app-debug.apk
 
 > **Why not executed?** Although the Pixel 9a above is detected (`adb devices` → `4C041JEBF15065`), this CLI session has no way to perform manual gestures or provide microphone input demanded by the calibration-driven UAT steps. Execute locally with physical access, then expand the table with any additional connected devices as needed.
 
+### Workspace-Local Flutter Retry (2025-11-17 09:15 UTC)
+
+To eliminate the original Flutter cache permission error, the SDK was cloned into the repo (`.flutter-sdk/`) and Flutter commands were run with `HOME`, `PUB_CACHE`, and `GRADLE_USER_HOME` redirected to workspace folders plus cached artifacts copied from `/home/rmondo`. This let the CLI run `flutter` tooling offline, but the flow still cannot execute any UAT scenarios:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages | `flutter pub get --offline` | ✅ Uses cached packages |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Compilation halts immediately because FRB/Freezed outputs never generated constructors such as `AudioError_StreamFailure` and `CalibrationError_Timeout`. |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle fails with `Could not determine a usable wildcard IP for this machine.` so no APK exists for sideloading. |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+lib/bridge/api.dart/error.dart:38:74: Error: Couldn't find constructor 'AudioError_StreamFailure'.
+lib/bridge/api.dart/frb_generated.dart:600:16: Error: The method 'CalibrationError_Timeout' isn't defined for the type 'RustLibApiImpl'.
+
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine a usable wildcard IP for this machine.
+```
+
+**Action required:** Manual UAT must still occur on a workstation with physical Android hardware. Before that run, regenerate the flutter_rust_bridge outputs so the Freezed constructors exist, then retry the commands above on the workstation (outside the sandbox) to capture APKs and device telemetry.
+
 ---
 
 ## Test Scenarios
