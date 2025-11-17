@@ -37,6 +37,15 @@ adb uninstall com.beatbox.trainer  # Adjust package name as needed
 adb install build/app/outputs/flutter-apk/app-debug.apk
 ```
 
+### Execution Attempt (2025-11-17 - Codex CLI)
+| Step | Command | Result |
+| --- | --- | --- |
+| Build debug APK | `flutter build apk --debug` | FAILED – Flutter SDK inside the sandbox cannot write to `/home/rmondo/flutter/bin/cache/engine.stamp` (`Permission denied`). Without a compiled APK there is nothing to sideload. |
+| Detect connected devices | `adb devices` | FAILED – `adb` daemon cannot start: libusb hotplug init fails and the smartsocket listener cannot be installed (`Operation not permitted`). No device list is returned, so install/automation commands cannot run. |
+| Install + run scenarios | _Blocked_ | Both prerequisites above failed. The CLI session has no ability to interact with touch or microphone hardware even if the device were visible, so manual calibration-guided flows remain impossible here. |
+
+**Next Action for QA:** Run the suite on a workstation with physical access to an Android handset. Re-run the commands above until both succeed, then proceed with the per-scenario steps below. Attach screenshots/logs for any failures.
+
 ---
 
 ## Test Scenarios
@@ -820,6 +829,8 @@ Use this section to document any critical bugs found during testing that block U
 ---
 
 ## Test Execution Summary
+
+> **Current Status (2025-11-17):** All scenarios remain unexecuted because the Codex CLI cannot complete `flutter build apk --debug` nor start the `adb` daemon. See the "Execution Attempt" table above for command output. Once a physical workstation is available, populate the matrix below with actual Pass/Fail outcomes per device.
 
 ### Device Test Matrix
 

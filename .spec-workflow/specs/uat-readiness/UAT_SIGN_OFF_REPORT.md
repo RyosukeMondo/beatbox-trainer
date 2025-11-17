@@ -10,7 +10,7 @@
 ## 1. Executive Summary
 - **Scope**: All user stories US-1 through US-6, covering onboarding, calibration, training feedback, settings, debug tooling, and UAT documentation.
 - **Devices Attempted**: Pixel 9a (Android 16, device id `4C041JEBF15065`). Device is visible over ADB but requires physical interaction (touch + microphone input) unavailable inside the Codex CLI session.
-- **Execution Window**: Not started. APK build + install scripts verified, but no scenarios were run because manual interaction is blocked.
+- **Execution Window**: Not started. Latest CLI attempt (2025-11-17) failed before execution because `flutter build apk --debug` cannot write to the Flutter engine cache (permission denied) and `adb devices` cannot start the daemon (`Operation not permitted`).
 - **Automated Evidence**: 566 automated tests passing (154 Rust + 412 Dart) per `UAT_READINESS_REPORT.md`. The remaining 13 Dart widget tests fail only because of test harness issues around `CalibrationScreen` and do not reflect production defects.
 - **Overall Assessment**: The build remains **ready for UAT** from an engineering standpoint, but **sign-off is pending** until at least one physical Android device run captures results and metrics.
 
