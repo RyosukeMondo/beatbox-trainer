@@ -165,6 +165,44 @@ F adb     : main.cpp:167 could not install *smartsocket* listener: Operation not
 adb: failed to check server version: cannot connect to daemon
 ```
 
+### Sandbox Attempt #5 (2025-11-17 10:06 UTC)
+
+Recreated the in-repo Flutter SDK (`rsync -a /home/rmondo/flutter .flutter-sdk`) and redirected tool caches (`HOME=.home`, `PUB_CACHE=.pub-cache`, `GRADLE_USER_HOME=.gradle`) to writable folders so the CLI could re-run the UAT checklist from a clean environment. The blockers persist:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages offline | `flutter pub get --offline` | ⚠️ Packages resolve from the copied `.pub-cache`, but the tool still tries `git fetch --tags` and fails immediately because outbound HTTPS is restricted (`fatal: unable to access 'https://github.com/flutter/flutter.git/': Could not resolve host`). |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Dart VM cannot bind its server socket (`OS Error: Operation not permitted, errno = 1`), so the integration test never runs. |
+| Assemble debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle aborts as soon as it tries to determine a wildcard IP (`Could not determine a usable wildcard IP for this machine.`), preventing APK generation. |
+| Enumerate devices | `adb devices` | ❌ Daemon launch still fails because libusb cannot initialize and the smartsocket listener cannot be installed (`Operation not permitted`). |
+
+```
+$ flutter pub get --offline
+Command exited with code 128: git fetch --tags
+Standard error: fatal: unable to access 'https://github.com/flutter/flutter.git/': Could not resolve host: github.com
+Resolving dependencies...
+Got dependencies!
+
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0 -1: loading /home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart [E]
+  Failed to load "/home/rmondo/repos/beatbox-trainer/test/integration/calibration_flow_test.dart": Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
+
+$ flutter build apk --debug --no-pub
+Running Gradle task 'assembleDebug'...
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine a usable wildcard IP for this machine.
+Gradle task assembleDebug failed with exit code 1
+
+$ adb devices
+* daemon not running; starting now at tcp:5037
+W adb     : usb_libusb_hotplug.cpp:257 failed to initialize libusb: LIBUSB_ERROR_OTHER
+F adb     : main.cpp:167 could not install *smartsocket* listener: Operation not permitted
+adb: failed to check server version: cannot connect to daemon
+```
+
+**Next action:** perform the remaining UAT steps on physical Android hardware outside this sandbox, record Pass/Fail evidence per scenario, and sync the results plus artifacts back into this document so Task 9.2 can be closed.
+
 **Action Items for Physical QA**
 1. Re-run `flutter_rust_bridge_codegen generate` (network required) so Rust/Dart bindings are synchronized.
 2. Re-run `dart run build_runner build --delete-conflicting-outputs` after regenerating the bridge.
