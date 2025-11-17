@@ -108,6 +108,34 @@ $ flutter test --no-pub test/integration/calibration_flow_test.dart
 5. Execute every scenario below on each device, logging Pass/Fail plus evidence (screenshots, metrics, log files).
 6. Update the tracker table below and attach artifacts prior to sign-off.
 
+### Sandbox Attempt #6 (2025-11-17 10:20 UTC)
+
+Re-synced the Flutter SDK plus cached tool directories into the workspace (`.flutter-sdk`, `.home`, `.pub-cache`, `.gradle`) and retried the entire CLI-only workflow with the exported environment variables listed above (`FLUTTER_ROOT`, `HOME`, `PUB_CACHE`, etc.).
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Fetch packages offline | `flutter pub get --offline` | ✅ Uses the hydrated `.pub-cache` artifacts—no network required. |
+| Run integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ The Dart VM cannot open its server socket (`OS Error: Operation not permitted, errno = 1`), so tests never launch. |
+| Build debug APK | `flutter build apk --debug --no-pub` | ❌ Gradle aborts instantly (`Could not determine a usable wildcard IP for this machine.`) before producing artifacts. |
+| Detect connected devices | `ADB_TRACE=all adb devices` | ❌ `adb` daemon fails to initialize libusb and cannot install the `*smartsocket*` listener (`Operation not permitted`). |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:00 +0 -1: loading ... calibration_flow_test.dart [E]
+  Failed to create server socket (OS Error: Operation not permitted, errno = 1)
+
+$ flutter build apk --debug --no-pub
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine a usable wildcard IP for this machine.
+
+$ ADB_TRACE=all adb devices
+failed to initialize libusb: LIBUSB_ERROR_OTHER
+could not install *smartsocket* listener: Operation not permitted
+```
+
+**Conclusion:** Even with workspace-local SDK/caches, the sandbox denies the networking and device capabilities required for APK assembly and physical-device orchestration. A human with direct access to Android hardware must perform the remaining steps and capture evidence outside this CLI.
+
 ### Scenario Execution Tracker
 
 | Scenario | Device(s) | Status | Evidence | Notes |
@@ -130,6 +158,17 @@ $ flutter test --no-pub test/integration/calibration_flow_test.dart
 | 16 – Accessibility (TalkBack) | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Optional but recommended |
 | 17 – Error Recovery | _Pending assignments_ | ☐ Pending | _Add screenshot/log link_ | Force failure scenarios |
 | 18 – Sign-Off & Packaging | _Pending assignments_ | ☐ Pending | _Add report link_ | Complete after all devices tested |
+
+> **Status note:** All rows remain in a `Pending` state because physical Android devices are unreachable inside the Codex sandbox. Update each entry with Pass/Fail once the scenarios run on hardware.
+
+### Manual Execution Checklist (Physical QA Hand-off)
+
+1. **Prepare toolchain** – On a workstation with Android Studio + SDK + Flutter installed, run `flutter pub get`, `flutter test --no-pub test/integration/calibration_flow_test.dart`, and `./scripts/pre-commit` to ensure the build is green before installing APKs.
+2. **Assemble APK** – Execute `flutter build apk --debug` (or `--profile` if desired), verify `build/app/outputs/flutter-apk/app-debug.apk` exists, and capture the commit SHA used.
+3. **Device matrix** – Connect at least the three required device categories (Pixel 9a/Android 14+, Samsung/Android 11-13, alternate OEM/Android 11-13). Record model + Android version + build number for each in the tracker table.
+4. **Installation & reset** – For each device and each scenario requiring a clean slate, run `adb uninstall com.beatbox.trainer` followed by `adb install build/app/outputs/flutter-apk/app-debug.apk`. Confirm microphone permissions are reset where applicable.
+5. **Scenario execution** – Follow every numbered step in the scenarios section, record Pass/Fail in the tracker table, capture screenshots or screen recordings for anomalies, and log measured metrics (latency, BPM drift, performance numbers, etc.).
+6. **Evidence & sign-off** – Attach exported debug logs, performance benchmark outputs, and any crash logs. Update `UAT_TEST_SCENARIOS.md`, `UAT_SIGN_OFF_REPORT.md`, and `UAT_READINESS_REPORT.md` with the collected data, then obtain product/QA sign-off.
 
 ---
 
