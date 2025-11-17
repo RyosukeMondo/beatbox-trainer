@@ -70,6 +70,66 @@ Could not determine a usable wildcard IP for this machine.
 
 **Action required:** Manual UAT must still occur on a workstation with physical Android hardware. Before that run, regenerate the flutter_rust_bridge outputs so the Freezed constructors exist, then retry the commands above on the workstation (outside the sandbox) to capture APKs and device telemetry.
 
+### Sandbox Attempt #2 (2025-11-17 00:36 UTC)
+
+To push the CLI environment as far as possible, the Flutter SDK was replicated into the repository (`rsync -a /home/rmondo/flutter .flutter-sdk`) and all tool invocations were executed with the following overrides:
+
+```bash
+export FLUTTER_ROOT="$PWD/.flutter-sdk"
+export PATH="$FLUTTER_ROOT/bin:$PATH"
+export HOME="$PWD/.home"
+export PUB_CACHE="$PWD/.pub-cache"
+export GRADLE_USER_HOME="$PWD/.gradle"
+export FLUTTER_SKIP_UPDATE_CHECK=true
+export FLUTTER_SUPPRESS_ANALYTICS=true
+export DART_SUPPRESS_ANALYTICS=true
+```
+
+The `.pub-cache` contents were copied from `/home/rmondo/.pub-cache` so `dart run` could operate offline. With that setup:
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Regenerate Freezed outputs | `dart run build_runner build --delete-conflicting-outputs` | ✅ Success – `error.freezed.dart` now includes `AudioError_StreamFailure` and `CalibrationError_Timeout`, removing the analyzer errors. |
+| Regenerate flutter_rust_bridge glue | `flutter_rust_bridge_codegen generate` | ❌ Blocked offline – `cargo expand` cannot download `axum-macros` from crates.io. Run on a workstation with internet access to refresh `lib/bridge/api.dart/frb_generated.dart` and `rust/src/bridge_generated.rs`. |
+| Integration harness | `flutter test --no-pub test/integration/calibration_flow_test.dart` | ❌ Now fails only because the sandbox forbids binding a VM server socket (`OS Error: Operation not permitted, errno = 1`). |
+
+```
+$ flutter test --no-pub test/integration/calibration_flow_test.dart
+00:05 +0 -1: loading ... calibration_flow_test.dart [E]
+  Failed to create server socket (OS Error: Operation not permitted, errno = 1), address = 127.0.0.1, port = 0
+```
+
+**Action Items for Physical QA**
+1. Re-run `flutter_rust_bridge_codegen generate` (network required) so Rust/Dart bindings are synchronized.
+2. Re-run `dart run build_runner build --delete-conflicting-outputs` after regenerating the bridge.
+3. Execute `flutter test --no-pub test/integration/calibration_flow_test.dart` on a workstation to confirm the harness now passes.
+4. Build the APK (`flutter build apk --debug`) and install it via `adb install` on each physical Android device.
+5. Run every scenario below, capture Pass/Fail per device, and attach screenshots/logcat for any anomalies.
+6. Populate the **Scenario Execution Tracker** before requesting sign-off.
+
+### Scenario Execution Tracker
+
+| Scenario | Device | Status | Evidence | Notes |
+| --- | --- | --- | --- | --- |
+| 1 – First-Time User Onboarding Flow | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Requires physical device |
+| 2 – Complete Calibration Process | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Needs microphone samples |
+| 3 – Calibration Persistence Across Restarts | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Verify SharedPreferences |
+| 4 – Real-Time Classification with Timing Feedback | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Capture latency measurements |
+| 5 – Debug Mode Activation & Metrics | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Video the overlay if possible |
+| 6 – Debug Log Export | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Attach exported JSON |
+| 7 – Settings: Default BPM | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Stopwatch BPM |
+| 8 – Settings: Classifier Level Selection | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Document recalibration dialog |
+| 9 – Settings: Recalibrate Button | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Confirm data cleared |
+| 10 – Navigation: Settings Access | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Back button behaviour |
+| 11 – Offline Mode Validation | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Use Airplane Mode |
+| 12 – Error Handling: Microphone Denied | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Capture permission toast |
+| 13 – Performance Benchmarks | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Run `tools/performance_validation.py` |
+| 14 – Background/Foreground Resilience | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Document session state |
+| 15 – Settings Persistence & Validation | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Include reinstall step |
+| 16 – Accessibility (TalkBack) | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Optional if time allows |
+| 17 – Crash Recovery / Error Surfaces | _Pending assignment_ | ☐ Pending | _Add screenshot/log link_ | Force failures via debug mode |
+| 18 – Sign-Off & Evidence Packaging | _Pending assignment_ | ☐ Pending | _Add report link_ | Complete once above rows filled |
+
 ---
 
 ## Test Scenarios

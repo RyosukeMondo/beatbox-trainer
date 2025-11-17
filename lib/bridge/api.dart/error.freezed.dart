@@ -55,7 +55,7 @@ extension AudioErrorPatterns on AudioError {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AudioError_BpmInvalid value)?  bpmInvalid,TResult Function( AudioError_AlreadyRunning value)?  alreadyRunning,TResult Function( AudioError_NotRunning value)?  notRunning,TResult Function( AudioError_HardwareError value)?  hardwareError,TResult Function( AudioError_PermissionDenied value)?  permissionDenied,TResult Function( AudioError_StreamOpenFailed value)?  streamOpenFailed,TResult Function( AudioError_LockPoisoned value)?  lockPoisoned,TResult Function( AudioError_JniInitFailed value)?  jniInitFailed,TResult Function( AudioError_ContextNotInitialized value)?  contextNotInitialized,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AudioError_BpmInvalid value)?  bpmInvalid,TResult Function( AudioError_AlreadyRunning value)?  alreadyRunning,TResult Function( AudioError_NotRunning value)?  notRunning,TResult Function( AudioError_HardwareError value)?  hardwareError,TResult Function( AudioError_PermissionDenied value)?  permissionDenied,TResult Function( AudioError_StreamOpenFailed value)?  streamOpenFailed,TResult Function( AudioError_LockPoisoned value)?  lockPoisoned,TResult Function( AudioError_JniInitFailed value)?  jniInitFailed,TResult Function( AudioError_ContextNotInitialized value)?  contextNotInitialized,TResult Function( AudioError_StreamFailure value)?  streamFailure,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid() when bpmInvalid != null:
@@ -67,7 +67,8 @@ return permissionDenied(_that);case AudioError_StreamOpenFailed() when streamOpe
 return streamOpenFailed(_that);case AudioError_LockPoisoned() when lockPoisoned != null:
 return lockPoisoned(_that);case AudioError_JniInitFailed() when jniInitFailed != null:
 return jniInitFailed(_that);case AudioError_ContextNotInitialized() when contextNotInitialized != null:
-return contextNotInitialized(_that);case _:
+return contextNotInitialized(_that);case AudioError_StreamFailure() when streamFailure != null:
+return streamFailure(_that);case _:
   return orElse();
 
 }
@@ -85,7 +86,7 @@ return contextNotInitialized(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AudioError_BpmInvalid value)  bpmInvalid,required TResult Function( AudioError_AlreadyRunning value)  alreadyRunning,required TResult Function( AudioError_NotRunning value)  notRunning,required TResult Function( AudioError_HardwareError value)  hardwareError,required TResult Function( AudioError_PermissionDenied value)  permissionDenied,required TResult Function( AudioError_StreamOpenFailed value)  streamOpenFailed,required TResult Function( AudioError_LockPoisoned value)  lockPoisoned,required TResult Function( AudioError_JniInitFailed value)  jniInitFailed,required TResult Function( AudioError_ContextNotInitialized value)  contextNotInitialized,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AudioError_BpmInvalid value)  bpmInvalid,required TResult Function( AudioError_AlreadyRunning value)  alreadyRunning,required TResult Function( AudioError_NotRunning value)  notRunning,required TResult Function( AudioError_HardwareError value)  hardwareError,required TResult Function( AudioError_PermissionDenied value)  permissionDenied,required TResult Function( AudioError_StreamOpenFailed value)  streamOpenFailed,required TResult Function( AudioError_LockPoisoned value)  lockPoisoned,required TResult Function( AudioError_JniInitFailed value)  jniInitFailed,required TResult Function( AudioError_ContextNotInitialized value)  contextNotInitialized,required TResult Function( AudioError_StreamFailure value)  streamFailure,}){
 final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid():
@@ -97,7 +98,8 @@ return permissionDenied(_that);case AudioError_StreamOpenFailed():
 return streamOpenFailed(_that);case AudioError_LockPoisoned():
 return lockPoisoned(_that);case AudioError_JniInitFailed():
 return jniInitFailed(_that);case AudioError_ContextNotInitialized():
-return contextNotInitialized(_that);}
+return contextNotInitialized(_that);case AudioError_StreamFailure():
+return streamFailure(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -111,7 +113,7 @@ return contextNotInitialized(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AudioError_BpmInvalid value)?  bpmInvalid,TResult? Function( AudioError_AlreadyRunning value)?  alreadyRunning,TResult? Function( AudioError_NotRunning value)?  notRunning,TResult? Function( AudioError_HardwareError value)?  hardwareError,TResult? Function( AudioError_PermissionDenied value)?  permissionDenied,TResult? Function( AudioError_StreamOpenFailed value)?  streamOpenFailed,TResult? Function( AudioError_LockPoisoned value)?  lockPoisoned,TResult? Function( AudioError_JniInitFailed value)?  jniInitFailed,TResult? Function( AudioError_ContextNotInitialized value)?  contextNotInitialized,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AudioError_BpmInvalid value)?  bpmInvalid,TResult? Function( AudioError_AlreadyRunning value)?  alreadyRunning,TResult? Function( AudioError_NotRunning value)?  notRunning,TResult? Function( AudioError_HardwareError value)?  hardwareError,TResult? Function( AudioError_PermissionDenied value)?  permissionDenied,TResult? Function( AudioError_StreamOpenFailed value)?  streamOpenFailed,TResult? Function( AudioError_LockPoisoned value)?  lockPoisoned,TResult? Function( AudioError_JniInitFailed value)?  jniInitFailed,TResult? Function( AudioError_ContextNotInitialized value)?  contextNotInitialized,TResult? Function( AudioError_StreamFailure value)?  streamFailure,}){
 final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid() when bpmInvalid != null:
@@ -123,7 +125,8 @@ return permissionDenied(_that);case AudioError_StreamOpenFailed() when streamOpe
 return streamOpenFailed(_that);case AudioError_LockPoisoned() when lockPoisoned != null:
 return lockPoisoned(_that);case AudioError_JniInitFailed() when jniInitFailed != null:
 return jniInitFailed(_that);case AudioError_ContextNotInitialized() when contextNotInitialized != null:
-return contextNotInitialized(_that);case _:
+return contextNotInitialized(_that);case AudioError_StreamFailure() when streamFailure != null:
+return streamFailure(_that);case _:
   return null;
 
 }
@@ -140,7 +143,7 @@ return contextNotInitialized(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( int bpm)?  bpmInvalid,TResult Function()?  alreadyRunning,TResult Function()?  notRunning,TResult Function( String details)?  hardwareError,TResult Function()?  permissionDenied,TResult Function( String reason)?  streamOpenFailed,TResult Function( String component)?  lockPoisoned,TResult Function( String reason)?  jniInitFailed,TResult Function()?  contextNotInitialized,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( int bpm)?  bpmInvalid,TResult Function()?  alreadyRunning,TResult Function()?  notRunning,TResult Function( String details)?  hardwareError,TResult Function()?  permissionDenied,TResult Function( String reason)?  streamOpenFailed,TResult Function( String component)?  lockPoisoned,TResult Function( String reason)?  jniInitFailed,TResult Function()?  contextNotInitialized,TResult Function( String reason)?  streamFailure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid() when bpmInvalid != null:
 return bpmInvalid(_that.bpm);case AudioError_AlreadyRunning() when alreadyRunning != null:
@@ -151,7 +154,8 @@ return permissionDenied();case AudioError_StreamOpenFailed() when streamOpenFail
 return streamOpenFailed(_that.reason);case AudioError_LockPoisoned() when lockPoisoned != null:
 return lockPoisoned(_that.component);case AudioError_JniInitFailed() when jniInitFailed != null:
 return jniInitFailed(_that.reason);case AudioError_ContextNotInitialized() when contextNotInitialized != null:
-return contextNotInitialized();case _:
+return contextNotInitialized();case AudioError_StreamFailure() when streamFailure != null:
+return streamFailure(_that.reason);case _:
   return orElse();
 
 }
@@ -169,7 +173,7 @@ return contextNotInitialized();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( int bpm)  bpmInvalid,required TResult Function()  alreadyRunning,required TResult Function()  notRunning,required TResult Function( String details)  hardwareError,required TResult Function()  permissionDenied,required TResult Function( String reason)  streamOpenFailed,required TResult Function( String component)  lockPoisoned,required TResult Function( String reason)  jniInitFailed,required TResult Function()  contextNotInitialized,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( int bpm)  bpmInvalid,required TResult Function()  alreadyRunning,required TResult Function()  notRunning,required TResult Function( String details)  hardwareError,required TResult Function()  permissionDenied,required TResult Function( String reason)  streamOpenFailed,required TResult Function( String component)  lockPoisoned,required TResult Function( String reason)  jniInitFailed,required TResult Function()  contextNotInitialized,required TResult Function( String reason)  streamFailure,}) {final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid():
 return bpmInvalid(_that.bpm);case AudioError_AlreadyRunning():
@@ -180,7 +184,8 @@ return permissionDenied();case AudioError_StreamOpenFailed():
 return streamOpenFailed(_that.reason);case AudioError_LockPoisoned():
 return lockPoisoned(_that.component);case AudioError_JniInitFailed():
 return jniInitFailed(_that.reason);case AudioError_ContextNotInitialized():
-return contextNotInitialized();}
+return contextNotInitialized();case AudioError_StreamFailure():
+return streamFailure(_that.reason);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -194,7 +199,7 @@ return contextNotInitialized();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( int bpm)?  bpmInvalid,TResult? Function()?  alreadyRunning,TResult? Function()?  notRunning,TResult? Function( String details)?  hardwareError,TResult? Function()?  permissionDenied,TResult? Function( String reason)?  streamOpenFailed,TResult? Function( String component)?  lockPoisoned,TResult? Function( String reason)?  jniInitFailed,TResult? Function()?  contextNotInitialized,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( int bpm)?  bpmInvalid,TResult? Function()?  alreadyRunning,TResult? Function()?  notRunning,TResult? Function( String details)?  hardwareError,TResult? Function()?  permissionDenied,TResult? Function( String reason)?  streamOpenFailed,TResult? Function( String component)?  lockPoisoned,TResult? Function( String reason)?  jniInitFailed,TResult? Function()?  contextNotInitialized,TResult? Function( String reason)?  streamFailure,}) {final _that = this;
 switch (_that) {
 case AudioError_BpmInvalid() when bpmInvalid != null:
 return bpmInvalid(_that.bpm);case AudioError_AlreadyRunning() when alreadyRunning != null:
@@ -205,7 +210,8 @@ return permissionDenied();case AudioError_StreamOpenFailed() when streamOpenFail
 return streamOpenFailed(_that.reason);case AudioError_LockPoisoned() when lockPoisoned != null:
 return lockPoisoned(_that.component);case AudioError_JniInitFailed() when jniInitFailed != null:
 return jniInitFailed(_that.reason);case AudioError_ContextNotInitialized() when contextNotInitialized != null:
-return contextNotInitialized();case _:
+return contextNotInitialized();case AudioError_StreamFailure() when streamFailure != null:
+return streamFailure(_that.reason);case _:
   return null;
 
 }
@@ -672,6 +678,72 @@ String toString() {
 
 
 /// @nodoc
+
+
+class AudioError_StreamFailure extends AudioError {
+  const AudioError_StreamFailure({required this.reason}): super._();
+  
+
+ final  String reason;
+
+/// Create a copy of AudioError
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AudioError_StreamFailureCopyWith<AudioError_StreamFailure> get copyWith => _$AudioError_StreamFailureCopyWithImpl<AudioError_StreamFailure>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AudioError_StreamFailure&&(identical(other.reason, reason) || other.reason == reason));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,reason);
+
+@override
+String toString() {
+  return 'AudioError.streamFailure(reason: $reason)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AudioError_StreamFailureCopyWith<$Res> implements $AudioErrorCopyWith<$Res> {
+  factory $AudioError_StreamFailureCopyWith(AudioError_StreamFailure value, $Res Function(AudioError_StreamFailure) _then) = _$AudioError_StreamFailureCopyWithImpl;
+@useResult
+$Res call({
+ String reason
+});
+
+
+
+
+}
+/// @nodoc
+class _$AudioError_StreamFailureCopyWithImpl<$Res>
+    implements $AudioError_StreamFailureCopyWith<$Res> {
+  _$AudioError_StreamFailureCopyWithImpl(this._self, this._then);
+
+  final AudioError_StreamFailure _self;
+  final $Res Function(AudioError_StreamFailure) _then;
+
+/// Create a copy of AudioError
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
+  return _then(AudioError_StreamFailure(
+reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$CalibrationError {
 
 
@@ -715,7 +787,7 @@ extension CalibrationErrorPatterns on CalibrationError {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult Function( CalibrationError_NotComplete value)?  notComplete,TResult Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult Function( CalibrationError_AudioEngineError value)?  audioEngineError,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult Function( CalibrationError_NotComplete value)?  notComplete,TResult Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult Function( CalibrationError_Timeout value)?  timeout,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
@@ -723,8 +795,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures() when i
 return invalidFeatures(_that);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete(_that);case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned(_that);case CalibrationError_AudioEngineError() when audioEngineError != null:
-return audioEngineError(_that);case _:
+return statePoisoned(_that);case CalibrationError_Timeout() when timeout != null:
+return timeout(_that);case _:
   return orElse();
 
 }
@@ -742,7 +814,7 @@ return audioEngineError(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CalibrationError_InsufficientSamples value)  insufficientSamples,required TResult Function( CalibrationError_InvalidFeatures value)  invalidFeatures,required TResult Function( CalibrationError_NotComplete value)  notComplete,required TResult Function( CalibrationError_AlreadyInProgress value)  alreadyInProgress,required TResult Function( CalibrationError_StatePoisoned value)  statePoisoned,required TResult Function( CalibrationError_AudioEngineError value)  audioEngineError,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CalibrationError_InsufficientSamples value)  insufficientSamples,required TResult Function( CalibrationError_InvalidFeatures value)  invalidFeatures,required TResult Function( CalibrationError_NotComplete value)  notComplete,required TResult Function( CalibrationError_AlreadyInProgress value)  alreadyInProgress,required TResult Function( CalibrationError_StatePoisoned value)  statePoisoned,required TResult Function( CalibrationError_Timeout value)  timeout,}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples():
@@ -750,8 +822,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures():
 return invalidFeatures(_that);case CalibrationError_NotComplete():
 return notComplete(_that);case CalibrationError_AlreadyInProgress():
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned():
-return statePoisoned(_that);case CalibrationError_AudioEngineError():
-return audioEngineError(_that);}
+return statePoisoned(_that);case CalibrationError_Timeout():
+return timeout(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -765,7 +837,7 @@ return audioEngineError(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult? Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult? Function( CalibrationError_NotComplete value)?  notComplete,TResult? Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult? Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult? Function( CalibrationError_AudioEngineError value)?  audioEngineError,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CalibrationError_InsufficientSamples value)?  insufficientSamples,TResult? Function( CalibrationError_InvalidFeatures value)?  invalidFeatures,TResult? Function( CalibrationError_NotComplete value)?  notComplete,TResult? Function( CalibrationError_AlreadyInProgress value)?  alreadyInProgress,TResult? Function( CalibrationError_StatePoisoned value)?  statePoisoned,TResult? Function( CalibrationError_Timeout value)?  timeout,}){
 final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
@@ -773,8 +845,8 @@ return insufficientSamples(_that);case CalibrationError_InvalidFeatures() when i
 return invalidFeatures(_that);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete(_that);case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress(_that);case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned(_that);case CalibrationError_AudioEngineError() when audioEngineError != null:
-return audioEngineError(_that);case _:
+return statePoisoned(_that);case CalibrationError_Timeout() when timeout != null:
+return timeout(_that);case _:
   return null;
 
 }
@@ -791,15 +863,15 @@ return audioEngineError(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult Function( String reason)?  invalidFeatures,TResult Function()?  notComplete,TResult Function()?  alreadyInProgress,TResult Function()?  statePoisoned,TResult Function( String details)?  audioEngineError,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult Function( String reason)?  invalidFeatures,TResult Function()?  notComplete,TResult Function()?  alreadyInProgress,TResult Function()?  statePoisoned,TResult Function( String reason)?  timeout,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures() when invalidFeatures != null:
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete();case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress();case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned();case CalibrationError_AudioEngineError() when audioEngineError != null:
-return audioEngineError(_that.details);case _:
+return statePoisoned();case CalibrationError_Timeout() when timeout != null:
+return timeout(_that.reason);case _:
   return orElse();
 
 }
@@ -817,15 +889,15 @@ return audioEngineError(_that.details);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( BigInt required_,  BigInt collected)  insufficientSamples,required TResult Function( String reason)  invalidFeatures,required TResult Function()  notComplete,required TResult Function()  alreadyInProgress,required TResult Function()  statePoisoned,required TResult Function( String details)  audioEngineError,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( BigInt required_,  BigInt collected)  insufficientSamples,required TResult Function( String reason)  invalidFeatures,required TResult Function()  notComplete,required TResult Function()  alreadyInProgress,required TResult Function()  statePoisoned,required TResult Function( String reason)  timeout,}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples():
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures():
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete():
 return notComplete();case CalibrationError_AlreadyInProgress():
 return alreadyInProgress();case CalibrationError_StatePoisoned():
-return statePoisoned();case CalibrationError_AudioEngineError():
-return audioEngineError(_that.details);}
+return statePoisoned();case CalibrationError_Timeout():
+return timeout(_that.reason);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -839,15 +911,15 @@ return audioEngineError(_that.details);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult? Function( String reason)?  invalidFeatures,TResult? Function()?  notComplete,TResult? Function()?  alreadyInProgress,TResult? Function()?  statePoisoned,TResult? Function( String details)?  audioEngineError,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( BigInt required_,  BigInt collected)?  insufficientSamples,TResult? Function( String reason)?  invalidFeatures,TResult? Function()?  notComplete,TResult? Function()?  alreadyInProgress,TResult? Function()?  statePoisoned,TResult? Function( String reason)?  timeout,}) {final _that = this;
 switch (_that) {
 case CalibrationError_InsufficientSamples() when insufficientSamples != null:
 return insufficientSamples(_that.required_,_that.collected);case CalibrationError_InvalidFeatures() when invalidFeatures != null:
 return invalidFeatures(_that.reason);case CalibrationError_NotComplete() when notComplete != null:
 return notComplete();case CalibrationError_AlreadyInProgress() when alreadyInProgress != null:
 return alreadyInProgress();case CalibrationError_StatePoisoned() when statePoisoned != null:
-return statePoisoned();case CalibrationError_AudioEngineError() when audioEngineError != null:
-return audioEngineError(_that.details);case _:
+return statePoisoned();case CalibrationError_Timeout() when timeout != null:
+return timeout(_that.reason);case _:
   return null;
 
 }
@@ -1088,43 +1160,43 @@ String toString() {
 /// @nodoc
 
 
-class CalibrationError_AudioEngineError extends CalibrationError {
-  const CalibrationError_AudioEngineError({required this.details}): super._();
+class CalibrationError_Timeout extends CalibrationError {
+  const CalibrationError_Timeout({required this.reason}): super._();
   
 
- final  String details;
+ final  String reason;
 
 /// Create a copy of CalibrationError
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$CalibrationError_AudioEngineErrorCopyWith<CalibrationError_AudioEngineError> get copyWith => _$CalibrationError_AudioEngineErrorCopyWithImpl<CalibrationError_AudioEngineError>(this, _$identity);
+$CalibrationError_TimeoutCopyWith<CalibrationError_Timeout> get copyWith => _$CalibrationError_TimeoutCopyWithImpl<CalibrationError_Timeout>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CalibrationError_AudioEngineError&&(identical(other.details, details) || other.details == details));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CalibrationError_Timeout&&(identical(other.reason, reason) || other.reason == reason));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,details);
+int get hashCode => Object.hash(runtimeType,reason);
 
 @override
 String toString() {
-  return 'CalibrationError.audioEngineError(details: $details)';
+  return 'CalibrationError.timeout(reason: $reason)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $CalibrationError_AudioEngineErrorCopyWith<$Res> implements $CalibrationErrorCopyWith<$Res> {
-  factory $CalibrationError_AudioEngineErrorCopyWith(CalibrationError_AudioEngineError value, $Res Function(CalibrationError_AudioEngineError) _then) = _$CalibrationError_AudioEngineErrorCopyWithImpl;
+abstract mixin class $CalibrationError_TimeoutCopyWith<$Res> implements $CalibrationErrorCopyWith<$Res> {
+  factory $CalibrationError_TimeoutCopyWith(CalibrationError_Timeout value, $Res Function(CalibrationError_Timeout) _then) = _$CalibrationError_TimeoutCopyWithImpl;
 @useResult
 $Res call({
- String details
+ String reason
 });
 
 
@@ -1132,18 +1204,18 @@ $Res call({
 
 }
 /// @nodoc
-class _$CalibrationError_AudioEngineErrorCopyWithImpl<$Res>
-    implements $CalibrationError_AudioEngineErrorCopyWith<$Res> {
-  _$CalibrationError_AudioEngineErrorCopyWithImpl(this._self, this._then);
+class _$CalibrationError_TimeoutCopyWithImpl<$Res>
+    implements $CalibrationError_TimeoutCopyWith<$Res> {
+  _$CalibrationError_TimeoutCopyWithImpl(this._self, this._then);
 
-  final CalibrationError_AudioEngineError _self;
-  final $Res Function(CalibrationError_AudioEngineError) _then;
+  final CalibrationError_Timeout _self;
+  final $Res Function(CalibrationError_Timeout) _then;
 
 /// Create a copy of CalibrationError
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? details = null,}) {
-  return _then(CalibrationError_AudioEngineError(
-details: null == details ? _self.details : details // ignore: cast_nullable_to_non_nullable
+@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
+  return _then(CalibrationError_Timeout(
+reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
