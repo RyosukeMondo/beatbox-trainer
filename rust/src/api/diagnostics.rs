@@ -66,3 +66,23 @@ pub fn stop_fixture_session() -> Result<(), AudioError> {
         })
     }
 }
+
+pub(crate) fn fixture_session_is_running() -> bool {
+    #[cfg(any(test, feature = "diagnostics_fixtures"))]
+    {
+        FIXTURE_SESSION
+            .lock()
+            .map(|guard| {
+                guard
+                    .as_ref()
+                    .map(|handle| handle.is_running())
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(any(test, feature = "diagnostics_fixtures")))]
+    {
+        false
+    }
+}

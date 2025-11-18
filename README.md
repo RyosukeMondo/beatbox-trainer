@@ -157,8 +157,8 @@ evidence capture) now lives in
   fixtures so QA can produce auditable JSON transcripts. Typical command:
   `cargo run --bin beatbox_cli --features diagnostics_fixtures -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output ../logs/smoke/classify_basic_hits.json`.
 - **HTTP Debug/Control Server** – Enabled by the `debug_http` feature with
-  endpoints (`/health`, `/metrics`, `/classification-stream`, `/params`)
-  protected by `BEATBOX_DEBUG_TOKEN` (default `beatbox-debug`).
+  endpoints (`/healthz`, `/metrics`, `/trace`, `/classification-stream`,
+  `/params`) protected by `BEATBOX_DEBUG_TOKEN` (default `beatbox-debug`).
 - **Debug Lab Screen** – Hidden settings entry (tap the build number 5×) that
   visualizes FRB streams, mirrors the HTTP SSE feed, and pushes live
   `ParamPatch` updates. Use it to correlate CLI transcripts with on-device

@@ -24,7 +24,7 @@
     - Add shell wrapper + documentation for invoking CLI locally and from CI; include unit/integration tests for argument parsing and happy-path executions via `cargo test`/`cargo run`.
   - Requirements: Requirement 2 (CLI criteria), Requirement 1.3 (logs/metrics)
 
-- [ ] 4. Provide HTTP debug server
+- [x] 4. Provide HTTP debug server
   - Files: `rust/src/debug/http.rs`, `rust/src/debug/routes.rs`, `docs/api/diagnostics-http.md`
   - Actions:
     - Add optional `debug-http` feature enabling Axum-based server with `/healthz`, `/metrics`, `/trace` endpoints returning JSON/Prometheus/SSE payloads.

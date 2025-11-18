@@ -19,9 +19,9 @@ the evidence packets that ship with every pull request.
 - **CLI Harness (`rust/src/bin/beatbox_cli.rs`)** — wraps the fixture catalog
   for deterministic `classify`, `stream`, and `dump-fixtures` commands that
   CI/QA can replay verbatim.
-- **Debug HTTP Server (`rust/src/http`)** — Axum router with `/health`,
-  `/metrics`, `/classification-stream`, and `/params` endpoints guarded by the
-  `debug_http` feature and an auth token.
+- **Debug HTTP Server (`rust/src/debug/http.rs`)** — Axum router with `/healthz`,
+  `/metrics`, `/trace`, `/classification-stream`, and `/params` endpoints guarded
+  by the `debug_http` feature and an auth token.
 - **Debug Lab (Flutter)** — `lib/ui/screens/debug_lab_screen.dart` visualizes
   the HTTP + FRB telemetry streams, parameter patches, and synthetic fixture
   toggle within the app.
@@ -172,26 +172,30 @@ from user-facing QA docs.
 ## Debug HTTP Server
 
 The Axum server starts automatically in debug/profile builds when the
-`debug_http` feature is enabled (see `rust/src/http/mod.rs`). It binds to
-`BEATBOX_DEBUG_HTTP_ADDR` and requires the token from `BEATBOX_DEBUG_TOKEN`.
+`debug_http` feature is enabled (see `rust/src/debug/http.rs`). It binds to
+`BEATBOX_DEBUG_HTTP_ADDR`, authenticates via `BEATBOX_DEBUG_TOKEN`, and
+publishes telemetry snapshots described in `docs/api/diagnostics-http.md`.
 
 Endpoints:
 
 | Endpoint | Method | Description |
 | --- | --- | --- |
-| `/health` | GET | Engine running flag, uptime, calibration state |
-| `/metrics` | GET | Latest `AudioMetrics` sample + last `TelemetryEvent` |
-| `/classification-stream` | GET | SSE stream mirroring FRB payloads |
-| `/params` | GET | Supported live parameters + calibration snapshot |
-| `/params` | POST | Apply `ParamPatch` (BPM, centroid threshold, ZCR) |
+| `/healthz` | GET | JSON payload with uptime, watchdog state, fixture handle activity, and last error/JNI phase. `/health` aliases the same handler. |
+| `/metrics` | GET | Prometheus text with latency gauges, lifecycle timestamps, watchdog status, and classification counters. |
+| `/trace` | GET | SSE stream of serialized `MetricEvent` telemetry for dashboards or log shippers. |
+| `/classification-stream` | GET | Existing SSE feed of `ClassificationResult` payloads for Debug Lab parity. |
+| `/params` | GET | Supported live parameters + calibration snapshot for quick reference. |
+| `/params` | POST | Apply `ParamPatch` (BPM, centroid threshold, ZCR) in-flight. |
 
 Sample requests:
 
 ```bash
-curl "http://127.0.0.1:8787/health?token=beatbox-debug"
+curl "http://127.0.0.1:8787/healthz?token=beatbox-debug" | jq
+curl -H "Authorization: Bearer beatbox-debug" \
+  http://127.0.0.1:8787/metrics
 curl -N -H "Accept:text/event-stream" \
   -H "X-Debug-Token: beatbox-debug" \
-  http://127.0.0.1:8787/classification-stream
+  http://127.0.0.1:8787/trace
 curl -X POST http://127.0.0.1:8787/params \
   -H "Authorization: Bearer beatbox-debug" \
   -H "Content-Type: application/json" \
@@ -210,7 +214,8 @@ mirrored alongside FRB streams.
 3. Toggle **Synthetic fixtures** to drive deterministic events without using
    the CLI. Under the hood this calls `startFixtureSession`.
 4. Watch the **Audio Metrics** card, **TelemetryChart**, and **Event Log** to
-   confirm parity with the CLI JSON and HTTP `/metrics` payloads.
+   confirm parity with the CLI JSON and the Prometheus text emitted by the
+   HTTP `/metrics` endpoint.
 5. Use the **Param sliders** to send live `ParamPatch` commands over HTTP and
    verify the responses in `logs/smoke/http_smoke.log`.
 

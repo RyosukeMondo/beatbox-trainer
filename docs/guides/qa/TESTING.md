@@ -66,8 +66,9 @@ evidence capture, troubleshooting) now live in a dedicated playbook:
 
 Highlights:
 
-- **Loopback Axum server** (`debug_http` feature) publishes `/health`,
-  `/metrics`, `/classification-stream`, and `/params` endpoints bound to
+- **Loopback Axum server** (`debug_http` feature) publishes `/healthz`
+  (JSON), `/metrics` (Prometheus text), `/trace` (SSE telemetry), the legacy
+  `/classification-stream`, and `/params` endpoints bound to
   `BEATBOX_DEBUG_HTTP_ADDR`. All requests require `BEATBOX_DEBUG_TOKEN`.
 - **Fixture engine & FRB** (`diagnostics_fixtures` feature) let QA feed WAV or
   synthetic PCM into the real DSP pipeline via CLI (`beatbox_cli`) or FRB
