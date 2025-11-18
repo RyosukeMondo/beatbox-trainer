@@ -17,7 +17,7 @@ Key architectural patterns:
 - **Service Abstractions**: Interface-based design for mockable dependencies
 - **Lock-Free Audio Path**: Zero-allocation audio callback for <20ms latency
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
+See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for detailed architecture documentation.
 
 ## Getting Started
 
@@ -46,7 +46,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture docum
 
 ### Building for Android
 
-For complete Android build setup, including cargo-ndk installation, troubleshooting, and deployment, see **[docs/ANDROID_BUILD.md](docs/ANDROID_BUILD.md)**.
+For complete Android build setup, including cargo-ndk installation, troubleshooting, and deployment, see **[docs/guides/platform/ANDROID_BUILD.md](docs/guides/platform/ANDROID_BUILD.md)**.
 
 **Quick start for Android:**
 ```bash
@@ -80,7 +80,7 @@ git commit --no-verify
 
 ### Running Tests
 
-For comprehensive testing instructions, see [docs/TESTING.md](docs/TESTING.md).
+For comprehensive testing instructions, see [docs/guides/qa/TESTING.md](docs/guides/qa/TESTING.md).
 
 **Quick Start:**
 
@@ -153,18 +153,18 @@ The project enforces the following quality standards:
   fixtures so QA can produce auditable JSON transcripts. Typical commands:
   `cargo run -p beatbox_cli classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output ../logs/smoke/classify_basic_hits.json`.
   Fixture WAV/expectation pairs live under `rust/fixtures/`; see
-  [docs/TESTING.md](docs/TESTING.md#cli-fixture-harness-beatbox_cli) for
+  [docs/guides/qa/TESTING.md](docs/guides/qa/TESTING.md#cli-fixture-harness-beatbox_cli) for
   regeneration tips and evidence-handling requirements.
 - **HTTP Debug/Control Server** – Available in debug/profile builds via the
   `debug_http` Cargo feature. Endpoints (`/health`, `/metrics`,
   `/classification-stream`, `/params`) bind to `127.0.0.1:8787` and require the
   token from `BEATBOX_DEBUG_TOKEN` (default `beatbox-debug`). A trimmed OpenAPI
-  snippet lives in [docs/TESTING.md](docs/TESTING.md#debug-http-control-server-feature-debug_http).
+  snippet lives in [docs/guides/qa/TESTING.md](docs/guides/qa/TESTING.md#debug-http-control-server-feature-debug_http).
 - **Debug Lab Screen** – Hidden settings entry (tap the build number 5×) that
   visualizes FRB streams, mirrors the HTTP SSE feed, and sends live
   `ParamPatch` updates. Use it to correlate headset captures, CLI fixture
   results, and HTTP payloads. More detailed operator docs are under
-  [Debug Lab Workflows](docs/TESTING.md#debug-lab-workflows).
+  [Debug Lab Workflows](docs/guides/qa/TESTING.md#debug-lab-workflows).
 
 ## Dependency Injection Patterns
 
@@ -182,9 +182,10 @@ The app relies on `GetIt` for service location (`lib/di/service_locator.dart`).
   touching device hardware.
 
 For the full FRB and Flutter contract (streams, payload shapes, error codes),
-consult [docs/bridge_contracts.md](docs/bridge_contracts.md).
+consult [docs/architecture/bridge_contracts.md](docs/architecture/bridge_contracts.md).
 
 ## Resources
 
 - [Flutter Documentation](https://docs.flutter.dev/)
 - [Rust Documentation](https://doc.rust-lang.org/)
+- [Project Docs Index](docs/README.md)

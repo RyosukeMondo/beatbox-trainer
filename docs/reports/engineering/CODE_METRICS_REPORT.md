@@ -26,7 +26,7 @@ AUTOMATION & EVIDENCE PIPELINE
   snapshot of overall coverage plus the ≥90% critical-path verdicts
   (`rust/src/context.rs`, `rust/src/error.rs`, and every file under `lib/services/audio/`).
 
-These artifacts are now referenced from `UAT_READINESS_REPORT.md` and `docs/TESTING.md`
+These artifacts are now referenced from `UAT_READINESS_REPORT.md` and `docs/guides/qa/TESTING.md`
 so QA can attach the exact evidence that satisfied each gate.
 
 --------------------------------------------------------------------------------

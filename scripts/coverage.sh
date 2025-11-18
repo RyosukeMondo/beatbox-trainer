@@ -678,7 +678,7 @@ EOF
 \`\`\`
 
 ---
-*For more information, see [TESTING.md](../docs/TESTING.md)*
+*For more information, see [TESTING.md](../docs/guides/qa/TESTING.md)*
 EOF
 
     print_success "Unified report generated: $report_file"

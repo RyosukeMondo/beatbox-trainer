@@ -749,8 +749,8 @@ jobs:
 
 ### Project Architecture
 
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) - Application architecture overview
-- [docs/TESTING.md](TESTING.md) - Testing strategy and coverage
+- [docs/architecture/ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - Application architecture overview
+- [docs/guides/qa/TESTING.md](../qa/TESTING.md) - Testing strategy and coverage
 
 ### Error Codes Reference
 

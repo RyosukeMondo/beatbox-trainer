@@ -72,7 +72,7 @@
 ## What's Ready for UAT
 
 ### Documentation ✅
-1. **UAT Test Guide**: docs/UAT_TEST_GUIDE.md
+1. **UAT Test Guide**: docs/guides/qa/UAT_TEST_GUIDE.md
    - 6 comprehensive test cases
    - Pass/fail criteria
    - Sign-off checklist
@@ -81,7 +81,7 @@
    - Automated latency, jitter, CPU checks
    - JSON report generation
 
-3. **Release Checklist**: docs/release/uat_release_checklist.md
+3. **Release Checklist**: docs/guides/release/uat_release_checklist.md
 
 ### Code Quality ✅
 - All critical refactoring complete (47/47 tasks)
@@ -118,10 +118,10 @@
 - [ ] Build release APK
 - [ ] Install on Android test device
 - [ ] Verify adb connection
-- [ ] Review UAT_TEST_GUIDE.md
+- [ ] Review docs/guides/qa/UAT_TEST_GUIDE.md
 
 ### UAT Execution
-- [ ] Execute 6 test cases from UAT_TEST_GUIDE.md
+- [ ] Execute 6 test cases from docs/guides/qa/UAT_TEST_GUIDE.md
 - [ ] Run performance_validation.py tool
 - [ ] Document any issues found
 - [ ] Collect user feedback

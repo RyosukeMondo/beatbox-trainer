@@ -365,4 +365,4 @@ For ongoing performance validation:
 
 - [Requirements Document](../.spec-workflow/specs/remaining-uat-readiness/requirements.md) - Performance requirements
 - [Design Document](../.spec-workflow/specs/remaining-uat-readiness/design.md) - Architecture and performance considerations
-- [UAT Test Guide](./UAT_TEST_GUIDE.md) - User acceptance testing procedures
+- [UAT Test Guide](../../guides/qa/UAT_TEST_GUIDE.md) - User acceptance testing procedures

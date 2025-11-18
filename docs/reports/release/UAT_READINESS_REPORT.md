@@ -282,7 +282,7 @@ if (bpm < 40 || bpm > 240) {
 
 **Status**: ✅ COMPLETE
 
-1. **UAT Testing Guide**: ✅ docs/UAT_TEST_GUIDE.md
+1. **UAT Testing Guide**: ✅ docs/guides/qa/UAT_TEST_GUIDE.md
    - 6 comprehensive test cases
    - Pass/fail criteria
    - Performance metrics
@@ -293,27 +293,27 @@ if (bpm < 40 || bpm > 240) {
    - Validates latency, jitter, CPU, stream overhead
    - JSON report generation
 
-3. **Performance Validation Docs**: ✅ docs/PERFORMANCE_VALIDATION.md
+3. **Performance Validation Docs**: ✅ docs/reports/engineering/PERFORMANCE_VALIDATION.md
    - Tool usage instructions
    - Troubleshooting guide
    - Manual validation fallbacks
 
-4. **UAT Release Checklist**: ✅ docs/release/uat_release_checklist.md
+4. **UAT Release Checklist**: ✅ docs/guides/release/uat_release_checklist.md
    - All validation steps documented
    - Deployment instructions
    - Known limitations
 
-5. **Testing Playbook Updates**: ✅ docs/TESTING.md
+5. **Testing Playbook Updates**: ✅ docs/guides/qa/TESTING.md
    - CLI fixture harness workflow (`beatbox_cli` commands + log paths)
    - HTTP debug-server smoke instructions with `logs/smoke/http_smoke.log` trace guidance
    - Coverage summary artifact reference (`logs/smoke/coverage_summary.json`)
 6. **Diagnostics & DI Guide**: ✅ README.md
    - New "Diagnostics & Observability Tooling" section detailing CLI, HTTP, and Debug Lab entry points
    - "Dependency Injection Patterns" walkthrough describing `setupServiceLocator`, widget injection, and mock overrides
-7. **Bridge Contracts**: ✅ docs/bridge_contracts.md
+7. **Bridge Contracts**: ✅ docs/architecture/bridge_contracts.md
    - Canonical JSON payloads for FRB streams and HTTP endpoints (classification, calibration, telemetry, ParamPatch)
    - Error code lookup table plus parity checklist linking CLI ↔ HTTP ↔ Flutter
-8. **Troubleshooting Knowledge Base**: ✅ docs/TESTING.md
+8. **Troubleshooting Knowledge Base**: ✅ docs/guides/qa/TESTING.md
    - Stream + token issues table with actionable fixes for QA/support teams
 9. **UAT Scenario Refresh**: ✅ UAT_TEST_SCENARIOS.md
    - Adds Debug Lab verification and deterministic fixture evidence capture so support can follow the same scripts
@@ -404,7 +404,7 @@ Based on architecture and previous testing:
 ## 11. UAT Approval Criteria
 
 ### Must Pass (Critical)
-1. ✅ All 6 UAT test cases pass (see UAT_TEST_GUIDE.md)
+1. ✅ All 6 UAT test cases pass (see docs/guides/qa/UAT_TEST_GUIDE.md)
 2. ⏳ Performance metrics within targets (run performance_validation.py)
 3. ⏳ No critical bugs found during manual testing
 4. ⏳ User experience is smooth and intuitive
@@ -424,7 +424,7 @@ Based on architecture and previous testing:
 ## 12. Recommendations
 
 ### For UAT Phase
-1. **Execute UAT Test Cases**: Follow docs/UAT_TEST_GUIDE.md exactly
+1. **Execute UAT Test Cases**: Follow docs/guides/qa/UAT_TEST_GUIDE.md exactly
 2. **Run Performance Validation**: Use tools/performance_validation.py on Android device
 3. **Collect User Feedback**: Document any UX issues or confusion
 4. **Test Error Scenarios**: Verify error messages are helpful
@@ -470,7 +470,7 @@ Based on architecture and previous testing:
 **Next Steps**:
 1. Build release APK
 2. Install on Android test device
-3. Follow UAT_TEST_GUIDE.md test procedures
+3. Follow docs/guides/qa/UAT_TEST_GUIDE.md test procedures
 4. Run performance_validation.py automated checks
 5. Document results and any issues found
 

@@ -437,7 +437,7 @@ def main():
     print(report)
 
     # Save report to file
-    report_path = project_root / 'CODE_METRICS_REPORT.md'
+    report_path = project_root / 'docs' / 'reports' / 'engineering' / 'CODE_METRICS_REPORT.md'
     with open(report_path, 'w') as f:
         f.write(report)
 
