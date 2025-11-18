@@ -18,6 +18,7 @@ use crate::calibration::procedure::CalibrationProcedure;
 use crate::calibration::progress::CalibrationProgress;
 use crate::calibration::state::CalibrationState;
 use crate::config::OnsetDetectionConfig;
+use crate::telemetry;
 use rtrb::PopError;
 
 pub mod classifier;
@@ -129,6 +130,11 @@ pub fn spawn_analysis_thread(
 
             // Accumulate small buffers into larger chunks
             accumulator.extend_from_slice(&buffer);
+            let occupancy = (accumulator.len().min(min_buffer_size) as f32
+                / min_buffer_size as f32)
+                .clamp(0.0, 1.0)
+                * 100.0;
+            telemetry::hub().record_buffer_occupancy("analysis_accumulator", occupancy);
 
             // Return buffer to pool immediately
             if analysis_channels.pool_producer.push(buffer).is_err() {
@@ -255,6 +261,7 @@ pub fn spawn_analysis_thread(
 
                         // Send result to broadcast channel (drops if no subscribers)
                         // Broadcast channels don't fail on send, they just drop messages if no one is listening
+                        telemetry::hub().record_classification(&result);
                         let _ = result_sender.send(result);
                     }
                 } else {

@@ -9,13 +9,16 @@ use once_cell::sync::Lazy;
 use crate::analysis::ClassificationResult;
 use crate::bridge_generated::StreamSink;
 use crate::calibration::CalibrationProgress;
-use crate::engine::core::{EngineHandle, ParamPatch, TelemetryEvent};
+use crate::engine::core::{EngineHandle, ParamPatch};
 use crate::error::{AudioError, CalibrationError};
-
-mod diagnostics;
+pub mod diagnostics;
+mod streams;
 mod types;
 
 pub use diagnostics::{start_fixture_session, stop_fixture_session};
+pub use streams::{
+    audio_metrics_stream, diagnostic_metrics_stream, onset_events_stream, telemetry_stream,
+};
 use tokio::sync::mpsc::error::TrySendError;
 pub use types::{AudioMetrics, OnsetEvent};
 
@@ -385,91 +388,6 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
     serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {
         reason: format!("Failed to serialize calibration state to JSON: {}", e),
     })
-}
-
-/// Stream of audio metrics for debug visualization
-///
-/// Returns a stream that yields AudioMetrics with real-time DSP metrics
-/// from the audio processing pipeline. Useful for debugging and development.
-///
-/// Metrics include:
-/// - RMS amplitude level
-/// - Spectral centroid
-/// - Spectral flux
-/// - Frame numbers and timestamps
-///
-/// # Returns
-/// Stream<AudioMetrics> that yields metrics while audio engine is running
-///
-/// # Usage
-/// ```dart
-/// final stream = await audioMetricsStream();
-/// await for (final metrics in stream) {
-///   print('RMS: ${metrics.rms}, Centroid: ${metrics.spectralCentroid} Hz');
-/// }
-/// ```
-#[flutter_rust_bridge::frb(ignore)]
-pub async fn audio_metrics_stream() -> impl futures::Stream<Item = AudioMetrics> {
-    ENGINE_HANDLE.audio_metrics_stream().await
-}
-
-/// Stream of telemetry events for debug instrumentation
-///
-/// Emits engine lifecycle events (start/stop, BPM changes) and warnings.
-#[allow(unused_must_use)]
-#[flutter_rust_bridge::frb]
-pub fn telemetry_stream(sink: StreamSink<TelemetryEvent>) {
-    let mut telemetry_rx = ENGINE_HANDLE.subscribe_telemetry();
-
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create Tokio runtime for telemetry stream");
-
-        rt.block_on(async move {
-            loop {
-                match telemetry_rx.recv().await {
-                    Some(event) => {
-                        if sink.add(event).is_err() {
-                            break;
-                        }
-                    }
-                    None => {
-                        let _ = sink.add_error(AudioError::StreamFailure {
-                            reason: "telemetry channel closed".to_string(),
-                        });
-                        break;
-                    }
-                }
-            }
-        });
-    });
-}
-
-/// Stream of onset events for debug visualization
-///
-/// Returns a stream that yields OnsetEvent whenever an onset (percussive transient)
-/// is detected. Each event includes extracted features and classification result.
-///
-/// Useful for:
-/// - Understanding onset detection behavior
-/// - Debugging classification issues
-/// - Visualizing feature extraction in real-time
-///
-/// # Returns
-/// Stream<OnsetEvent> that yields onset events while audio engine is running
-///
-/// # Usage
-/// ```dart
-/// final stream = await onsetEventsStream();
-/// await for (final event in stream) {
-///   print('Onset at ${event.timestamp}ms: ${event.classification?.sound}');
-/// }
-/// ```
-#[flutter_rust_bridge::frb(ignore)]
-pub async fn onset_events_stream() -> impl futures::Stream<Item = OnsetEvent> {
-    ENGINE_HANDLE.onset_events_stream().await
 }
 
 // Error code constant accessors for Dart/Flutter

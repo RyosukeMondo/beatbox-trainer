@@ -11,6 +11,7 @@ import 'analysis.dart';
 import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'api.dart';
+import 'api/diagnostics.dart';
 import 'calibration/progress.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -18,6 +19,8 @@ import 'engine/core.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
+import 'telemetry/events.dart';
+import 'testing/fixtures.dart';
 
 
 
@@ -30,13 +33,21 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
                     required super.portManager,
                   });
 
-                  
+                  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FixtureSpecPtr => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
+
+
 
                   @protected AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+@protected FixtureSpec dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw);
+
+@protected FixtureSpec dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw);
 
 @protected RustStreamSink<CalibrationProgress> dco_decode_StreamSink_calibration_progress_Sse(dynamic raw);
 
 @protected RustStreamSink<ClassificationResult> dco_decode_StreamSink_classification_result_Sse(dynamic raw);
+
+@protected RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(dynamic raw);
 
 @protected RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(dynamic raw);
 
@@ -64,11 +75,17 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected ClassificationResult dco_decode_classification_result(dynamic raw);
 
+@protected DiagnosticError dco_decode_diagnostic_error(dynamic raw);
+
 @protected double dco_decode_f_32(dynamic raw);
 
 @protected int dco_decode_i_32(dynamic raw);
 
+@protected LifecyclePhase dco_decode_lifecycle_phase(dynamic raw);
+
 @protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+@protected MetricEvent dco_decode_metric_event(dynamic raw);
 
 @protected String? dco_decode_opt_String(dynamic raw);
 
@@ -98,9 +115,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
+@protected FixtureSpec sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer);
+
+@protected FixtureSpec sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer);
+
 @protected RustStreamSink<CalibrationProgress> sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer);
 
 @protected RustStreamSink<ClassificationResult> sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer);
+
+@protected RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(SseDeserializer deserializer);
 
 @protected RustStreamSink<TelemetryEvent> sse_decode_StreamSink_telemetry_event_Sse(SseDeserializer deserializer);
 
@@ -128,11 +151,17 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected ClassificationResult sse_decode_classification_result(SseDeserializer deserializer);
 
+@protected DiagnosticError sse_decode_diagnostic_error(SseDeserializer deserializer);
+
 @protected double sse_decode_f_32(SseDeserializer deserializer);
 
 @protected int sse_decode_i_32(SseDeserializer deserializer);
 
+@protected LifecyclePhase sse_decode_lifecycle_phase(SseDeserializer deserializer);
+
 @protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+@protected MetricEvent sse_decode_metric_event(SseDeserializer deserializer);
 
 @protected String? sse_decode_opt_String(SseDeserializer deserializer);
 
@@ -164,9 +193,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer);
 
+@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer);
+
+@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer);
+
 @protected void sse_encode_StreamSink_calibration_progress_Sse(RustStreamSink<CalibrationProgress> self, SseSerializer serializer);
 
 @protected void sse_encode_StreamSink_classification_result_Sse(RustStreamSink<ClassificationResult> self, SseSerializer serializer);
+
+@protected void sse_encode_StreamSink_metric_event_Sse(RustStreamSink<MetricEvent> self, SseSerializer serializer);
 
 @protected void sse_encode_StreamSink_telemetry_event_Sse(RustStreamSink<TelemetryEvent> self, SseSerializer serializer);
 
@@ -194,11 +229,17 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected void sse_encode_classification_result(ClassificationResult self, SseSerializer serializer);
 
+@protected void sse_encode_diagnostic_error(DiagnosticError self, SseSerializer serializer);
+
 @protected void sse_encode_f_32(double self, SseSerializer serializer);
 
 @protected void sse_encode_i_32(int self, SseSerializer serializer);
 
+@protected void sse_encode_lifecycle_phase(LifecyclePhase self, SseSerializer serializer);
+
 @protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
+
+@protected void sse_encode_metric_event(MetricEvent self, SseSerializer serializer);
 
 @protected void sse_encode_opt_String(String? self, SseSerializer serializer);
 
@@ -236,11 +277,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 class RustLibWire implements BaseWire {
             RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
-            
+            void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr) => wasmModule.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(ptr);
+
+void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr) => wasmModule.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(ptr);
         }
         @JS('wasm_bindgen') external RustLibWasmModule get wasmModule;
 
         @JS() @anonymous extension type RustLibWasmModule._(JSObject _) implements JSObject {
-            
+            external void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr);
+
+external void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr);
         }
         

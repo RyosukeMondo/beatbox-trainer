@@ -8,7 +8,7 @@
     - Ensure zero-allocation behavior by integrating with `audio::buffer_pool` and reusing rtrb queues; add unit tests covering sample rate conversion, looping, and teardown.
   - Requirements: Requirement 1 (all acceptance criteria)
 
-- [ ] 2. Build telemetry collector and FRB surfaces
+- [x] 2. Build telemetry collector and FRB surfaces
   - Files: `rust/src/telemetry/mod.rs`, `rust/src/telemetry/events.rs`, `lib/bridge/api.dart` (generated), `lib/services/audio/telemetry_stream.dart`
   - Actions:
     - Hook latency, classification, buffer occupancy, JNI lifecycle emitters into telemetry bus with bounded queues.

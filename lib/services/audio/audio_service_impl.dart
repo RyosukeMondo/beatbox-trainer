@@ -12,6 +12,7 @@ import '../../bridge/extensions/error_code_extensions.dart';
 import '../error_handler/error_handler.dart';
 import '../error_handler/exceptions.dart';
 import 'i_audio_service.dart';
+import 'telemetry_stream.dart';
 
 /// Concrete implementation of [IAudioService] wrapping FFI bridge
 ///
@@ -115,6 +116,19 @@ class AudioServiceImpl implements IAudioService {
           .handleError((error) {
             throw _errorHandler.createAudioException(error.toString());
           });
+    } catch (e) {
+      throw _errorHandler.createAudioException(e.toString());
+    }
+  }
+
+  @override
+  Stream<DiagnosticMetric> getDiagnosticMetricsStream() {
+    try {
+      return mapDiagnosticMetrics(api.diagnosticMetricsStream()).handleError(
+        (error) {
+          throw _errorHandler.createAudioException(error.toString());
+        },
+      );
     } catch (e) {
       throw _errorHandler.createAudioException(e.toString());
     }

@@ -11,11 +11,10 @@ import 'engine/core.dart';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'telemetry/events.dart';
 
 
-            // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioMetrics`, `OnsetEvent`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
-// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `onset_events_stream`
+            // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `onset_events_stream`
 
 
             /// Initialize and greet from Rust
@@ -153,7 +152,7 @@ Future<void>  finishCalibration() => RustLib.instance.api.crateApiFinishCalibrat
 /// the number of samples collected (0-10).
 ///
 /// # Returns
-/// `Stream<CalibrationProgress>` that yields progress updates
+/// Stream<CalibrationProgress> that yields progress updates
 ///
 /// # Usage
 /// ```dart
@@ -226,6 +225,9 @@ Future<String>  getCalibrationState() => RustLib.instance.api.crateApiGetCalibra
 ///
 /// Emits engine lifecycle events (start/stop, BPM changes) and warnings.
 Stream<TelemetryEvent>  telemetryStream() => RustLib.instance.api.crateApiTelemetryStream();
+
+/// Stream of diagnostic metrics aggregated from telemetry hub.
+Stream<MetricEvent>  diagnosticMetricsStream() => RustLib.instance.api.crateApiDiagnosticMetricsStream();
 
 /// Get AudioErrorCodes as a structured object with all error code constants
 AudioErrorCodes  getAudioErrorCodes() => RustLib.instance.api.crateApiGetAudioErrorCodes();

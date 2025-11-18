@@ -1,6 +1,7 @@
 import '../../models/calibration_progress.dart';
 import '../../models/classification_result.dart';
 import '../../models/telemetry_event.dart';
+import 'telemetry_stream.dart';
 
 /// Audio service interface for dependency injection and testing.
 ///
@@ -83,6 +84,12 @@ abstract class IAudioService {
   /// Consumers can subscribe to receive engine start/stop notifications,
   /// BPM adjustments, and warning signals for debug overlays.
   Stream<TelemetryEvent> getTelemetryStream();
+
+  /// Stream of detailed diagnostic metrics used by the harness tooling.
+  ///
+  /// Exposes latency samples, buffer occupancy gauges, and JNI lifecycle
+  /// events for automated tests and developer overlays.
+  Stream<DiagnosticMetric> getDiagnosticMetricsStream();
 
   /// Start calibration workflow.
   ///

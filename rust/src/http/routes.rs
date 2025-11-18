@@ -16,6 +16,7 @@ use tokio::sync::mpsc::error::TrySendError;
 use crate::api::AudioMetrics;
 use crate::calibration::CalibrationState;
 use crate::engine::core::{EngineHandle, ParamPatch, TelemetryEvent};
+use crate::telemetry::{self, TelemetrySnapshot};
 
 use super::sse;
 
@@ -94,6 +95,7 @@ pub struct HealthResponse {
 pub struct MetricsResponse {
     pub latest_audio_metrics: Option<AudioMetrics>,
     pub latest_telemetry: Option<TelemetryEvent>,
+    pub diagnostics: TelemetrySnapshot,
 }
 
 /// Parameter description payload.
@@ -169,10 +171,12 @@ pub async fn metrics(
         let mut telemetry_rx = state.handle.telemetry_receiver();
         drain_broadcast(&mut telemetry_rx)
     };
+    let diagnostics = telemetry::hub().snapshot();
 
     Ok(Json(MetricsResponse {
         latest_audio_metrics,
         latest_telemetry,
+        diagnostics,
     }))
 }
 
@@ -349,6 +353,7 @@ mod tests {
         println!("[HTTP Smoke] /metrics => {json}");
         assert_eq!(status, StatusCode::OK);
         assert!(json["latest_audio_metrics"].is_null() || json["latest_audio_metrics"].is_object());
+        assert!(json["diagnostics"].is_object());
     }
 
     #[tokio::test]

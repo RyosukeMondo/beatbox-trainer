@@ -16,6 +16,7 @@ pub mod error;
 pub mod fixtures;
 pub mod http;
 pub mod managers;
+pub mod telemetry;
 pub mod testing;
 
 // Generated FFI bridge code (created by flutter_rust_bridge codegen)
@@ -54,6 +55,8 @@ fn init_logging() {
 /// Static storage for JavaVM pointer
 /// This is set during JNI_OnLoad and used later when the context is provided
 #[cfg(target_os = "android")]
+use crate::telemetry::LifecyclePhase;
+#[cfg(target_os = "android")]
 static JAVA_VM: once_cell::sync::OnceCell<jni::JavaVM> = once_cell::sync::OnceCell::new();
 
 /// JNI_OnLoad is called when the native library is loaded by Android
@@ -75,6 +78,7 @@ pub extern "system" fn JNI_OnLoad(
     init_logging();
 
     info!("JNI_OnLoad called - storing JavaVM pointer");
+    crate::telemetry::hub().record_jni_phase(LifecyclePhase::LibraryLoaded);
 
     // Store the JavaVM pointer for later use when the context is provided
     if JAVA_VM.set(vm).is_err() {
@@ -112,6 +116,7 @@ fn initialize_ndk_context_once(vm: &jni::JavaVM, context_global: &jni::objects::
             );
         }
         info!("Android context initialized successfully with JavaVM and Context");
+        crate::telemetry::hub().record_jni_phase(LifecyclePhase::ContextInitialized);
     } else {
         info!("Android context already initialized, skipping re-initialization");
     }
@@ -152,6 +157,7 @@ pub extern "system" fn Java_com_ryosukemondo_beatbox_1trainer_MainActivity_initi
 
     info!("Created global reference for application context");
     initialize_ndk_context_once(vm, &context_global);
+    crate::telemetry::hub().record_jni_phase(LifecyclePhase::PermissionsGranted);
 }
 
 #[cfg(test)]

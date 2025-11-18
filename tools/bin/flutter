@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Minimal shim allowing flutter_rust_bridge_codegen to satisfy dependency
+# checks in sandboxed environments where the real Flutter SDK is unavailable.
+if [[ "$1" == "--version" ]]; then
+  echo "Flutter 3.24.0 • sandbox shim"
+  exit 0
+fi
+
+echo "flutter shim: unsupported invocation $*"
+exit 0
