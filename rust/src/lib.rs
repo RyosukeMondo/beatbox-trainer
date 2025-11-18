@@ -16,6 +16,7 @@ pub mod error;
 pub mod fixtures;
 pub mod http;
 pub mod managers;
+pub mod testing;
 
 // Generated FFI bridge code (created by flutter_rust_bridge codegen)
 #[allow(

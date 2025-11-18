@@ -11,52 +11,16 @@ use crate::bridge_generated::StreamSink;
 use crate::calibration::CalibrationProgress;
 use crate::engine::core::{EngineHandle, ParamPatch, TelemetryEvent};
 use crate::error::{AudioError, CalibrationError};
+
+mod diagnostics;
+mod types;
+
+pub use diagnostics::{start_fixture_session, stop_fixture_session};
 use tokio::sync::mpsc::error::TrySendError;
+pub use types::{AudioMetrics, OnsetEvent};
 
 // Re-export error code constants for FFI exposure
 pub use crate::error::{AudioErrorCodes, CalibrationErrorCodes};
-
-/// Audio metrics for debug visualization
-///
-/// Provides real-time DSP metrics from the audio processing pipeline
-/// for debugging and development purposes.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct AudioMetrics {
-    /// Root mean square (RMS) amplitude level (0.0 to 1.0)
-    pub rms: f64,
-    /// Spectral centroid in Hz (weighted mean frequency)
-    pub spectral_centroid: f64,
-    /// Spectral flux (measure of spectral change over time)
-    pub spectral_flux: f64,
-    /// Frame number in audio stream
-    pub frame_number: u64,
-    /// Timestamp in milliseconds since engine start
-    pub timestamp: u64,
-}
-
-/// Onset event with classification details
-///
-/// Emitted whenever an onset (percussive transient) is detected,
-/// including the extracted features and classification result.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct OnsetEvent {
-    /// Timestamp in milliseconds since engine start
-    pub timestamp: u64,
-    /// Onset energy/strength (unnormalized)
-    pub energy: f64,
-    /// Spectral centroid in Hz
-    pub centroid: f64,
-    /// Zero-crossing rate (0.0 to 1.0)
-    pub zcr: f64,
-    /// Spectral flatness (0.0 to 1.0)
-    pub flatness: f64,
-    /// Spectral rolloff in Hz
-    pub rolloff: f64,
-    /// Decay time in milliseconds
-    pub decay_time_ms: f64,
-    /// Classification result (if available)
-    pub classification: Option<ClassificationResult>,
-}
 
 /// Global engine handle instance - Single dependency injection container
 ///
@@ -524,20 +488,4 @@ pub fn get_calibration_error_codes() -> CalibrationErrorCodes {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_greet() {
-        let result = greet("World".to_string()).unwrap();
-        assert_eq!(result, "Hello, World! Flutter Rust Bridge is working.");
-    }
-
-    #[test]
-    fn test_get_version() {
-        let result = get_version().unwrap();
-        assert_eq!(result, "0.1.0");
-    }
-
-    // Removed: add_numbers test (stub function removed)
-}
+mod tests;

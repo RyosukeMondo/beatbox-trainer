@@ -9,7 +9,7 @@
 // - Pipeline: OnsetDetector → FeatureExtractor → Classifier → Quantizer
 // - Output: ClassificationResult sent via tokio channel to Dart Stream
 
-use std::sync::atomic::{AtomicU32, AtomicU64};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
 
@@ -18,6 +18,7 @@ use crate::calibration::procedure::CalibrationProcedure;
 use crate::calibration::progress::CalibrationProgress;
 use crate::calibration::state::CalibrationState;
 use crate::config::OnsetDetectionConfig;
+use rtrb::PopError;
 
 pub mod classifier;
 pub mod features;
@@ -90,6 +91,7 @@ pub fn spawn_analysis_thread(
     result_sender: tokio::sync::broadcast::Sender<ClassificationResult>,
     onset_config: OnsetDetectionConfig,
     log_every_n_buffers: u64,
+    shutdown_flag: Option<Arc<AtomicBool>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         // Initialize DSP components (all allocations happen here, not in loop)
@@ -114,9 +116,12 @@ pub fn spawn_analysis_thread(
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
             let buffer = match analysis_channels.data_consumer.pop() {
                 Ok(buf) => buf,
-                Err(_) => {
-                    // Queue is empty, try again
-                    // Small sleep to avoid busy-waiting
+                Err(PopError::Empty) => {
+                    if let Some(flag) = shutdown_flag.as_ref() {
+                        if !flag.load(Ordering::SeqCst) {
+                            break;
+                        }
+                    }
                     std::thread::sleep(std::time::Duration::from_millis(1));
                     continue;
                 }
@@ -140,7 +145,7 @@ pub fn spawn_analysis_thread(
             unsafe {
                 NON_ZERO_CHECK += 1;
                 if let Some(interval) = log_interval {
-                    if interval > 0 && NON_ZERO_CHECK % interval == 0 {
+                    if interval > 0 && NON_ZERO_CHECK.is_multiple_of(interval) {
                         let max_amplitude =
                             accumulator.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
                         log::info!(
@@ -270,232 +275,4 @@ pub fn spawn_analysis_thread(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::audio::buffer_pool::BufferPool;
-    use crate::calibration::procedure::CalibrationProcedure;
-    use crate::calibration::state::CalibrationState;
-    use std::sync::atomic::{AtomicU32, AtomicU64};
-    use std::sync::{Arc, Mutex, RwLock};
-    use std::thread;
-    use std::time::Duration;
-    use tokio::sync::broadcast;
-
-    // NOTE: These tests verify the calibration mode switching logic in the analysis thread.
-    // Full end-to-end testing with onset detection requires manual testing on device,
-    // as onset detection needs proper initialization and continuous audio stream.
-    // The tests focus on verifying:
-    // 1. Thread spawns successfully with calibration parameters
-    // 2. Mode switching logic (calibration vs classification)
-    // 3. Lock handling and fallback behavior
-    // 4. Thread doesn't panic on errors
-
-    #[test]
-    fn test_calibration_mode_thread_spawns_with_procedure() {
-        // Verify: Thread spawns successfully with calibration procedure parameter
-        let channels = BufferPool::new(8, 2048);
-        let (_audio_tx, analysis_rx) = channels.split_for_threads();
-
-        let procedure = CalibrationProcedure::new(10);
-        let calibration_procedure = Arc::new(Mutex::new(Some(procedure)));
-        let calibration_state = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (progress_tx, _progress_rx) = broadcast::channel(100);
-        let (result_tx, _result_rx) = broadcast::channel(100);
-        let frame_counter = Arc::new(AtomicU64::new(0));
-        let bpm = Arc::new(AtomicU32::new(120));
-
-        // Spawn thread - should not panic
-        let analysis_thread = spawn_analysis_thread(
-            analysis_rx,
-            calibration_state,
-            calibration_procedure,
-            Some(progress_tx),
-            frame_counter,
-            bpm,
-            48000,
-            result_tx,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        // Give thread time to initialize
-        thread::sleep(Duration::from_millis(50));
-
-        // Verify: Thread is running (not panicked)
-        assert!(!analysis_thread.is_finished());
-    }
-
-    #[test]
-    fn test_classification_mode_thread_spawns_without_procedure() {
-        // Verify: Thread spawns successfully with None procedure (classification mode)
-        let channels = BufferPool::new(8, 2048);
-        let (_audio_tx, analysis_rx) = channels.split_for_threads();
-
-        let calibration_procedure = Arc::new(Mutex::new(None));
-        let calibration_state = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (progress_tx, _progress_rx) = broadcast::channel(100);
-        let (result_tx, _result_rx) = broadcast::channel(100);
-        let frame_counter = Arc::new(AtomicU64::new(0));
-        let bpm = Arc::new(AtomicU32::new(120));
-
-        // Spawn thread - should not panic even without calibration procedure
-        let analysis_thread = spawn_analysis_thread(
-            analysis_rx,
-            calibration_state,
-            calibration_procedure,
-            Some(progress_tx),
-            frame_counter,
-            bpm,
-            48000,
-            result_tx,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        // Give thread time to initialize
-        thread::sleep(Duration::from_millis(50));
-
-        // Verify: Thread is running (not panicked)
-        assert!(!analysis_thread.is_finished());
-    }
-
-    #[test]
-    fn test_thread_handles_calibration_procedure_gracefully() {
-        // Verify: Thread doesn't panic when processing with calibration procedure
-        let channels = BufferPool::new(8, 2048);
-        let (_audio_tx, analysis_rx) = channels.split_for_threads();
-
-        let procedure = CalibrationProcedure::new(10);
-        let calibration_procedure = Arc::new(Mutex::new(Some(procedure)));
-        let calibration_state = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (progress_tx, _progress_rx) = broadcast::channel(100);
-        let (result_tx, _result_rx) = broadcast::channel(100);
-        let frame_counter = Arc::new(AtomicU64::new(0));
-        let bpm = Arc::new(AtomicU32::new(120));
-
-        // Spawn analysis thread
-        let analysis_thread = spawn_analysis_thread(
-            analysis_rx,
-            calibration_state,
-            calibration_procedure,
-            Some(progress_tx),
-            frame_counter,
-            bpm,
-            48000,
-            result_tx,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        // Give thread time to run its processing loop
-        thread::sleep(Duration::from_millis(100));
-
-        // Verify: Thread is still running (hasn't panicked on errors)
-        assert!(!analysis_thread.is_finished());
-    }
-
-    #[test]
-    fn test_thread_accepts_optional_progress_channel() {
-        // Verify: Thread handles optional progress channel (Some and None)
-        let channels1 = BufferPool::new(8, 2048);
-        let (_audio_tx1, analysis_rx1) = channels1.split_for_threads();
-
-        let procedure1 = CalibrationProcedure::new(10);
-        let calibration_procedure1 = Arc::new(Mutex::new(Some(procedure1)));
-        let calibration_state1 = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (progress_tx, _progress_rx) = broadcast::channel(100);
-        let (result_tx1, _result_rx1) = broadcast::channel(100);
-        let frame_counter1 = Arc::new(AtomicU64::new(0));
-        let bpm1 = Arc::new(AtomicU32::new(120));
-
-        // Spawn with Some(progress_tx)
-        let thread1 = spawn_analysis_thread(
-            analysis_rx1,
-            calibration_state1,
-            calibration_procedure1,
-            Some(progress_tx),
-            frame_counter1,
-            bpm1,
-            48000,
-            result_tx1,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        // Spawn with None
-        let channels2 = BufferPool::new(8, 2048);
-        let (_audio_tx2, analysis_rx2) = channels2.split_for_threads();
-        let procedure2 = CalibrationProcedure::new(10);
-        let calibration_procedure2 = Arc::new(Mutex::new(Some(procedure2)));
-        let calibration_state2 = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (result_tx2, _result_rx2) = broadcast::channel(100);
-        let frame_counter2 = Arc::new(AtomicU64::new(0));
-        let bpm2 = Arc::new(AtomicU32::new(120));
-
-        let thread2 = spawn_analysis_thread(
-            analysis_rx2,
-            calibration_state2,
-            calibration_procedure2,
-            None, // No progress channel
-            frame_counter2,
-            bpm2,
-            48000,
-            result_tx2,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        thread::sleep(Duration::from_millis(50));
-
-        // Verify: Both threads running without panicking
-        assert!(!thread1.is_finished());
-        assert!(!thread2.is_finished());
-    }
-
-    #[test]
-    fn test_thread_handles_lock_contention_without_deadlock() {
-        // Verify: Thread doesn't deadlock when procedure lock is held
-        let channels = BufferPool::new(8, 2048);
-        let (_audio_tx, analysis_rx) = channels.split_for_threads();
-
-        let procedure = CalibrationProcedure::new(10);
-        let calibration_procedure = Arc::new(Mutex::new(Some(procedure)));
-        let procedure_clone = Arc::clone(&calibration_procedure);
-
-        let calibration_state = Arc::new(RwLock::new(CalibrationState::new_default()));
-        let (progress_tx, _progress_rx) = broadcast::channel(100);
-        let (result_tx, _result_rx) = broadcast::channel(100);
-        let frame_counter = Arc::new(AtomicU64::new(0));
-        let bpm = Arc::new(AtomicU32::new(120));
-
-        // Spawn analysis thread
-        let analysis_thread = spawn_analysis_thread(
-            analysis_rx,
-            calibration_state,
-            calibration_procedure,
-            Some(progress_tx),
-            frame_counter,
-            bpm,
-            48000,
-            result_tx,
-            OnsetDetectionConfig::default(),
-            100,
-        );
-
-        // Hold lock on procedure to simulate contention
-        let _lock = procedure_clone.lock().unwrap();
-
-        // Give thread time to attempt try_lock (should fail and continue processing)
-        thread::sleep(Duration::from_millis(100));
-
-        // Verify: Thread is still running (didn't deadlock on try_lock failure)
-        assert!(!analysis_thread.is_finished());
-
-        // Drop lock
-        drop(_lock);
-
-        // Verify thread still running
-        thread::sleep(Duration::from_millis(50));
-        assert!(!analysis_thread.is_finished());
-    }
-}
+mod tests;

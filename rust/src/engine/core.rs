@@ -15,6 +15,8 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::analysis::ClassificationResult;
 use crate::api::{AudioMetrics, OnsetEvent};
+#[cfg(any(test, feature = "diagnostics_fixtures"))]
+use crate::calibration::CalibrationProcedure;
 use crate::calibration::{CalibrationProgress, CalibrationState};
 use crate::config::AppConfig;
 use crate::engine::backend::{AudioBackend, EngineStartContext, TimeSource};
@@ -429,8 +431,7 @@ impl EngineHandle {
             .as_millis() as u64
     }
 
-    /// Snapshot the current app configuration (desktop tooling helper).
-    #[cfg(not(target_os = "android"))]
+    /// Snapshot the current app configuration (tooling helper).
     pub fn config_snapshot(&self) -> AppConfig {
         self.config
             .read()
@@ -439,9 +440,16 @@ impl EngineHandle {
     }
 
     /// Expose calibration state handle for fixture processors.
-    #[cfg(not(target_os = "android"))]
     pub fn calibration_state_handle(&self) -> Arc<RwLock<CalibrationState>> {
         self.calibration.get_state_arc()
+    }
+
+    /// Expose calibration procedure handle when diagnostics fixtures need it.
+    #[cfg(any(test, feature = "diagnostics_fixtures"))]
+    pub fn calibration_procedure_handle(
+        &self,
+    ) -> Arc<std::sync::Mutex<Option<CalibrationProcedure>>> {
+        self.calibration.get_procedure_arc()
     }
 }
 
@@ -450,52 +458,7 @@ impl EngineHandle {
 // ========================================================================
 
 #[cfg(test)]
-impl EngineHandle {
-    pub fn new_test() -> Self {
-        Self::new()
-    }
-
-    pub fn reset(&self) {
-        let _ = self.stop_audio();
-        let _ = self.load_calibration(CalibrationState::new_default());
-    }
-
-    pub fn with_mock_calibration(state: CalibrationState) -> Self {
-        let ctx = Self::new();
-        let _ = ctx.load_calibration(state);
-        ctx
-    }
-
-    pub fn get_calibration_state_for_test(&self) -> Option<CalibrationState> {
-        self.get_calibration_state().ok()
-    }
-
-    pub fn is_audio_running_for_test(&self) -> Option<bool> {
-        match self.start_audio(0) {
-            Err(AudioError::AlreadyRunning) => Some(true),
-            Err(AudioError::BpmInvalid { .. }) => Some(false),
-            _ => None,
-        }
-    }
-
-    pub fn is_calibration_active_for_test(&self) -> Option<bool> {
-        match self.start_calibration() {
-            Err(CalibrationError::AlreadyInProgress) => Some(true),
-            Ok(()) => {
-                let _ = self.finish_calibration();
-                Some(false)
-            }
-            _ => None,
-        }
-    }
-
-    pub fn new_test_with_channels() -> Self {
-        let ctx = Self::new();
-        let _ = ctx.broadcasts.init_classification();
-        let _ = ctx.broadcasts.init_calibration();
-        ctx
-    }
-}
+mod tests;
 
 impl Default for EngineHandle {
     fn default() -> Self {
