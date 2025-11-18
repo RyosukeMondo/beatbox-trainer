@@ -16,7 +16,7 @@
     - Write Rust + Dart unit tests ensuring event order guarantees and drop-handling warnings.
   - Requirements: Requirements 1 & 2 (telemetry logging portions), Requirement 3 (log consolidation)
 
-- [ ] 3. Deliver diagnostics CLI tooling
+- [x] 3. Deliver diagnostics CLI tooling
   - Files: `rust/src/bin/bbt-diag.rs`, `tools/cli/diagnostics/run.sh`, `scripts/pre-commit`
   - Actions:
     - Implement clap-based CLI supporting `run`, `serve`, `record` commands with flags for fixture paths, synthetic patterns, metrics port, telemetry format.

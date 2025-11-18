@@ -98,9 +98,51 @@ return `AudioError(StreamFailure)` so automated tests can fail fast.
 
 ## CLI Harness Workflows
 
-All fixture assets live under `rust/fixtures/` with optional
-`<name>.expect.json` expectation files. The CLI wraps these assets so QA can
-generate diffable JSON reports:
+### `bbt-diag` (telemetry + diagnostics control)
+
+The new `bbt-diag` binary drives fixture playback, telemetry summaries, and
+recording pipelines directly inside the diagnostics feature set. Commands:
+
+- `run` – start a fixture source (`--fixture`, `--synthetic`, or `--loopback`)
+  and emit telemetry summaries in either `table` (default) or `json` format via
+  `--telemetry-format`.
+- `record` – capture raw `ClassificationResult` payloads to disk:
+  `bbt-diag record --synthetic sine --watch-ms 300 --max-events 8 --output logs/smoke/diag.json`.
+- `serve` – launch the existing debug HTTP server with token/port overrides
+  (`--host`, `--metrics-port`, `--token`) when compiled with `debug_http`.
+
+Helpful flags shared by `run`/`record`:
+
+| Flag | Description |
+| --- | --- |
+| `--fixture <wav>` | Stream PCM from a WAV asset. |
+| `--synthetic <pattern>` | Generate deterministic SINE/SQUARE/WHITE_NOISE/IMPULSE patterns. |
+| `--loopback` | Exercise the microphone passthrough stub without external audio. |
+| `--watch-ms <ms>` | Duration before the CLI tears down the fixture session. |
+| `--duration-ms <ms>` | Override `FixtureSpec` duration (per loop). |
+| `--telemetry-format json|table` | Output format for telemetry summaries (run command). |
+
+Wrap the binary through `tools/cli/diagnostics/run.sh` to align with CI
+defaults. The script automatically enables the `diagnostics_fixtures` feature,
+captures logs under `logs/diagnostics/`, and supports overrides:
+
+```bash
+# default synthetic impulse stream
+tools/cli/diagnostics/run.sh
+
+# run beat triggered fixture + HTTP server simultaneously
+BBT_DIAG_FEATURES="diagnostics_fixtures debug_http" \
+tools/cli/diagnostics/run.sh serve --metrics-port 9090 --token my-token
+```
+
+Use `tools/cli/diagnostics/run.sh record ...` inside CI smoke jobs so the JSON
+artifacts land next to other QA evidence.
+
+### `beatbox_cli` (expectation diff runner)
+
+All fixture assets still live under `rust/fixtures/` with optional
+`<name>.expect.json` expectation files. The legacy CLI wraps these assets so QA
+can generate diffable JSON reports:
 
 ```bash
 cd rust
@@ -178,9 +220,14 @@ attachments next to existing smoke logs for easy upload to QA tickets.
 ## Evidence & Automation
 
 - `scripts/pre-commit` (see comments at the end of the hook) automatically runs
-  Flutter tests, Rust tests, CLI smoke (`cargo run --bin beatbox_cli ...`), and
+  Flutter tests, Rust tests, both CLI smokes (`cargo run --bin beatbox_cli ...`
+  plus `cargo run --features diagnostics_fixtures --bin bbt-diag -- run/record`), and
   HTTP smoke (`cargo test --features debug_http http::routes::tests::`). Logs
   land in `logs/smoke/cli_smoke.log` and `logs/smoke/http_smoke.log`.
+- Use `tools/cli/diagnostics/run.sh` locally or in CI to capture repeatable
+  telemetry snapshots; the wrapper persists stdout to
+  `logs/diagnostics/bbt-diag-<timestamp>.log` and mirrors the arguments that
+  pre-commit uses.
 - `scripts/coverage.sh` now treats diagnostics harnesses as critical paths:
   - Rust coverage must keep `testing/fixture_engine.rs` and
     `api/diagnostics.rs` above 90%.

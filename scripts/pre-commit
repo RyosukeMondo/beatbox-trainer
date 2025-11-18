@@ -24,6 +24,7 @@ ARTIFACT_DIR="$PROJECT_ROOT/logs/smoke"
 CLI_SMOKE_LOG="$ARTIFACT_DIR/cli_smoke.log"
 HTTP_SMOKE_LOG="$ARTIFACT_DIR/http_smoke.log"
 CLI_SMOKE_REPORT="$ARTIFACT_DIR/classify_basic_hits.json"
+DIAG_RECORD_REPORT="$ARTIFACT_DIR/bbt_diag_record.json"
 # Generated/third-party files that are exempt from line-count limits
 GENERATED_FILE_PATTERNS=(
     "lib/bridge/api.dart/frb_generated.dart"
@@ -454,16 +455,23 @@ run_cli_smoke_tests() {
     local classify_cmd=(cargo run --bin beatbox_cli -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output "$CLI_SMOKE_REPORT")
     local stream_cmd=(cargo run --bin beatbox_cli -- stream --fixture basic_hits --bpm 110)
     local dump_cmd=(cargo run --bin beatbox_cli -- dump-fixtures)
+    local diag_run_cmd=(cargo run --features diagnostics_fixtures --bin bbt-diag -- run --synthetic sine --watch-ms 300 --telemetry-format json)
+    local diag_record_cmd=(cargo run --features diagnostics_fixtures --bin bbt-diag -- record --synthetic sine --watch-ms 300 --max-events 4 --output "$DIAG_RECORD_REPORT")
 
     if (
         cd "$PROJECT_ROOT/rust" &&
             "${classify_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
             "${stream_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
-            "${dump_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1
+            "${dump_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
+            "${diag_run_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
+            "${diag_record_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1
     ); then
         print_success "CLI harness smoke tests passed (logs: $CLI_SMOKE_LOG)"
         if [ -f "$CLI_SMOKE_REPORT" ]; then
             echo "Classification report stored at $CLI_SMOKE_REPORT"
+        fi
+        if [ -f "$DIAG_RECORD_REPORT" ]; then
+            echo "Diagnostics record stored at $DIAG_RECORD_REPORT"
         fi
     else
         print_error "CLI harness smoke tests failed (see $CLI_SMOKE_LOG)"

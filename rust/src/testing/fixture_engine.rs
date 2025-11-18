@@ -41,6 +41,10 @@ cfg_if::cfg_if! {
                     }
                     Ok(())
                 }
+
+                pub fn is_running(&self) -> bool {
+                    self.running.load(Ordering::SeqCst)
+                }
             }
 
             impl Drop for FixtureHandle {
@@ -159,6 +163,10 @@ cfg_if::cfg_if! {
             impl FixtureHandle {
                 pub fn stop(&mut self) -> Result<(), AudioError> {
                     Ok(())
+                }
+
+                pub fn is_running(&self) -> bool {
+                    false
                 }
             }
 
