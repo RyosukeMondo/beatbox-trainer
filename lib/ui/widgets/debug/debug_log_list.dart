@@ -3,10 +3,7 @@ import '../../../models/debug_log_entry.dart';
 
 /// Scrollable list rendering DebugLab log entries with severity badges.
 class DebugLogList extends StatelessWidget {
-  const DebugLogList({
-    super.key,
-    required this.entries,
-  });
+  const DebugLogList({super.key, required this.entries});
 
   final List<DebugLogEntry> entries;
 
@@ -57,8 +54,9 @@ class DebugLogList extends StatelessWidget {
       DebugLogSource.telemetry => 'TEL',
       DebugLogSource.system => 'SYS',
     };
+    const double badgeOpacity = 0.15;
     return CircleAvatar(
-      backgroundColor: color.withOpacity(0.15),
+      backgroundColor: color.withValues(alpha: badgeOpacity),
       foregroundColor: color,
       child: Text(label, semanticsLabel: 'Source $label'),
     );

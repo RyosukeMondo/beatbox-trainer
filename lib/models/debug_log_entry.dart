@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'classification_result.dart';
 import 'telemetry_event.dart';
 
@@ -39,7 +38,7 @@ class DebugLogEntry {
       severity: DebugLogSeverity.info,
       title: result.sound.displayName,
       detail:
-          '${describeEnum(result.timing.classification)} • '
+          '${result.timing.classification.name} • '
           '${result.timing.formattedError} • '
           '${(result.confidence * 100).toStringAsFixed(1)}%',
       classification: result,
@@ -51,7 +50,8 @@ class DebugLogEntry {
     TelemetryEvent event, {
     DebugLogSeverity? overrideSeverity,
   }) {
-    final severity = overrideSeverity ??
+    final severity =
+        overrideSeverity ??
         (event.type == TelemetryEventType.warning
             ? DebugLogSeverity.warning
             : DebugLogSeverity.info);
@@ -59,7 +59,7 @@ class DebugLogEntry {
       timestamp: DateTime.now(),
       source: DebugLogSource.telemetry,
       severity: severity,
-      title: describeEnum(event.type),
+      title: event.type.name,
       detail: event.detail,
       telemetry: event,
     );

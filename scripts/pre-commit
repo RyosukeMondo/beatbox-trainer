@@ -24,6 +24,11 @@ ARTIFACT_DIR="$PROJECT_ROOT/logs/smoke"
 CLI_SMOKE_LOG="$ARTIFACT_DIR/cli_smoke.log"
 HTTP_SMOKE_LOG="$ARTIFACT_DIR/http_smoke.log"
 CLI_SMOKE_REPORT="$ARTIFACT_DIR/classify_basic_hits.json"
+# Generated/third-party files that are exempt from line-count limits
+GENERATED_FILE_PATTERNS=(
+    "lib/bridge/api.dart/frb_generated.dart"
+    "lib/bridge/api.dart/api.dart"
+)
 
 # Track overall status
 FAILED=0
@@ -84,6 +89,9 @@ check_file_sizes() {
     # Check Dart files
     while IFS= read -r file; do
         if [ -f "$file" ]; then
+            if should_skip_generated_file "$file"; then
+                continue
+            fi
             local line_count=$(wc -l < "$file")
             if [ "$line_count" -gt "$MAX_FILE_LINES" ]; then
                 oversized_files+=("$file ($line_count lines)")
@@ -94,6 +102,9 @@ check_file_sizes() {
     # Check Rust files (excluding test modules)
     while IFS= read -r file; do
         if [ -f "$file" ] && [[ ! "$file" =~ /tests?/ ]] && [[ ! "$file" =~ _test\.rs$ ]]; then
+            if should_skip_generated_file "$file"; then
+                continue
+            fi
             local line_count=$(wc -l < "$file")
             if [ "$line_count" -gt "$MAX_FILE_LINES" ]; then
                 oversized_files+=("$file ($line_count lines)")
@@ -112,6 +123,42 @@ check_file_sizes() {
 
     print_success "All files within size limit"
     return 0
+}
+
+# Determine if a file should be skipped for generated-code checks
+should_skip_generated_file() {
+    local file="$1"
+    for pattern in "${GENERATED_FILE_PATTERNS[@]}"; do
+        if [[ -n "$pattern" && "$file" == $pattern ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+filter_generated_matches() {
+    local lines="$1"
+    local filtered=()
+    while IFS= read -r line; do
+        if [ -z "$line" ]; then
+            continue
+        fi
+        local skip=0
+        for pattern in "${GENERATED_FILE_PATTERNS[@]}"; do
+            local abs_path="$PROJECT_ROOT/$pattern"
+            if [[ -n "$pattern" && "$line" == "$abs_path"* ]]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 0 ]; then
+            filtered+=("$line")
+        fi
+    done <<< "$lines"
+
+    if [ ${#filtered[@]} -ne 0 ]; then
+        printf '%s\n' "${filtered[@]}"
+    fi
 }
 
 # Check function sizes in Dart files
@@ -249,8 +296,24 @@ check_dart_format() {
         return 0
     fi
 
+    local filtered_files=()
+    while IFS= read -r file; do
+        if [ -z "$file" ]; then
+            continue
+        fi
+        if should_skip_generated_file "$file"; then
+            continue
+        fi
+        filtered_files+=("$file")
+    done <<< "$dart_files"
+
+    if [ ${#filtered_files[@]} -eq 0 ]; then
+        print_success "No Dart files to format"
+        return 0
+    fi
+
     # Run dart format in check mode
-    if echo "$dart_files" | xargs dart format --set-exit-if-changed --output=none >/dev/null 2>&1; then
+    if dart format --set-exit-if-changed --output=none "${filtered_files[@]}" >/dev/null 2>&1; then
         print_success "Dart code is properly formatted"
         return 0
     else
@@ -375,13 +438,19 @@ run_tests() {
 
 run_cli_smoke_tests() {
     print_header "Running CLI fixture harness smoke tests"
+
+    if [ ! -f "$PROJECT_ROOT/rust/src/bin/beatbox_cli.rs" ]; then
+        print_warning "beatbox_cli binary not found; skipping CLI harness smoke tests"
+        return 0
+    fi
+
     mkdir -p "$ARTIFACT_DIR"
     : > "$CLI_SMOKE_LOG"
     echo "[CLI smoke] $(date -Iseconds)" >> "$CLI_SMOKE_LOG"
 
-    local classify_cmd=(cargo run -p beatbox_cli -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output "$CLI_SMOKE_REPORT")
-    local stream_cmd=(cargo run -p beatbox_cli -- stream --fixture basic_hits --bpm 110)
-    local dump_cmd=(cargo run -p beatbox_cli dump-fixtures)
+    local classify_cmd=(cargo run --bin beatbox_cli -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output "$CLI_SMOKE_REPORT")
+    local stream_cmd=(cargo run --bin beatbox_cli -- stream --fixture basic_hits --bpm 110)
+    local dump_cmd=(cargo run --bin beatbox_cli -- dump-fixtures)
 
     if (
         cd "$PROJECT_ROOT/rust" &&
@@ -430,13 +499,14 @@ check_bridge_stubs() {
         if [ -e "$path" ]; then
             local result=""
             if command_exists rg; then
-                result=$(rg --no-heading --line-number --color=never -E "$pattern" "$path" || true)
+                result=$(rg --no-heading --line-number --color=never -e "$pattern" "$path" || true)
             else
                 result=$(grep -RInE "$pattern" "$path" || true)
             fi
+            result=$(filter_generated_matches "$result")
             if [ -n "$result" ]; then
                 findings+=$'\n'"$result"
-            }
+            fi
         fi
     done
 

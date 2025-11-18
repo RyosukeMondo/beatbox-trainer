@@ -153,7 +153,7 @@ Future<void>  finishCalibration() => RustLib.instance.api.crateApiFinishCalibrat
 /// the number of samples collected (0-10).
 ///
 /// # Returns
-/// Stream<CalibrationProgress> that yields progress updates
+/// `Stream<CalibrationProgress>` that yields progress updates
 ///
 /// # Usage
 /// ```dart

@@ -26,46 +26,44 @@ use std::thread;
 static SERVER_STARTED: AtomicBool = AtomicBool::new(false);
 
 /// Spawn the debug HTTP server only when the feature flag and debug builds are enabled.
+#[cfg(all(feature = "debug_http", debug_assertions))]
 pub fn spawn_if_enabled(handle: &'static EngineHandle) {
-    #[cfg(all(feature = "debug_http", debug_assertions))]
+    if SERVER_STARTED
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
     {
-        if SERVER_STARTED
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_err()
-        {
-            warn!("Debug HTTP server already running");
-            return;
-        }
-
-        let addr: SocketAddr = std::env::var("BEATBOX_DEBUG_HTTP_ADDR")
-            .unwrap_or_else(|_| "127.0.0.1:8787".to_string())
-            .parse()
-            .unwrap_or_else(|_| SocketAddr::from(([127, 0, 0, 1], 8787)));
-
-        let token =
-            std::env::var("BEATBOX_DEBUG_TOKEN").unwrap_or_else(|_| "beatbox-debug".to_string());
-        let preview = token.chars().take(4).collect::<String>();
-
-        thread::spawn(move || {
-            let runtime = tokio::runtime::Builder::new_multi_thread()
-                .worker_threads(2)
-                .enable_all()
-                .build()
-                .expect("Failed to build tokio runtime for debug HTTP server");
-
-            info!(
-                "Debug HTTP server binding {} (token prefix {}***)",
-                addr, preview
-            );
-
-            runtime.block_on(async move {
-                let state = DebugHttpState::new(handle, token);
-                if let Err(err) = run_http_server(state, addr).await {
-                    error!("Debug HTTP server stopped: {}", err);
-                }
-            });
-        });
+        warn!("Debug HTTP server already running");
+        return;
     }
+
+    let addr: SocketAddr = std::env::var("BEATBOX_DEBUG_HTTP_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:8787".to_string())
+        .parse()
+        .unwrap_or_else(|_| SocketAddr::from(([127, 0, 0, 1], 8787)));
+
+    let token =
+        std::env::var("BEATBOX_DEBUG_TOKEN").unwrap_or_else(|_| "beatbox-debug".to_string());
+    let preview = token.chars().take(4).collect::<String>();
+
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .expect("Failed to build tokio runtime for debug HTTP server");
+
+        info!(
+            "Debug HTTP server binding {} (token prefix {}***)",
+            addr, preview
+        );
+
+        runtime.block_on(async move {
+            let state = DebugHttpState::new(handle, token);
+            if let Err(err) = run_http_server(state, addr).await {
+                error!("Debug HTTP server stopped: {}", err);
+            }
+        });
+    });
 }
 
 #[cfg(not(all(feature = "debug_http", debug_assertions)))]

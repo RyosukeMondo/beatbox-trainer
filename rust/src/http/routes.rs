@@ -1,19 +1,17 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use axum::extract::{Query, State};
 use axum::http::header::{HeaderName, AUTHORIZATION};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Json, Response};
-use axum::routing::{get, post};
+use axum::routing::get;
 use axum::Router;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::TryRecvError;
 use tokio::sync::mpsc::error::TrySendError;
-use tower::timeout::TimeoutLayer;
 
 use crate::api::AudioMetrics;
 use crate::calibration::CalibrationState;
@@ -119,7 +117,6 @@ pub fn build_router(state: DebugHttpState) -> Router {
         .route("/classification-stream", get(classification_stream_handler))
         .route("/params", get(list_params).post(apply_params))
         .with_state(state)
-        .layer(TimeoutLayer::new(Duration::from_secs(5)))
 }
 
 /// Run the HTTP server loop.
@@ -207,7 +204,7 @@ pub async fn apply_params(
     State(state): State<DebugHttpState>,
     Query(query): Query<AuthQuery>,
     headers: HeaderMap,
-    Json(mut patch): Json<ParamPatch>,
+    Json(patch): Json<ParamPatch>,
 ) -> Result<Json<ParamAck>, HttpServerError> {
     state.authorize(&headers, query.token.as_deref())?;
 
@@ -269,7 +266,7 @@ fn drain_broadcast<T: Clone>(rx: &mut broadcast::Receiver<T>) -> Option<T> {
 #[cfg(all(test, feature = "debug_http"))]
 mod tests {
     use super::*;
-    use axum::body::Body;
+    use axum::body::{to_bytes, Body};
     use axum::http::{Request, StatusCode};
     use axum::response::Response;
     use futures::StreamExt;
@@ -287,12 +284,9 @@ mod tests {
 
     async fn response_json(response: Response) -> (StatusCode, Value) {
         let status = response.status();
-        let mut body = response.into_body();
-        let mut bytes = Vec::new();
-        while let Some(chunk) = body.next().await {
-            let chunk = chunk.expect("body chunk");
-            bytes.extend_from_slice(&chunk);
-        }
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body bytes");
         let json = serde_json::from_slice::<Value>(&bytes).expect("JSON body");
         (status, json)
     }

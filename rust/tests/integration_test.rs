@@ -12,6 +12,15 @@
 use beatbox_trainer::context::AppContext;
 use beatbox_trainer::error::{AudioError, CalibrationError};
 
+#[cfg(not(target_os = "android"))]
+fn init_test_runtime() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("failed to build test runtime")
+}
+
 /// Test that AppContext can be created successfully
 #[test]
 fn test_app_context_creation() {
@@ -26,31 +35,27 @@ fn test_app_context_creation() {
 /// On non-Android platforms, start_audio should return HardwareError
 #[test]
 fn test_audio_lifecycle_non_android() {
-    let context = AppContext::new();
-
-    // Attempt to start audio (should fail on non-Android)
-    let result = context.start_audio(120);
-
-    // Verify we get the expected error on non-Android
     #[cfg(not(target_os = "android"))]
     {
-        assert!(result.is_err(), "start_audio should fail on non-Android");
-        match result.unwrap_err() {
-            AudioError::HardwareError { details } => {
-                assert!(
-                    details.contains("only supported on Android"),
-                    "Error should mention Android requirement"
-                );
-            }
-            other => panic!("Expected HardwareError, got {:?}", other),
-        }
+        let runtime = init_test_runtime();
+        let handle = runtime.handle().clone();
+        let _guard = handle.enter();
+
+        let context = AppContext::new();
+        assert!(
+            context.start_audio(120).is_ok(),
+            "start_audio should succeed on desktop stub backend"
+        );
+        assert!(
+            context.stop_audio().is_ok(),
+            "stop_audio should succeed after starting"
+        );
     }
 
-    // On Android, we can't test full lifecycle without real hardware
     #[cfg(target_os = "android")]
     {
-        // Just verify the call doesn't panic
-        let _ = result;
+        let context = AppContext::new();
+        let _ = context.start_audio(120);
     }
 }
 
@@ -102,32 +107,25 @@ fn test_double_start_prevention() {
 /// Test that stop_audio is safe to call when not running
 #[test]
 fn test_stop_audio_when_not_running() {
-    let context = AppContext::new();
-
-    // Stop audio when not running should succeed (graceful handling)
-    let result = context.stop_audio();
-
     #[cfg(not(target_os = "android"))]
     {
-        // On non-Android, stop_audio returns HardwareError
-        assert!(
-            result.is_err(),
-            "stop_audio should return error on non-Android"
-        );
+        let runtime = init_test_runtime();
+        let handle = runtime.handle().clone();
+        let _guard = handle.enter();
+
+        let context = AppContext::new();
+        let result = context.stop_audio();
+        assert!(result.is_err(), "stop_audio should report NotRunning");
         match result.unwrap_err() {
-            AudioError::HardwareError { details } => {
-                assert!(
-                    details.contains("only supported on Android"),
-                    "Error should mention Android requirement"
-                );
-            }
-            other => panic!("Expected HardwareError, got {:?}", other),
+            AudioError::NotRunning => {}
+            other => panic!("Expected NotRunning, got {:?}", other),
         }
     }
 
     #[cfg(target_os = "android")]
     {
-        // On Android, stop_audio when not running should succeed
+        let context = AppContext::new();
+        let result = context.stop_audio();
         assert!(
             result.is_ok(),
             "stop_audio should succeed even when not running"
@@ -225,37 +223,34 @@ async fn test_classification_stream_when_not_running() {
 /// Test error handling for set_bpm when not running
 #[test]
 fn test_set_bpm_when_not_running() {
-    let context = AppContext::new();
-
-    // Try to set BPM without starting audio
-    let result = context.set_bpm(140);
-
     #[cfg(not(target_os = "android"))]
     {
-        // On non-Android, should fail with HardwareError
-        assert!(result.is_err(), "set_bpm should fail on non-Android");
+        let runtime = init_test_runtime();
+        let handle = runtime.handle().clone();
+        let _guard = handle.enter();
+
+        let context = AppContext::new();
+        let result = context.set_bpm(140);
+        assert!(
+            result.is_err(),
+            "set_bpm should fail when engine is stopped"
+        );
         match result.unwrap_err() {
-            AudioError::HardwareError { details } => {
-                assert!(
-                    details.contains("only supported on Android"),
-                    "Error should mention Android requirement"
-                );
-            }
-            other => panic!("Expected HardwareError, got {:?}", other),
+            AudioError::NotRunning => {}
+            other => panic!("Expected NotRunning, got {:?}", other),
         }
     }
 
     #[cfg(target_os = "android")]
     {
-        // On Android, should fail with NotRunning
+        let context = AppContext::new();
+        let result = context.set_bpm(140);
         assert!(
             result.is_err(),
             "set_bpm should fail when audio not running"
         );
         match result.unwrap_err() {
-            AudioError::NotRunning => {
-                // Expected error
-            }
+            AudioError::NotRunning => {}
             other => panic!("Expected NotRunning, got {:?}", other),
         }
     }
@@ -294,30 +289,56 @@ fn test_set_bpm_validation() {
 fn test_concurrent_access() {
     use std::sync::Arc;
     use std::thread;
+    #[cfg(not(target_os = "android"))]
+    {
+        let runtime = init_test_runtime();
+        let handle = runtime.handle().clone();
+        let _guard = handle.enter();
 
-    let context = Arc::new(AppContext::new());
-    let mut handles = vec![];
+        let context = Arc::new(AppContext::new());
+        let mut handles = vec![];
 
-    // Spawn multiple threads that try to use the context
-    for i in 0..5 {
-        let context_clone = Arc::clone(&context);
-        let handle = thread::spawn(move || {
-            if i % 2 == 0 {
-                // Even threads try to start/stop audio
-                let _ = context_clone.start_audio(120);
-                let _ = context_clone.stop_audio();
-            } else {
-                // Odd threads try to start/finish calibration
-                let _ = context_clone.start_calibration();
-                let _ = context_clone.finish_calibration();
-            }
-        });
-        handles.push(handle);
+        for i in 0..5 {
+            let context_clone = Arc::clone(&context);
+            let handle_clone = handle.clone();
+            let thread_handle = thread::spawn(move || {
+                let _thread_guard = handle_clone.enter();
+                if i % 2 == 0 {
+                    let _ = context_clone.start_audio(120);
+                    let _ = context_clone.stop_audio();
+                } else {
+                    let _ = context_clone.start_calibration();
+                    let _ = context_clone.finish_calibration();
+                }
+            });
+            handles.push(thread_handle);
+        }
+
+        for handle in handles {
+            handle.join().expect("Thread should not panic");
+        }
     }
 
-    // Wait for all threads to complete
-    for handle in handles {
-        handle.join().expect("Thread should not panic");
+    #[cfg(target_os = "android")]
+    {
+        let context = Arc::new(AppContext::new());
+        let mut handles = vec![];
+        for i in 0..5 {
+            let context_clone = Arc::clone(&context);
+            let thread_handle = thread::spawn(move || {
+                if i % 2 == 0 {
+                    let _ = context_clone.start_audio(120);
+                    let _ = context_clone.stop_audio();
+                } else {
+                    let _ = context_clone.start_calibration();
+                    let _ = context_clone.finish_calibration();
+                }
+            });
+            handles.push(thread_handle);
+        }
+        for handle in handles {
+            handle.join().expect("Thread should not panic");
+        }
     }
 
     // If we got here, concurrent access is safe
