@@ -149,22 +149,23 @@ The project enforces the following quality standards:
 
 ## Diagnostics & Observability Tooling
 
+The end-to-end workflow (fixture engine, CLI harness, HTTP server, Debug Lab,
+evidence capture) now lives in
+[docs/guides/qa/diagnostics.md](docs/guides/qa/diagnostics.md). Highlights:
+
 - **CLI Harness (`beatbox_cli`)** – Deterministically drives the DSP from WAV
-  fixtures so QA can produce auditable JSON transcripts. Typical commands:
-  `cargo run -p beatbox_cli classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output ../logs/smoke/classify_basic_hits.json`.
-  Fixture WAV/expectation pairs live under `rust/fixtures/`; see
-  [docs/guides/qa/TESTING.md](docs/guides/qa/TESTING.md#cli-fixture-harness-beatbox_cli) for
-  regeneration tips and evidence-handling requirements.
-- **HTTP Debug/Control Server** – Available in debug/profile builds via the
-  `debug_http` Cargo feature. Endpoints (`/health`, `/metrics`,
-  `/classification-stream`, `/params`) bind to `127.0.0.1:8787` and require the
-  token from `BEATBOX_DEBUG_TOKEN` (default `beatbox-debug`). A trimmed OpenAPI
-  snippet lives in [docs/guides/qa/TESTING.md](docs/guides/qa/TESTING.md#debug-http-control-server-feature-debug_http).
+  fixtures so QA can produce auditable JSON transcripts. Typical command:
+  `cargo run --bin beatbox_cli --features diagnostics_fixtures -- classify --fixture basic_hits --expect fixtures/basic_hits.expect.json --output ../logs/smoke/classify_basic_hits.json`.
+- **HTTP Debug/Control Server** – Enabled by the `debug_http` feature with
+  endpoints (`/health`, `/metrics`, `/classification-stream`, `/params`)
+  protected by `BEATBOX_DEBUG_TOKEN` (default `beatbox-debug`).
 - **Debug Lab Screen** – Hidden settings entry (tap the build number 5×) that
-  visualizes FRB streams, mirrors the HTTP SSE feed, and sends live
-  `ParamPatch` updates. Use it to correlate headset captures, CLI fixture
-  results, and HTTP payloads. More detailed operator docs are under
-  [Debug Lab Workflows](docs/guides/qa/TESTING.md#debug-lab-workflows).
+  visualizes FRB streams, mirrors the HTTP SSE feed, and pushes live
+  `ParamPatch` updates. Use it to correlate CLI transcripts with on-device
+  telemetry.
+- **Automation Hooks** – `scripts/pre-commit`, `.vscode/launch.json`, and
+  `scripts/coverage.sh` keep diagnostics smoke logs, IDE launchers, and
+  fixture-engine coverage thresholds in sync across contributors.
 
 ## Dependency Injection Patterns
 

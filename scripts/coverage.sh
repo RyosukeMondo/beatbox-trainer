@@ -65,10 +65,13 @@ ARTIFACT_DIR="$PROJECT_ROOT/logs/smoke"
 CRITICAL_PATHS=(
     "context.rs"
     "error.rs"
+    "testing/fixture_engine.rs"
+    "api/diagnostics.rs"
 )
 
 DART_CRITICAL_PREFIXES=(
     "lib/services/audio/"
+    "lib/services/audio/test_harness/"
 )
 
 # Parse command-line arguments

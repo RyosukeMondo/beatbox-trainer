@@ -58,164 +58,29 @@ flutter test && cd rust && cargo test
 - Dart HTML: `coverage/dart/index.html`
 - Unified Report: `coverage/COVERAGE_REPORT.md`
 
-## Debug HTTP Control Server (Feature `debug_http`)
+## Diagnostics Platform
 
-The Rust crate now exposes a loopback-only Axum server for diagnostics when the `debug_http` Cargo
-feature is enabled (the default for local builds via `flutter_rust_bridge.yaml`). The server only
-boots in debug builds and is guarded by a token to avoid accidental exposure.
+Diagnostics workflows (fixture engine, CLI harness, Debug Lab, HTTP server,
+evidence capture, troubleshooting) now live in a dedicated playbook:
+[docs/guides/qa/diagnostics.md](diagnostics.md).
 
-- **Bind address**: `127.0.0.1:8787` (override with `BEATBOX_DEBUG_HTTP_ADDR=127.0.0.1:9000`)
-- **Token**: `beatbox-debug` by default (override via `BEATBOX_DEBUG_TOKEN=<value>`)
-- **Feature flag**: disable entirely with `cargo build --no-default-features`
-- **Start-up**: automatically spawned from `init_app()` after flutter_rust_bridge initialization
+Highlights:
 
-### Endpoints
+- **Loopback Axum server** (`debug_http` feature) publishes `/health`,
+  `/metrics`, `/classification-stream`, and `/params` endpoints bound to
+  `BEATBOX_DEBUG_HTTP_ADDR`. All requests require `BEATBOX_DEBUG_TOKEN`.
+- **Fixture engine & FRB** (`diagnostics_fixtures` feature) let QA feed WAV or
+  synthetic PCM into the real DSP pipeline via CLI (`beatbox_cli`) or FRB
+  methods (`startFixtureSession`, `stopFixtureSession`).
+- **Debug Lab** (Settings ▸ Debug Lab) mirrors HTTP telemetry, SSE streams, and
+  ParamPatch commands alongside synthetic fixture toggles.
+- **Automation** – `scripts/pre-commit`, `.vscode/launch.json`, and
+  `scripts/coverage.sh` enforce fixture/HTTP smoke runs plus coverage gates for
+  `rust/src/testing/fixture_engine.rs`, `rust/src/api/diagnostics.rs`, and
+  `lib/services/audio/**`.
 
-| Endpoint | Method | Description |
-| --- | --- | --- |
-| `/health` | `GET` | Returns engine state (`engine_running`, `uptime_ms`, calibration flag) |
-| `/metrics` | `GET` | Provides the most recent `AudioMetrics` sample plus telemetry event |
-| `/classification-stream` | `GET` | SSE stream mirroring FRB classification payloads |
-| `/params` | `GET` | Lists supported live parameters + current calibration snapshot |
-| `/params` | `POST` | Applies a `ParamPatch` (`bpm`, `centroid_threshold`, `zcr_threshold`) |
-
-All endpoints accept the token via query (`?token=...`), header (`X-Debug-Token: ...`), or bearer auth.
-
-```bash
-curl "http://127.0.0.1:8787/health?token=beatbox-debug"
-curl -N -H "Accept:text/event-stream" \
-  -H "X-Debug-Token: beatbox-debug" \
-  http://127.0.0.1:8787/classification-stream
-curl -X POST http://127.0.0.1:8787/params \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer beatbox-debug" \
-  -d '{"bpm":110}'
-```
-
-### OpenAPI Snippet
-
-```yaml
-paths:
-  /health:
-    get:
-      security: [{ bearerAuth: [] }]
-      responses:
-        '200':
-          description: Engine status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string }
-                  engine_running: { type: boolean }
-                  uptime_ms: { type: integer, format: int64 }
-                  calibrated: { type: boolean }
-  /params:
-    post:
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                bpm: { type: integer, minimum: 40, maximum: 240 }
-                centroid_threshold: { type: number }
-                zcr_threshold: { type: number }
-      responses:
-        '200':
-          description: Patch accepted
-  /classification-stream:
-    get:
-      summary: Server-sent events mirroring FRB classification payloads
-      responses:
-        '200':
-          description: Continuous stream of `ClassificationResult`
-          headers:
-            Content-Type:
-              schema:
-                type: string
-              example: text/event-stream
-```
-
-### Automated Smoke Checks & Evidence
-
-The HTTP server is exercised automatically before every commit:
-
-```bash
-cargo test --features debug_http http::routes::tests:: -- --nocapture
-```
-
-The smoke run prints the `/health`, `/metrics`, and `/params` JSON payloads so that
-`scripts/pre-commit` can persist an auditable trace in `logs/smoke/http_smoke.log`.
-Attach that log to UAT reports when demonstrating live telemetry and authorization.
-
-## CLI Fixture Harness (`beatbox_cli`)
-
-The CLI harness lets you drive the DSP pipeline deterministically from PCM fixtures:
-
-```bash
-# Classification with expectation diff + persisted report
-cargo run -p beatbox_cli -- classify \
-  --fixture basic_hits \
-  --expect fixtures/basic_hits.expect.json \
-  --output ../logs/smoke/classify_basic_hits.json
-
-# Stream fixture events to stdout
-cargo run -p beatbox_cli -- stream --fixture basic_hits --bpm 110
-
-# Enumerate available fixtures
-cargo run -p beatbox_cli dump-fixtures
-```
-
-`scripts/pre-commit` runs the three commands above and appends the raw stdout/stderr
-to `logs/smoke/cli_smoke.log`, ensuring every commit carries reproducible evidence
-for classification, streaming, and fixture management. The JSON report in
-`logs/smoke/classify_basic_hits.json` is referenced directly by UAT documentation.
-
-### Fixture Layout & Expectation Files
-
-- **Audio fixtures** live in `rust/fixtures/*.wav` and must be mono, 48 kHz PCM.
-- **Expectation files** live next to the WAV with the suffix `.expect.json` and
-  contain the ordered list of `ClassificationResult` payloads produced by
-  `beatbox_cli classify --dump-expect`. Always regenerate these files after
-  tweaking DSP heuristics so CI diffs remain meaningful.
-- **Evidence artifacts**: When `--output` is provided, the CLI emits a full
-  transcript (`classification`, `calibration`, telemetry) saved under
-  `logs/smoke/`. Attach those artifacts to UAT tickets to prove deterministic
-  parity between the CLI and runtime builds.
-
-### Debug Lab Workflows
-
-The Flutter Debug Lab screen (Settings ▸ tap build number 5×) is the canonical
-UI for correlating FRB streams, HTTP SSE, and CLI fixtures.
-
-1. Activate Debug Lab from Settings ▸ Advanced ▸ "Enable Debug Lab".
-2. Provide the HTTP token (default `beatbox-debug`) in the banner; the app will
-   reuse the same token for FRB stream retries.
-3. Start `beatbox_cli stream --fixture=<name>` if you need deterministic input,
-   or enable "Synthetic Input" to feed internal sine bursts.
-4. Watch the **Classification Stream** panel; every entry should match what you
-   see over `curl -N /classification-stream`.
-5. Use the **Parameter Sliders** to send `ParamPatch` commands; verify the
-   confirmation toast references the HTTP `/params` echo payload.
-
-See [README.md](../README.md#diagnostics--observability-tooling) for quick
-navigation tips and bridging diagrams.
-
-## Stream & Token Troubleshooting
-
-| Symptom | Likely Cause | Resolution |
-| --- | --- | --- |
-| `AudioError.StreamFailure: parameter command queue is full` | Too many Debug Lab slider updates queued | Pause gesture spam, wait 500 ms before reapplying, or restart engine via Debug Lab toggle |
-| Debug Lab shows "Token rejected" banner | Token mismatch between HTTP server and app | Export `BEATBOX_DEBUG_TOKEN`, restart app (FRB caches token on init), verify `curl /health?token=...` succeeds |
-| CLI succeeds but HTTP `/classification-stream` is silent | SSE client not authenticated or server disabled | Ensure `debug_http` feature is on (default), include `X-Debug-Token`, and run app in debug/profile build |
-| Flutter UI streams emit stale data | Engine not running or FRB stream closed | Confirm `beatbox_cli` or Training screen started the engine; tap "Restart Engine" in Debug Lab to reopen channels |
-
-When in doubt, inspect `logs/smoke/http_smoke.log` and
-`logs/smoke/cli_smoke.log` before retrying on-device—they capture the last
-successful payloads and tokens.
+Whenever you need endpoint details, CLI recipes, or log-attachment guidance,
+jump to the diagnostics guide instead of duplicating content here.
 
 ## Test Organization
 

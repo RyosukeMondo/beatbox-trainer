@@ -48,7 +48,7 @@
     - Update Gradle test configs so these tests run in CI emulators and produce artifacts (logs + repro commands).
   - Requirements: Requirement 3 (all acceptance criteria)
 
-- [ ] 7. Documentation and developer enablement
+- [x] 7. Documentation and developer enablement
   - Files: `docs/guides/qa/diagnostics.md`, updates to `docs/guides/qa/TESTING.md`, `README.md`, IDE launch configs under `.vscode/` or `tools/`
   - Actions:
     - Author guide covering fixture execution, CLI usage, HTTP server endpoints, interpreting metrics, and attaching logs.

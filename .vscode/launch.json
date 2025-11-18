@@ -1,0 +1,97 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Diagnostics CLI • classify fixture",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/rust",
+      "cargo": {
+        "args": [
+          "run",
+          "--bin",
+          "beatbox_cli",
+          "--features",
+          "diagnostics_fixtures"
+        ],
+        "filter": {
+          "name": "beatbox_cli",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "classify",
+        "--fixture",
+        "basic_hits",
+        "--expect",
+        "fixtures/basic_hits.expect.json",
+        "--output",
+        "../logs/smoke/classify_basic_hits.json",
+        "--bpm",
+        "110"
+      ],
+      "env": {
+        "RUST_LOG": "info",
+        "RUST_BACKTRACE": "1"
+      }
+    },
+    {
+      "name": "Diagnostics CLI • stream fixture",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/rust",
+      "cargo": {
+        "args": [
+          "run",
+          "--bin",
+          "beatbox_cli",
+          "--features",
+          "diagnostics_fixtures"
+        ],
+        "filter": {
+          "name": "beatbox_cli",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "stream",
+        "--fixture",
+        "basic_hits",
+        "--bpm",
+        "110"
+      ],
+      "env": {
+        "RUST_LOG": "info",
+        "RUST_BACKTRACE": "1"
+      }
+    },
+    {
+      "name": "Debug HTTP smoke tests",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/rust",
+      "cargo": {
+        "args": [
+          "test",
+          "--features",
+          "debug_http",
+          "http::routes::tests::"
+        ],
+        "filter": {
+          "name": "beatbox_trainer",
+          "kind": "lib"
+        }
+      },
+      "args": [
+        "--",
+        "--nocapture"
+      ],
+      "env": {
+        "BEATBOX_DEBUG_HTTP_ADDR": "127.0.0.1:8787",
+        "BEATBOX_DEBUG_TOKEN": "beatbox-debug",
+        "RUST_LOG": "info",
+        "RUST_BACKTRACE": "1"
+      }
+    }
+  ]
+}
