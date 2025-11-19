@@ -104,44 +104,26 @@ impl OutputCallback {
             audio_channels,
         }
     }
-}
 
-impl AudioOutputCallback for OutputCallback {
-    type FrameType = (f32, oboe::Mono);
+    /// Non-blocking pump that mirrors microphone input into the analysis queue.
+    fn pump_input_stream(&self, frame_capacity: usize) {
+        if frame_capacity == 0 {
+            return;
+        }
 
-    fn on_audio_ready(
-        &mut self,
-        _stream: &mut dyn AudioOutputStreamSafe,
-        frames: &mut [f32],
-    ) -> DataCallbackResult {
-        // Real-time audio callback - NO ALLOCATIONS, LOCKS, OR BLOCKING!
-
-        // Load current state (atomic operations are lock-free)
-        let current_frame = self.frame_counter.load(Ordering::Relaxed);
-        let current_bpm = self.bpm.load(Ordering::Relaxed);
-        let mut click_pos = self.click_position.load(Ordering::Relaxed) as usize;
-
-        // Read from input stream (microphone) - NON-BLOCKING
-        // try_lock() is used to avoid blocking the real-time thread
         if let Ok(mut input_guard) = self.input_stream.try_lock() {
             if let Some(ref mut input) = *input_guard {
-                // Read audio from input stream (non-blocking)
-                let mut input_buffer = vec![0.0f32; frames.len()];
+                let mut input_buffer = vec![0.0f32; frame_capacity];
                 let frames_read = input.read(&mut input_buffer, 0).unwrap_or(0);
 
                 if frames_read > 0 {
-                    // Push to buffer pool for analysis thread
                     if let Ok(mut channels_guard) = self.audio_channels.try_lock() {
                         if let Some(ref mut channels) = *channels_guard {
-                            // Try to get an empty buffer from pool
                             if let Ok(mut buffer) = channels.pool_consumer.pop() {
                                 buffer.clear();
-                                buffer.extend_from_slice(&input_buffer[..(frames_read as usize)]);
-                                // Push filled buffer to analysis thread
+                                buffer.extend_from_slice(&input_buffer[..frames_read]);
                                 let _ = channels.data_producer.push(buffer);
-                                // Silently drop if queue full - this is expected under load
                             }
-                            // Silently skip if no buffer available - this is expected under load
                         } else {
                             warn!("[AudioCallback] audio_channels is None");
                         }
@@ -162,6 +144,26 @@ impl AudioOutputCallback for OutputCallback {
                 warn!("[AudioCallback] input_stream is None");
             }
         }
+    }
+}
+
+impl AudioOutputCallback for OutputCallback {
+    type FrameType = (f32, oboe::Mono);
+
+    fn on_audio_ready(
+        &mut self,
+        _stream: &mut dyn AudioOutputStreamSafe,
+        frames: &mut [f32],
+    ) -> DataCallbackResult {
+        // Real-time audio callback - NO ALLOCATIONS, LOCKS, OR BLOCKING!
+
+        // Load current state (atomic operations are lock-free)
+        let current_frame = self.frame_counter.load(Ordering::Relaxed);
+        let current_bpm = self.bpm.load(Ordering::Relaxed);
+        let mut click_pos = self.click_position.load(Ordering::Relaxed) as usize;
+
+        // Pump microphone frames into analysis queue (non-blocking)
+        self.pump_input_stream(frames.len());
 
         // Process each output frame (metronome generation)
         for (i, sample) in frames.iter_mut().enumerate() {
