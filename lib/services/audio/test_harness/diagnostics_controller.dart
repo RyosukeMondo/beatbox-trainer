@@ -34,8 +34,9 @@ class FrbFixtureSessionClient implements FixtureSessionClient {
   }
 
   @override
-  Future<void> stop() async {
-    await diagnostics_api.stopFixtureSession();
+  Future<void> stop() {
+    diagnostics_api.stopFixtureSession();
+    return SynchronousFuture(null);
   }
 }
 

@@ -43,12 +43,13 @@ class AudioController {
   Future<void> start({required int bpm}) async {
     final harness = _harnessAudioSource;
     if (harness != null && harness.requiresFixtureSession) {
-      if (_diagnosticsController == null) {
+      final diagnostics = _diagnosticsController;
+      if (diagnostics == null) {
         throw StateError(
           'DiagnosticsController required when using fixture harnesses.',
         );
       }
-      await _diagnosticsController!.startFixtureSession(harness);
+      await diagnostics.startFixtureSession(harness);
       return;
     }
 

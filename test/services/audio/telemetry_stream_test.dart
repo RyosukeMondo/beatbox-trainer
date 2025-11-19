@@ -2,7 +2,7 @@ import 'package:beatbox_trainer/bridge/api.dart/analysis/classifier.dart'
     as ffi_classifier;
 import 'package:beatbox_trainer/bridge/api.dart/telemetry/events.dart' as ffi;
 import 'package:beatbox_trainer/services/audio/telemetry_stream.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DiagnosticMetric', () {
@@ -33,8 +33,9 @@ void main() {
         ),
       ];
 
-      final metrics =
-          await mapDiagnosticMetrics(Stream.fromIterable(events)).toList();
+      final metrics = await mapDiagnosticMetrics(
+        Stream.fromIterable(events),
+      ).toList();
 
       expect(metrics, hasLength(2));
       expect(metrics.first.payload['channel'], 'analysis_accumulator');

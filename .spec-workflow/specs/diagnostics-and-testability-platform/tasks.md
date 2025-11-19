@@ -40,7 +40,7 @@
     - Write unit + widget-level tests using new harness utilities to validate classification/timing UI updates, mocking FRB streams where needed.
   - Requirements: Requirement 1 (Dart layer swap), Requirement 3.1 (mocked bridge adapters)
 
-- [ ] 6. Add Android instrumentation hooks
+- [x] 6. Add Android instrumentation hooks
   - Files: `android/app/src/main/kotlin/.../DiagnosticsReceiver.kt`, `android/app/src/androidTest/.../DiagnosticsLifecycleTest.kt`, updates to `MainActivity.kt`
   - Actions:
     - Implement broadcast receiver / logging utility that captures JNI load/unload, permission callbacks, and forwards to shared log buffer.

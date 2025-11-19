@@ -11,6 +11,7 @@ val rustTargets = mapOf(
     "armeabi-v7a" to "armv7-linux-androideabi",
     "x86_64" to "x86_64-linux-android"
 )
+val diagnosticsPackage = "com.ryosukemondo.beatbox_trainer"
 
 android {
     namespace = "com.ryosukemondo.beatbox_trainer"
@@ -40,6 +41,9 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
     buildTypes {
@@ -64,6 +68,11 @@ android {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
         }
+    }
+
+    testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
+        animationsDisabled = true
     }
 }
 
@@ -149,4 +158,43 @@ tasks.whenTaskAdded {
     if (name == "preBuild") {
         dependsOn("buildRustAndroid")
     }
+}
+
+tasks.register("diagnosticsAndroidTestArtifacts") {
+    group = "verification"
+    description =
+        "Runs diagnostics instrumentation tests and captures adb repro/log artifacts."
+    val logsDir = File(rootProject.projectDir, "logs/diagnostics/android")
+    outputs.dir(logsDir)
+    dependsOn("connectedDebugAndroidTest")
+    doLast {
+        logsDir.mkdirs()
+        val reproFile = File(logsDir, "REPRO_COMMAND.txt")
+        reproFile.writeText(
+            """
+            To rerun diagnostics instrumentation tests manually:
+              adb shell am instrument -w ${diagnosticsPackage}.test/androidx.test.runner.AndroidJUnitRunner
+
+            Latest Gradle results stored in: ${project.buildDir}/outputs/androidTest-results/connected
+            """.trimIndent()
+        )
+
+        val sourceDir = File(project.buildDir, "outputs/androidTest-results/connected")
+        if (sourceDir.exists()) {
+            val targetDir = File(logsDir, "connected")
+            if (targetDir.exists()) {
+                targetDir.deleteRecursively()
+            }
+            sourceDir.copyRecursively(targetDir, overwrite = true)
+        }
+    }
+}
+
+dependencies {
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test:core-ktx:1.5.0")
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestUtil("androidx.test:orchestrator:1.4.2")
 }
