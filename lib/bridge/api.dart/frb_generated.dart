@@ -8,1204 +8,2598 @@ import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'api.dart';
 import 'api/diagnostics.dart';
+import 'api/streams.dart';
 import 'calibration/progress.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'engine/core.dart';
 import 'error.dart';
 import 'frb_generated.dart';
-import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'frb_generated.io.dart'
+    if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'telemetry/events.dart';
+import 'testing/fixture_manifest.dart';
 import 'testing/fixtures.dart';
 
+/// Main entrypoint of the Rust API
+class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
+  @internal
+  static final instance = RustLib._();
 
-                /// Main entrypoint of the Rust API
-                class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
-                  @internal
-                  static final instance = RustLib._();
+  RustLib._();
 
-                  RustLib._();
+  /// Initialize flutter_rust_bridge
+  static Future<void> init({
+    RustLibApi? api,
+    BaseHandler? handler,
+    ExternalLibrary? externalLibrary,
+    bool forceSameCodegenVersion = true,
+  }) async {
+    await instance.initImpl(
+      api: api,
+      handler: handler,
+      externalLibrary: externalLibrary,
+      forceSameCodegenVersion: forceSameCodegenVersion,
+    );
+  }
 
-                  /// Initialize flutter_rust_bridge
-                  static Future<void> init({
-                    RustLibApi? api,
-                    BaseHandler? handler,
-                    ExternalLibrary? externalLibrary,
-                    bool forceSameCodegenVersion = true,
-                  }) async {
-                    await instance.initImpl(
-                      api: api,
-                      handler: handler,
-                      externalLibrary: externalLibrary,
-                      forceSameCodegenVersion: forceSameCodegenVersion,
-                    );
-                  }
+  /// Initialize flutter_rust_bridge in mock mode.
+  /// No libraries for FFI are loaded.
+  static void initMock({required RustLibApi api}) {
+    instance.initMockImpl(api: api);
+  }
 
-                  /// Initialize flutter_rust_bridge in mock mode.
-                  /// No libraries for FFI are loaded.
-                  static void initMock({
-                    required RustLibApi api,
-                  }) {
-                    instance.initMockImpl(
-                      api: api,
-                    );
-                  }
+  /// Dispose flutter_rust_bridge
+  ///
+  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
+  /// is automatically disposed when the app stops.
+  static void dispose() => instance.disposeImpl();
 
-                  /// Dispose flutter_rust_bridge
-                  ///
-                  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
-                  /// is automatically disposed when the app stops.
-                  static void dispose() => instance.disposeImpl();
+  @override
+  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
+      RustLibApiImpl.new;
 
-                  @override
-                  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor => RustLibApiImpl.new;
+  @override
+  WireConstructor<RustLibWire> get wireConstructor =>
+      RustLibWire.fromExternalLibrary;
 
-                  @override
-                  WireConstructor<RustLibWire> get wireConstructor => RustLibWire.fromExternalLibrary;
+  @override
+  Future<void> executeRustInitializers() async {
+    await api.crateApiInitApp();
+  }
 
-                  @override
-                  Future<void> executeRustInitializers() async {
-                    await api.crateApiInitApp();
+  @override
+  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
+      kDefaultExternalLibraryLoaderConfig;
 
-                  }
+  @override
+  String get codegenVersion => '2.11.1';
 
-                  @override
-                  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig => kDefaultExternalLibraryLoaderConfig;
+  @override
+  int get rustContentHash => 1203735652;
 
-                  @override
-                  String get codegenVersion => '2.11.1';
+  static const kDefaultExternalLibraryLoaderConfig =
+      ExternalLibraryLoaderConfig(
+        stem: 'beatbox_trainer',
+        ioDirectory: 'rust/target/release/',
+        webPrefix: 'pkg/',
+      );
+}
 
-                  @override
-                  int get rustContentHash => -359979749;
+abstract class RustLibApi extends BaseApi {
+  Future<void> crateApiApplyParams({required ParamPatch patch});
 
-                  static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
-                    stem: 'beatbox_trainer',
-                    ioDirectory: 'rust/target/release/',
-                    webPrefix: 'pkg/',
-                  );
-                }
-                
+  Stream<CalibrationProgress> crateApiCalibrationStream();
 
-                abstract class RustLibApi extends BaseApi {
-                  Future<void> crateApiApplyParams({required ParamPatch patch });
+  Stream<ClassificationResult> crateApiClassificationStream();
 
-Stream<CalibrationProgress> crateApiCalibrationStream();
+  Stream<MetricEvent> crateApiStreamsDiagnosticMetricsStream();
 
-Stream<ClassificationResult> crateApiClassificationStream();
+  Future<void> crateApiFinishCalibration();
 
-Stream<MetricEvent> crateApiDiagnosticMetricsStream();
+  FixtureManifestEntry? crateApiDiagnosticsFixtureMetadataForId({
+    required String id,
+  });
 
-Future<void> crateApiFinishCalibration();
+  AudioErrorCodes crateApiGetAudioErrorCodes();
 
-AudioErrorCodes crateApiGetAudioErrorCodes();
+  CalibrationErrorCodes crateApiGetCalibrationErrorCodes();
 
-CalibrationErrorCodes crateApiGetCalibrationErrorCodes();
+  Future<String> crateApiGetCalibrationState();
 
-Future<String> crateApiGetCalibrationState();
+  String crateApiGetVersion();
 
-String crateApiGetVersion();
+  String crateApiGreet({required String name});
 
-String crateApiGreet({required String name });
+  Future<void> crateApiInitApp();
 
-Future<void> crateApiInitApp();
+  Future<void> crateApiLoadCalibrationState({required String json});
 
-Future<void> crateApiLoadCalibrationState({required String json });
+  List<FixtureManifestEntry> crateApiDiagnosticsLoadFixtureCatalog();
 
-Future<void> crateApiSetBpm({required int bpm });
+  Future<void> crateApiSetBpm({required int bpm});
 
-Future<void> crateApiStartAudio({required int bpm });
+  Future<void> crateApiStartAudio({required int bpm});
 
-Future<void> crateApiStartCalibration();
+  Future<void> crateApiStartCalibration();
 
-Future<void> crateApiDiagnosticsStartFixtureSession({required FixtureSpec spec });
+  Future<void> crateApiDiagnosticsStartFixtureSession({
+    required FixtureSpec spec,
+  });
 
-Future<void> crateApiStopAudio();
+  Future<void> crateApiStopAudio();
 
-void crateApiDiagnosticsStopFixtureSession();
+  void crateApiDiagnosticsStopFixtureSession();
 
-Stream<TelemetryEvent> crateApiTelemetryStream();
+  Stream<TelemetryEvent> crateApiStreamsTelemetryStream();
 
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_FixtureSpec;
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_FixtureSpec;
 
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_FixtureSpec;
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_FixtureSpec;
 
-CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FixtureSpecPtr;
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FixtureSpecPtr;
+}
 
+class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
+  RustLibApiImpl({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
 
-                }
-                
-
-                class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
-                  RustLibApiImpl({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
-
-                  @override Future<void> crateApiApplyParams({required ParamPatch patch })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_param_patch(patch, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiApplyParams({required ParamPatch patch}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_param_patch(patch, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiApplyParamsConstMeta,
-            argValues: [patch],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiApplyParamsConstMeta,
+        argValues: [patch],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiApplyParamsConstMeta =>
+      const TaskConstMeta(debugName: "apply_params", argNames: ["patch"]);
 
-        TaskConstMeta get kCrateApiApplyParamsConstMeta => const TaskConstMeta(
-            debugName: "apply_params",
-            argNames: ["patch"],
-        );
-        
-
-@override Stream<CalibrationProgress> crateApiCalibrationStream()  { 
-            final sink = RustStreamSink<CalibrationProgress>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_StreamSink_calibration_progress_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiCalibrationStreamConstMeta,
-            argValues: [sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
-
-
-        TaskConstMeta get kCrateApiCalibrationStreamConstMeta => const TaskConstMeta(
-            debugName: "calibration_stream",
-            argNames: ["sink"],
-        );
-        
-
-@override Stream<ClassificationResult> crateApiClassificationStream()  { 
-            final sink = RustStreamSink<ClassificationResult>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_StreamSink_classification_result_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiClassificationStreamConstMeta,
-            argValues: [sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
-
-
-        TaskConstMeta get kCrateApiClassificationStreamConstMeta => const TaskConstMeta(
-            debugName: "classification_stream",
-            argNames: ["sink"],
-        );
-        
-
-@override Stream<MetricEvent> crateApiDiagnosticMetricsStream()  { 
-            final sink = RustStreamSink<MetricEvent>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_StreamSink_metric_event_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiDiagnosticMetricsStreamConstMeta,
-            argValues: [sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
-
-
-        TaskConstMeta get kCrateApiDiagnosticMetricsStreamConstMeta => const TaskConstMeta(
-            debugName: "diagnostic_metrics_stream",
-            argNames: ["sink"],
-        );
-        
-
-@override Future<void> crateApiFinishCalibration()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
+  @override
+  Stream<CalibrationProgress> crateApiCalibrationStream() {
+    final sink = RustStreamSink<CalibrationProgress>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+            sse_encode_StreamSink_calibration_progress_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 2,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiCalibrationStreamConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiCalibrationStreamConstMeta =>
+      const TaskConstMeta(debugName: "calibration_stream", argNames: ["sink"]);
+
+  @override
+  Stream<ClassificationResult> crateApiClassificationStream() {
+    final sink = RustStreamSink<ClassificationResult>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_classification_result_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 3,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiClassificationStreamConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiClassificationStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "classification_stream",
+        argNames: ["sink"],
+      );
+
+  @override
+  Stream<MetricEvent> crateApiStreamsDiagnosticMetricsStream() {
+    final sink = RustStreamSink<MetricEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_metric_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 4,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiStreamsDiagnosticMetricsStreamConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiStreamsDiagnosticMetricsStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "diagnostic_metrics_stream",
+        argNames: ["sink"],
+      );
+
+  @override
+  Future<void> crateApiFinishCalibration() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_calibration_error,
-        )
-        ,
-            constMeta: kCrateApiFinishCalibrationConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFinishCalibrationConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFinishCalibrationConstMeta =>
+      const TaskConstMeta(debugName: "finish_calibration", argNames: []);
 
-        TaskConstMeta get kCrateApiFinishCalibrationConstMeta => const TaskConstMeta(
-            debugName: "finish_calibration",
-            argNames: [],
-        );
-        
+  @override
+  FixtureManifestEntry? crateApiDiagnosticsFixtureMetadataForId({
+    required String id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_fixture_manifest_entry,
+          decodeErrorData: sse_decode_audio_error,
+        ),
+        constMeta: kCrateApiDiagnosticsFixtureMetadataForIdConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override AudioErrorCodes crateApiGetAudioErrorCodes()  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateApiDiagnosticsFixtureMetadataForIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "fixture_metadata_for_id",
+        argNames: ["id"],
+      );
+
+  @override
+  AudioErrorCodes crateApiGetAudioErrorCodes() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_audio_error_codes,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiGetAudioErrorCodesConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiGetAudioErrorCodesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiGetAudioErrorCodesConstMeta =>
+      const TaskConstMeta(debugName: "get_audio_error_codes", argNames: []);
 
-        TaskConstMeta get kCrateApiGetAudioErrorCodesConstMeta => const TaskConstMeta(
-            debugName: "get_audio_error_codes",
-            argNames: [],
-        );
-        
-
-@override CalibrationErrorCodes crateApiGetCalibrationErrorCodes()  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  CalibrationErrorCodes crateApiGetCalibrationErrorCodes() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_calibration_error_codes,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiGetCalibrationErrorCodesConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiGetCalibrationErrorCodesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiGetCalibrationErrorCodesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_calibration_error_codes",
+        argNames: [],
+      );
 
-        TaskConstMeta get kCrateApiGetCalibrationErrorCodesConstMeta => const TaskConstMeta(
-            debugName: "get_calibration_error_codes",
-            argNames: [],
-        );
-        
-
-@override Future<String> crateApiGetCalibrationState()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiGetCalibrationState() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_calibration_error,
-        )
-        ,
-            constMeta: kCrateApiGetCalibrationStateConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiGetCalibrationStateConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiGetCalibrationStateConstMeta =>
+      const TaskConstMeta(debugName: "get_calibration_state", argNames: []);
 
-        TaskConstMeta get kCrateApiGetCalibrationStateConstMeta => const TaskConstMeta(
-            debugName: "get_calibration_state",
-            argNames: [],
-        );
-        
-
-@override String crateApiGetVersion()  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_String,
-          decodeErrorData: sse_decode_AnyhowException,
-        )
-        ,
-            constMeta: kCrateApiGetVersionConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateApiGetVersionConstMeta => const TaskConstMeta(
-            debugName: "get_version",
-            argNames: [],
-        );
-        
-
-@override String crateApiGreet({required String name })  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  String crateApiGetVersion() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_AnyhowException,
-        )
-        ,
-            constMeta: kCrateApiGreetConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiGetVersionConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiGetVersionConstMeta =>
+      const TaskConstMeta(debugName: "get_version", argNames: []);
 
-        TaskConstMeta get kCrateApiGreetConstMeta => const TaskConstMeta(
-            debugName: "greet",
-            argNames: ["name"],
-        );
-        
+  @override
+  String crateApiGreet({required String name}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiGreetConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<void> crateApiInitApp()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateApiGreetConstMeta =>
+      const TaskConstMeta(debugName: "greet", argNames: ["name"]);
+
+  @override
+  Future<void> crateApiInitApp() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiInitAppConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiInitAppConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiInitAppConstMeta =>
+      const TaskConstMeta(debugName: "init_app", argNames: []);
 
-        TaskConstMeta get kCrateApiInitAppConstMeta => const TaskConstMeta(
-            debugName: "init_app",
-            argNames: [],
-        );
-        
-
-@override Future<void> crateApiLoadCalibrationState({required String json })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(json, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiLoadCalibrationState({required String json}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(json, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_calibration_error,
-        )
-        ,
-            constMeta: kCrateApiLoadCalibrationStateConstMeta,
-            argValues: [json],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiLoadCalibrationStateConstMeta,
+        argValues: [json],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiLoadCalibrationStateConstMeta =>
+      const TaskConstMeta(
+        debugName: "load_calibration_state",
+        argNames: ["json"],
+      );
 
-        TaskConstMeta get kCrateApiLoadCalibrationStateConstMeta => const TaskConstMeta(
-            debugName: "load_calibration_state",
-            argNames: ["json"],
-        );
-        
+  @override
+  List<FixtureManifestEntry> crateApiDiagnosticsLoadFixtureCatalog() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_fixture_manifest_entry,
+          decodeErrorData: sse_decode_audio_error,
+        ),
+        constMeta: kCrateApiDiagnosticsLoadFixtureCatalogConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<void> crateApiSetBpm({required int bpm })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(bpm, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateApiDiagnosticsLoadFixtureCatalogConstMeta =>
+      const TaskConstMeta(debugName: "load_fixture_catalog", argNames: []);
+
+  @override
+  Future<void> crateApiSetBpm({required int bpm}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(bpm, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiSetBpmConstMeta,
-            argValues: [bpm],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSetBpmConstMeta,
+        argValues: [bpm],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSetBpmConstMeta =>
+      const TaskConstMeta(debugName: "set_bpm", argNames: ["bpm"]);
 
-        TaskConstMeta get kCrateApiSetBpmConstMeta => const TaskConstMeta(
-            debugName: "set_bpm",
-            argNames: ["bpm"],
-        );
-        
-
-@override Future<void> crateApiStartAudio({required int bpm })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(bpm, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiStartAudio({required int bpm}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(bpm, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiStartAudioConstMeta,
-            argValues: [bpm],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiStartAudioConstMeta,
+        argValues: [bpm],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiStartAudioConstMeta =>
+      const TaskConstMeta(debugName: "start_audio", argNames: ["bpm"]);
 
-        TaskConstMeta get kCrateApiStartAudioConstMeta => const TaskConstMeta(
-            debugName: "start_audio",
-            argNames: ["bpm"],
-        );
-        
-
-@override Future<void> crateApiStartCalibration()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiStartCalibration() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_calibration_error,
-        )
-        ,
-            constMeta: kCrateApiStartCalibrationConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiStartCalibrationConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiStartCalibrationConstMeta =>
+      const TaskConstMeta(debugName: "start_calibration", argNames: []);
 
-        TaskConstMeta get kCrateApiStartCalibrationConstMeta => const TaskConstMeta(
-            debugName: "start_calibration",
-            argNames: [],
-        );
-        
-
-@override Future<void> crateApiDiagnosticsStartFixtureSession({required FixtureSpec spec })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(spec, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiDiagnosticsStartFixtureSession({
+    required FixtureSpec spec,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+            spec,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiDiagnosticsStartFixtureSessionConstMeta,
-            argValues: [spec],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiDiagnosticsStartFixtureSessionConstMeta,
+        argValues: [spec],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiDiagnosticsStartFixtureSessionConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_fixture_session",
+        argNames: ["spec"],
+      );
 
-        TaskConstMeta get kCrateApiDiagnosticsStartFixtureSessionConstMeta => const TaskConstMeta(
-            debugName: "start_fixture_session",
-            argNames: ["spec"],
-        );
-        
+  @override
+  Future<void> crateApiStopAudio() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_audio_error,
+        ),
+        constMeta: kCrateApiStopAudioConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<void> crateApiStopAudio()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
+  TaskConstMeta get kCrateApiStopAudioConstMeta =>
+      const TaskConstMeta(debugName: "stop_audio", argNames: []);
+
+  @override
+  void crateApiDiagnosticsStopFixtureSession() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_audio_error,
+        ),
+        constMeta: kCrateApiDiagnosticsStopFixtureSessionConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDiagnosticsStopFixtureSessionConstMeta =>
+      const TaskConstMeta(debugName: "stop_fixture_session", argNames: []);
+
+  @override
+  Stream<TelemetryEvent> crateApiStreamsTelemetryStream() {
+    final sink = RustStreamSink<TelemetryEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiStopAudioConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+            sse_encode_StreamSink_telemetry_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 21,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiStreamsTelemetryStreamConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
+  TaskConstMeta get kCrateApiStreamsTelemetryStreamConstMeta =>
+      const TaskConstMeta(debugName: "telemetry_stream", argNames: ["sink"]);
 
-        TaskConstMeta get kCrateApiStopAudioConstMeta => const TaskConstMeta(
-            debugName: "stop_audio",
-            argNames: [],
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_FixtureSpec => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_FixtureSpec => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  FixtureSpec
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FixtureSpecImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_string(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
+  Map<String, int> dco_decode_Map_String_u_32_None(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_u_32(raw).map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
+  FixtureSpec
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FixtureSpecImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<CalibrationProgress>
+  dco_decode_StreamSink_calibration_progress_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<ClassificationResult>
+  dco_decode_StreamSink_classification_result_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  String dco_decode_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as String;
+  }
+
+  @protected
+  AudioError dco_decode_audio_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return AudioError_BpmInvalid(bpm: dco_decode_u_32(raw[1]));
+      case 1:
+        return AudioError_AlreadyRunning();
+      case 2:
+        return AudioError_NotRunning();
+      case 3:
+        return AudioError_HardwareError(details: dco_decode_String(raw[1]));
+      case 4:
+        return AudioError_PermissionDenied();
+      case 5:
+        return AudioError_StreamOpenFailed(reason: dco_decode_String(raw[1]));
+      case 6:
+        return AudioError_LockPoisoned(component: dco_decode_String(raw[1]));
+      case 7:
+        return AudioError_JniInitFailed(reason: dco_decode_String(raw[1]));
+      case 8:
+        return AudioError_ContextNotInitialized();
+      case 9:
+        return AudioError_StreamFailure(reason: dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  AudioErrorCodes dco_decode_audio_error_codes(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 0)
+      throw Exception('unexpected arr length: expect 0 but see ${arr.length}');
+    return AudioErrorCodes();
+  }
+
+  @protected
+  BeatboxHit dco_decode_beatbox_hit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return BeatboxHit.values[raw as int];
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  FixtureManifestEntry dco_decode_box_autoadd_fixture_manifest_entry(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_fixture_manifest_entry(raw);
+  }
+
+  @protected
+  ParamPatch dco_decode_box_autoadd_param_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_param_patch(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  CalibrationError dco_decode_calibration_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return CalibrationError_InsufficientSamples(
+          required_: dco_decode_usize(raw[1]),
+          collected: dco_decode_usize(raw[2]),
         );
-        
-
-@override void crateApiDiagnosticsStopFixtureSession()  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_audio_error,
-        )
-        ,
-            constMeta: kCrateApiDiagnosticsStopFixtureSessionConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateApiDiagnosticsStopFixtureSessionConstMeta => const TaskConstMeta(
-            debugName: "stop_fixture_session",
-            argNames: [],
+      case 1:
+        return CalibrationError_InvalidFeatures(
+          reason: dco_decode_String(raw[1]),
         );
-        
+      case 2:
+        return CalibrationError_NotComplete();
+      case 3:
+        return CalibrationError_AlreadyInProgress();
+      case 4:
+        return CalibrationError_StatePoisoned();
+      case 5:
+        return CalibrationError_Timeout(reason: dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
 
-@override Stream<TelemetryEvent> crateApiTelemetryStream()  { 
-            final sink = RustStreamSink<TelemetryEvent>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_StreamSink_telemetry_event_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiTelemetryStreamConstMeta,
-            argValues: [sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  @protected
+  CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 0)
+      throw Exception('unexpected arr length: expect 0 but see ${arr.length}');
+    return CalibrationErrorCodes();
+  }
 
+  @protected
+  CalibrationProgress dco_decode_calibration_progress(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return CalibrationProgress(
+      currentSound: dco_decode_calibration_sound(arr[0]),
+      samplesCollected: dco_decode_u_8(arr[1]),
+      samplesNeeded: dco_decode_u_8(arr[2]),
+    );
+  }
 
-        TaskConstMeta get kCrateApiTelemetryStreamConstMeta => const TaskConstMeta(
-            debugName: "telemetry_stream",
-            argNames: ["sink"],
+  @protected
+  CalibrationSound dco_decode_calibration_sound(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CalibrationSound.values[raw as int];
+  }
+
+  @protected
+  ClassificationResult dco_decode_classification_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ClassificationResult(
+      sound: dco_decode_beatbox_hit(arr[0]),
+      timing: dco_decode_timing_feedback(arr[1]),
+      timestampMs: dco_decode_u_64(arr[2]),
+      confidence: dco_decode_f_32(arr[3]),
+    );
+  }
+
+  @protected
+  DiagnosticError dco_decode_diagnostic_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return DiagnosticError.values[raw as int];
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  FixtureBpmRange dco_decode_fixture_bpm_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FixtureBpmRange(
+      min: dco_decode_u_32(arr[0]),
+      max: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  FixtureManifestEntry dco_decode_fixture_manifest_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return FixtureManifestEntry(
+      id: dco_decode_String(arr[0]),
+      description: dco_decode_opt_String(arr[1]),
+      source: dco_decode_fixture_source_descriptor(arr[2]),
+      sampleRate: dco_decode_u_32(arr[3]),
+      durationMs: dco_decode_u_32(arr[4]),
+      loopCount: dco_decode_u_16(arr[5]),
+      channels: dco_decode_u_8(arr[6]),
+      metadata: dco_decode_Map_String_String_None(arr[7]),
+      bpm: dco_decode_fixture_bpm_range(arr[8]),
+      expectedCounts: dco_decode_Map_String_u_32_None(arr[9]),
+      anomalyTags: dco_decode_list_String(arr[10]),
+      tolerances: dco_decode_fixture_tolerance_envelope(arr[11]),
+    );
+  }
+
+  @protected
+  FixtureSourceDescriptor dco_decode_fixture_source_descriptor(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return FixtureSourceDescriptor_WavFile(path: dco_decode_String(raw[1]));
+      case 1:
+        return FixtureSourceDescriptor_Synthetic(
+          pattern: dco_decode_manifest_synthetic_pattern(raw[1]),
+          frequencyHz: dco_decode_f_32(raw[2]),
+          amplitude: dco_decode_f_32(raw[3]),
         );
-        
-
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_FixtureSpec => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_FixtureSpec => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
-
-
-
-                  @protected AnyhowException dco_decode_AnyhowException(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return AnyhowException(raw as String); }
-
-@protected FixtureSpec dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return FixtureSpecImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected FixtureSpec dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return FixtureSpecImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected RustStreamSink<CalibrationProgress> dco_decode_StreamSink_calibration_progress_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<ClassificationResult> dco_decode_StreamSink_classification_result_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as String; }
-
-@protected AudioError dco_decode_audio_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return AudioError_BpmInvalid(bpm: dco_decode_u_32(raw[1]),);
-case 1: return AudioError_AlreadyRunning();
-case 2: return AudioError_NotRunning();
-case 3: return AudioError_HardwareError(details: dco_decode_String(raw[1]),);
-case 4: return AudioError_PermissionDenied();
-case 5: return AudioError_StreamOpenFailed(reason: dco_decode_String(raw[1]),);
-case 6: return AudioError_LockPoisoned(component: dco_decode_String(raw[1]),);
-case 7: return AudioError_JniInitFailed(reason: dco_decode_String(raw[1]),);
-case 8: return AudioError_ContextNotInitialized();
-case 9: return AudioError_StreamFailure(reason: dco_decode_String(raw[1]),);
-                default: throw Exception("unreachable");
-            } }
-
-@protected AudioErrorCodes dco_decode_audio_error_codes(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 0) throw Exception('unexpected arr length: expect 0 but see ${arr.length}');
-                return AudioErrorCodes(); }
-
-@protected BeatboxHit dco_decode_beatbox_hit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return BeatboxHit.values[raw as int]; }
-
-@protected double dco_decode_box_autoadd_f_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected ParamPatch dco_decode_box_autoadd_param_patch(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_param_patch(raw); }
-
-@protected int dco_decode_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected CalibrationError dco_decode_calibration_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return CalibrationError_InsufficientSamples(required_: dco_decode_usize(raw[1]),collected: dco_decode_usize(raw[2]),);
-case 1: return CalibrationError_InvalidFeatures(reason: dco_decode_String(raw[1]),);
-case 2: return CalibrationError_NotComplete();
-case 3: return CalibrationError_AlreadyInProgress();
-case 4: return CalibrationError_StatePoisoned();
-case 5: return CalibrationError_Timeout(reason: dco_decode_String(raw[1]),);
-                default: throw Exception("unreachable");
-            } }
-
-@protected CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 0) throw Exception('unexpected arr length: expect 0 but see ${arr.length}');
-                return CalibrationErrorCodes(); }
-
-@protected CalibrationProgress dco_decode_calibration_progress(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return CalibrationProgress(currentSound: dco_decode_calibration_sound(arr[0]),
-samplesCollected: dco_decode_u_8(arr[1]),
-samplesNeeded: dco_decode_u_8(arr[2]),); }
-
-@protected CalibrationSound dco_decode_calibration_sound(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return CalibrationSound.values[raw as int]; }
-
-@protected ClassificationResult dco_decode_classification_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return ClassificationResult(sound: dco_decode_beatbox_hit(arr[0]),
-timing: dco_decode_timing_feedback(arr[1]),
-timestampMs: dco_decode_u_64(arr[2]),
-confidence: dco_decode_f_32(arr[3]),); }
-
-@protected DiagnosticError dco_decode_diagnostic_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return DiagnosticError.values[raw as int]; }
-
-@protected double dco_decode_f_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected int dco_decode_i_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected LifecyclePhase dco_decode_lifecycle_phase(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return LifecyclePhase.values[raw as int]; }
-
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint8List; }
-
-@protected MetricEvent dco_decode_metric_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return MetricEvent_Latency(avgMs: dco_decode_f_32(raw[1]),maxMs: dco_decode_f_32(raw[2]),sampleCount: dco_decode_usize(raw[3]),);
-case 1: return MetricEvent_BufferOccupancy(channel: dco_decode_String(raw[1]),percent: dco_decode_f_32(raw[2]),);
-case 2: return MetricEvent_Classification(sound: dco_decode_beatbox_hit(raw[1]),confidence: dco_decode_f_32(raw[2]),timingErrorMs: dco_decode_f_32(raw[3]),);
-case 3: return MetricEvent_JniLifecycle(phase: dco_decode_lifecycle_phase(raw[1]),timestampMs: dco_decode_u_64(raw[2]),);
-case 4: return MetricEvent_Error(code: dco_decode_diagnostic_error(raw[1]),context: dco_decode_String(raw[2]),);
-                default: throw Exception("unreachable");
-            } }
-
-@protected String? dco_decode_opt_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_String(raw); }
-
-@protected double? dco_decode_opt_box_autoadd_f_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_f_32(raw); }
-
-@protected int? dco_decode_opt_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_u_32(raw); }
-
-@protected ParamPatch dco_decode_param_patch(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return ParamPatch(bpm: dco_decode_opt_box_autoadd_u_32(arr[0]),
-centroidThreshold: dco_decode_opt_box_autoadd_f_32(arr[1]),
-zcrThreshold: dco_decode_opt_box_autoadd_f_32(arr[2]),); }
-
-@protected TelemetryEvent dco_decode_telemetry_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return TelemetryEvent(timestampMs: dco_decode_u_64(arr[0]),
-kind: dco_decode_telemetry_event_kind(arr[1]),
-detail: dco_decode_opt_String(arr[2]),); }
-
-@protected TelemetryEventKind dco_decode_telemetry_event_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return TelemetryEventKind_EngineStarted(bpm: dco_decode_u_32(raw[1]),);
-case 1: return TelemetryEventKind_EngineStopped();
-case 2: return TelemetryEventKind_BpmChanged(bpm: dco_decode_u_32(raw[1]),);
-case 3: return TelemetryEventKind_Warning();
-                default: throw Exception("unreachable");
-            } }
-
-@protected TimingClassification dco_decode_timing_classification(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return TimingClassification.values[raw as int]; }
-
-@protected TimingFeedback dco_decode_timing_feedback(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return TimingFeedback(classification: dco_decode_timing_classification(arr[0]),
-errorMs: dco_decode_f_32(arr[1]),); }
-
-@protected int dco_decode_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected BigInt dco_decode_u_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected int dco_decode_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return; }
-
-@protected BigInt dco_decode_usize(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_String(deserializer);
-        return AnyhowException(inner); }
-
-@protected FixtureSpec sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return FixtureSpecImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected FixtureSpec sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return FixtureSpecImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected RustStreamSink<CalibrationProgress> sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<ClassificationResult> sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<TelemetryEvent> sse_decode_StreamSink_telemetry_event_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_list_prim_u_8_strict(deserializer);
-        return utf8.decoder.convert(inner); }
-
-@protected AudioError sse_decode_audio_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: var var_bpm = sse_decode_u_32(deserializer);
-return AudioError_BpmInvalid(bpm: var_bpm);case 1: return AudioError_AlreadyRunning();case 2: return AudioError_NotRunning();case 3: var var_details = sse_decode_String(deserializer);
-return AudioError_HardwareError(details: var_details);case 4: return AudioError_PermissionDenied();case 5: var var_reason = sse_decode_String(deserializer);
-return AudioError_StreamOpenFailed(reason: var_reason);case 6: var var_component = sse_decode_String(deserializer);
-return AudioError_LockPoisoned(component: var_component);case 7: var var_reason = sse_decode_String(deserializer);
-return AudioError_JniInitFailed(reason: var_reason);case 8: return AudioError_ContextNotInitialized();case 9: var var_reason = sse_decode_String(deserializer);
-return AudioError_StreamFailure(reason: var_reason); default: throw UnimplementedError(''); }
-             }
-
-@protected AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return AudioErrorCodes(); }
-
-@protected BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return BeatboxHit.values[inner]; }
-
-@protected double sse_decode_box_autoadd_f_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_f_32(deserializer)); }
-
-@protected ParamPatch sse_decode_box_autoadd_param_patch(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_param_patch(deserializer)); }
-
-@protected int sse_decode_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_u_32(deserializer)); }
-
-@protected CalibrationError sse_decode_calibration_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: var var_required_ = sse_decode_usize(deserializer);
-var var_collected = sse_decode_usize(deserializer);
-return CalibrationError_InsufficientSamples(required_: var_required_, collected: var_collected);case 1: var var_reason = sse_decode_String(deserializer);
-return CalibrationError_InvalidFeatures(reason: var_reason);case 2: return CalibrationError_NotComplete();case 3: return CalibrationError_AlreadyInProgress();case 4: return CalibrationError_StatePoisoned();case 5: var var_reason = sse_decode_String(deserializer);
-return CalibrationError_Timeout(reason: var_reason); default: throw UnimplementedError(''); }
-             }
-
-@protected CalibrationErrorCodes sse_decode_calibration_error_codes(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return CalibrationErrorCodes(); }
-
-@protected CalibrationProgress sse_decode_calibration_progress(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_currentSound = sse_decode_calibration_sound(deserializer);
-var var_samplesCollected = sse_decode_u_8(deserializer);
-var var_samplesNeeded = sse_decode_u_8(deserializer);
-return CalibrationProgress(currentSound: var_currentSound, samplesCollected: var_samplesCollected, samplesNeeded: var_samplesNeeded); }
-
-@protected CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return CalibrationSound.values[inner]; }
-
-@protected ClassificationResult sse_decode_classification_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_sound = sse_decode_beatbox_hit(deserializer);
-var var_timing = sse_decode_timing_feedback(deserializer);
-var var_timestampMs = sse_decode_u_64(deserializer);
-var var_confidence = sse_decode_f_32(deserializer);
-return ClassificationResult(sound: var_sound, timing: var_timing, timestampMs: var_timestampMs, confidence: var_confidence); }
-
-@protected DiagnosticError sse_decode_diagnostic_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return DiagnosticError.values[inner]; }
-
-@protected double sse_decode_f_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getFloat32(); }
-
-@protected int sse_decode_i_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getInt32(); }
-
-@protected LifecyclePhase sse_decode_lifecycle_phase(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return LifecyclePhase.values[inner]; }
-
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint8List(len_); }
-
-@protected MetricEvent sse_decode_metric_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: var var_avgMs = sse_decode_f_32(deserializer);
-var var_maxMs = sse_decode_f_32(deserializer);
-var var_sampleCount = sse_decode_usize(deserializer);
-return MetricEvent_Latency(avgMs: var_avgMs, maxMs: var_maxMs, sampleCount: var_sampleCount);case 1: var var_channel = sse_decode_String(deserializer);
-var var_percent = sse_decode_f_32(deserializer);
-return MetricEvent_BufferOccupancy(channel: var_channel, percent: var_percent);case 2: var var_sound = sse_decode_beatbox_hit(deserializer);
-var var_confidence = sse_decode_f_32(deserializer);
-var var_timingErrorMs = sse_decode_f_32(deserializer);
-return MetricEvent_Classification(sound: var_sound, confidence: var_confidence, timingErrorMs: var_timingErrorMs);case 3: var var_phase = sse_decode_lifecycle_phase(deserializer);
-var var_timestampMs = sse_decode_u_64(deserializer);
-return MetricEvent_JniLifecycle(phase: var_phase, timestampMs: var_timestampMs);case 4: var var_code = sse_decode_diagnostic_error(deserializer);
-var var_context = sse_decode_String(deserializer);
-return MetricEvent_Error(code: var_code, context: var_context); default: throw UnimplementedError(''); }
-             }
-
-@protected String? sse_decode_opt_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_String(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_f_32(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_u_32(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected ParamPatch sse_decode_param_patch(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_bpm = sse_decode_opt_box_autoadd_u_32(deserializer);
-var var_centroidThreshold = sse_decode_opt_box_autoadd_f_32(deserializer);
-var var_zcrThreshold = sse_decode_opt_box_autoadd_f_32(deserializer);
-return ParamPatch(bpm: var_bpm, centroidThreshold: var_centroidThreshold, zcrThreshold: var_zcrThreshold); }
-
-@protected TelemetryEvent sse_decode_telemetry_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_timestampMs = sse_decode_u_64(deserializer);
-var var_kind = sse_decode_telemetry_event_kind(deserializer);
-var var_detail = sse_decode_opt_String(deserializer);
-return TelemetryEvent(timestampMs: var_timestampMs, kind: var_kind, detail: var_detail); }
-
-@protected TelemetryEventKind sse_decode_telemetry_event_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: var var_bpm = sse_decode_u_32(deserializer);
-return TelemetryEventKind_EngineStarted(bpm: var_bpm);case 1: return TelemetryEventKind_EngineStopped();case 2: var var_bpm = sse_decode_u_32(deserializer);
-return TelemetryEventKind_BpmChanged(bpm: var_bpm);case 3: return TelemetryEventKind_Warning(); default: throw UnimplementedError(''); }
-             }
-
-@protected TimingClassification sse_decode_timing_classification(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return TimingClassification.values[inner]; }
-
-@protected TimingFeedback sse_decode_timing_feedback(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_classification = sse_decode_timing_classification(deserializer);
-var var_errorMs = sse_decode_f_32(deserializer);
-return TimingFeedback(classification: var_classification, errorMs: var_errorMs); }
-
-@protected int sse_decode_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint32(); }
-
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected int sse_decode_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8(); }
-
-@protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected BigInt sse_decode_usize(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8() != 0; }
-
-@protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.message, serializer); }
-
-@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as FixtureSpecImpl).frbInternalSseEncode(move: true), serializer); }
-
-@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as FixtureSpecImpl).frbInternalSseEncode(move: null), serializer); }
-
-@protected void sse_encode_StreamSink_calibration_progress_Sse(RustStreamSink<CalibrationProgress> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_calibration_progress,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_classification_result_Sse(RustStreamSink<ClassificationResult> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_classification_result,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_metric_event_Sse(RustStreamSink<MetricEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_metric_event,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_telemetry_event_Sse(RustStreamSink<TelemetryEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_telemetry_event,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
-
-@protected void sse_encode_audio_error(AudioError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case AudioError_BpmInvalid(bpm: final bpm): sse_encode_i_32(0, serializer); sse_encode_u_32(bpm, serializer);
-case AudioError_AlreadyRunning(): sse_encode_i_32(1, serializer); case AudioError_NotRunning(): sse_encode_i_32(2, serializer); case AudioError_HardwareError(details: final details): sse_encode_i_32(3, serializer); sse_encode_String(details, serializer);
-case AudioError_PermissionDenied(): sse_encode_i_32(4, serializer); case AudioError_StreamOpenFailed(reason: final reason): sse_encode_i_32(5, serializer); sse_encode_String(reason, serializer);
-case AudioError_LockPoisoned(component: final component): sse_encode_i_32(6, serializer); sse_encode_String(component, serializer);
-case AudioError_JniInitFailed(reason: final reason): sse_encode_i_32(7, serializer); sse_encode_String(reason, serializer);
-case AudioError_ContextNotInitialized(): sse_encode_i_32(8, serializer); case AudioError_StreamFailure(reason: final reason): sse_encode_i_32(9, serializer); sse_encode_String(reason, serializer);
-  } }
-
-@protected void sse_encode_audio_error_codes(AudioErrorCodes self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_32(self, serializer); }
-
-@protected void sse_encode_box_autoadd_param_patch(ParamPatch self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_param_patch(self, serializer); }
-
-@protected void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self, serializer); }
-
-@protected void sse_encode_calibration_error(CalibrationError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case CalibrationError_InsufficientSamples(required_: final required_,collected: final collected): sse_encode_i_32(0, serializer); sse_encode_usize(required_, serializer);
-sse_encode_usize(collected, serializer);
-case CalibrationError_InvalidFeatures(reason: final reason): sse_encode_i_32(1, serializer); sse_encode_String(reason, serializer);
-case CalibrationError_NotComplete(): sse_encode_i_32(2, serializer); case CalibrationError_AlreadyInProgress(): sse_encode_i_32(3, serializer); case CalibrationError_StatePoisoned(): sse_encode_i_32(4, serializer); case CalibrationError_Timeout(reason: final reason): sse_encode_i_32(5, serializer); sse_encode_String(reason, serializer);
-  } }
-
-@protected void sse_encode_calibration_error_codes(CalibrationErrorCodes self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_calibration_progress(CalibrationProgress self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_calibration_sound(self.currentSound, serializer);
-sse_encode_u_8(self.samplesCollected, serializer);
-sse_encode_u_8(self.samplesNeeded, serializer);
- }
-
-@protected void sse_encode_calibration_sound(CalibrationSound self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_classification_result(ClassificationResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_beatbox_hit(self.sound, serializer);
-sse_encode_timing_feedback(self.timing, serializer);
-sse_encode_u_64(self.timestampMs, serializer);
-sse_encode_f_32(self.confidence, serializer);
- }
-
-@protected void sse_encode_diagnostic_error(DiagnosticError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_f_32(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putFloat32(self); }
-
-@protected void sse_encode_i_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putInt32(self); }
-
-@protected void sse_encode_lifecycle_phase(LifecyclePhase self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint8List(self); }
-
-@protected void sse_encode_metric_event(MetricEvent self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case MetricEvent_Latency(avgMs: final avgMs,maxMs: final maxMs,sampleCount: final sampleCount): sse_encode_i_32(0, serializer); sse_encode_f_32(avgMs, serializer);
-sse_encode_f_32(maxMs, serializer);
-sse_encode_usize(sampleCount, serializer);
-case MetricEvent_BufferOccupancy(channel: final channel,percent: final percent): sse_encode_i_32(1, serializer); sse_encode_String(channel, serializer);
-sse_encode_f_32(percent, serializer);
-case MetricEvent_Classification(sound: final sound,confidence: final confidence,timingErrorMs: final timingErrorMs): sse_encode_i_32(2, serializer); sse_encode_beatbox_hit(sound, serializer);
-sse_encode_f_32(confidence, serializer);
-sse_encode_f_32(timingErrorMs, serializer);
-case MetricEvent_JniLifecycle(phase: final phase,timestampMs: final timestampMs): sse_encode_i_32(3, serializer); sse_encode_lifecycle_phase(phase, serializer);
-sse_encode_u_64(timestampMs, serializer);
-case MetricEvent_Error(code: final code,context: final context): sse_encode_i_32(4, serializer); sse_encode_diagnostic_error(code, serializer);
-sse_encode_String(context, serializer);
-  } }
-
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_String(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_f_32(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_u_32(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_param_patch(ParamPatch self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_opt_box_autoadd_u_32(self.bpm, serializer);
-sse_encode_opt_box_autoadd_f_32(self.centroidThreshold, serializer);
-sse_encode_opt_box_autoadd_f_32(self.zcrThreshold, serializer);
- }
-
-@protected void sse_encode_telemetry_event(TelemetryEvent self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.timestampMs, serializer);
-sse_encode_telemetry_event_kind(self.kind, serializer);
-sse_encode_opt_String(self.detail, serializer);
- }
-
-@protected void sse_encode_telemetry_event_kind(TelemetryEventKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case TelemetryEventKind_EngineStarted(bpm: final bpm): sse_encode_i_32(0, serializer); sse_encode_u_32(bpm, serializer);
-case TelemetryEventKind_EngineStopped(): sse_encode_i_32(1, serializer); case TelemetryEventKind_BpmChanged(bpm: final bpm): sse_encode_i_32(2, serializer); sse_encode_u_32(bpm, serializer);
-case TelemetryEventKind_Warning(): sse_encode_i_32(3, serializer);   } }
-
-@protected void sse_encode_timing_classification(TimingClassification self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_timing_feedback(TimingFeedback self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_timing_classification(self.classification, serializer);
-sse_encode_f_32(self.errorMs, serializer);
- }
-
-@protected void sse_encode_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint32(self); }
-
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-
-@protected void sse_encode_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self); }
-
-@protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_usize(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-
-@protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self ? 1 : 0); }
-                }
-                
-
-            @sealed class FixtureSpecImpl extends RustOpaque implements FixtureSpec {
-                // Not to be used by end users
-                FixtureSpecImpl.frbInternalDcoDecode(List<dynamic> wire):
-                    super.frbInternalDcoDecode(wire, _kStaticData);
-
-                // Not to be used by end users
-                FixtureSpecImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
-                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-                static final _kStaticData = RustArcStaticData(
-                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_FixtureSpec,
-                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_FixtureSpec,
-                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_FixtureSpecPtr,
-                );
-
-                
-            }
+      case 2:
+        return FixtureSourceDescriptor_Loopback(
+          device: dco_decode_opt_String(raw[1]),
+        );
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  FixtureThreshold dco_decode_fixture_threshold(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return FixtureThreshold(max: dco_decode_f_32(arr[0]));
+  }
+
+  @protected
+  FixtureToleranceEnvelope dco_decode_fixture_tolerance_envelope(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FixtureToleranceEnvelope(
+      latencyMs: dco_decode_fixture_threshold(arr[0]),
+      classificationDropPct: dco_decode_fixture_threshold(arr[1]),
+      bpmDeviationPct: dco_decode_fixture_threshold(arr[2]),
+    );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  LifecyclePhase dco_decode_lifecycle_phase(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return LifecyclePhase.values[raw as int];
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<FixtureManifestEntry> dco_decode_list_fixture_manifest_entry(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_fixture_manifest_entry)
+        .toList();
+  }
+
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint8List;
+  }
+
+  @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_record_string_string).toList();
+  }
+
+  @protected
+  List<(String, int)> dco_decode_list_record_string_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_record_string_u_32).toList();
+  }
+
+  @protected
+  ManifestSyntheticPattern dco_decode_manifest_synthetic_pattern(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ManifestSyntheticPattern.values[raw as int];
+  }
+
+  @protected
+  MetricEvent dco_decode_metric_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return MetricEvent_Latency(
+          avgMs: dco_decode_f_32(raw[1]),
+          maxMs: dco_decode_f_32(raw[2]),
+          sampleCount: dco_decode_usize(raw[3]),
+        );
+      case 1:
+        return MetricEvent_BufferOccupancy(
+          channel: dco_decode_String(raw[1]),
+          percent: dco_decode_f_32(raw[2]),
+        );
+      case 2:
+        return MetricEvent_Classification(
+          sound: dco_decode_beatbox_hit(raw[1]),
+          confidence: dco_decode_f_32(raw[2]),
+          timingErrorMs: dco_decode_f_32(raw[3]),
+        );
+      case 3:
+        return MetricEvent_JniLifecycle(
+          phase: dco_decode_lifecycle_phase(raw[1]),
+          timestampMs: dco_decode_u_64(raw[2]),
+        );
+      case 4:
+        return MetricEvent_Error(
+          code: dco_decode_diagnostic_error(raw[1]),
+          context: dco_decode_String(raw[2]),
+        );
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_32(raw);
+  }
+
+  @protected
+  FixtureManifestEntry? dco_decode_opt_box_autoadd_fixture_manifest_entry(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_fixture_manifest_entry(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  ParamPatch dco_decode_param_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ParamPatch(
+      bpm: dco_decode_opt_box_autoadd_u_32(arr[0]),
+      centroidThreshold: dco_decode_opt_box_autoadd_f_32(arr[1]),
+      zcrThreshold: dco_decode_opt_box_autoadd_f_32(arr[2]),
+    );
+  }
+
+  @protected
+  (String, String) dco_decode_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (dco_decode_String(arr[0]), dco_decode_String(arr[1]));
+  }
+
+  @protected
+  (String, int) dco_decode_record_string_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (dco_decode_String(arr[0]), dco_decode_u_32(arr[1]));
+  }
+
+  @protected
+  TelemetryEvent dco_decode_telemetry_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TelemetryEvent(
+      timestampMs: dco_decode_u_64(arr[0]),
+      kind: dco_decode_telemetry_event_kind(arr[1]),
+      detail: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  TelemetryEventKind dco_decode_telemetry_event_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return TelemetryEventKind_EngineStarted(bpm: dco_decode_u_32(raw[1]));
+      case 1:
+        return TelemetryEventKind_EngineStopped();
+      case 2:
+        return TelemetryEventKind_BpmChanged(bpm: dco_decode_u_32(raw[1]));
+      case 3:
+        return TelemetryEventKind_Warning();
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  TimingClassification dco_decode_timing_classification(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TimingClassification.values[raw as int];
+  }
+
+  @protected
+  TimingFeedback dco_decode_timing_feedback(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TimingFeedback(
+      classification: dco_decode_timing_classification(arr[0]),
+      errorMs: dco_decode_f_32(arr[1]),
+    );
+  }
+
+  @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  int dco_decode_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  void dco_decode_unit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return;
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  FixtureSpec
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return FixtureSpecImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_string(deserializer);
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
+  Map<String, int> sse_decode_Map_String_u_32_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_u_32(deserializer);
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
+  FixtureSpec
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return FixtureSpecImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustStreamSink<CalibrationProgress>
+  sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<ClassificationResult>
+  sse_decode_StreamSink_classification_result_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<TelemetryEvent> sse_decode_StreamSink_telemetry_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  String sse_decode_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
+    return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  AudioError sse_decode_audio_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_bpm = sse_decode_u_32(deserializer);
+        return AudioError_BpmInvalid(bpm: var_bpm);
+      case 1:
+        return AudioError_AlreadyRunning();
+      case 2:
+        return AudioError_NotRunning();
+      case 3:
+        var var_details = sse_decode_String(deserializer);
+        return AudioError_HardwareError(details: var_details);
+      case 4:
+        return AudioError_PermissionDenied();
+      case 5:
+        var var_reason = sse_decode_String(deserializer);
+        return AudioError_StreamOpenFailed(reason: var_reason);
+      case 6:
+        var var_component = sse_decode_String(deserializer);
+        return AudioError_LockPoisoned(component: var_component);
+      case 7:
+        var var_reason = sse_decode_String(deserializer);
+        return AudioError_JniInitFailed(reason: var_reason);
+      case 8:
+        return AudioError_ContextNotInitialized();
+      case 9:
+        var var_reason = sse_decode_String(deserializer);
+        return AudioError_StreamFailure(reason: var_reason);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return AudioErrorCodes();
+  }
+
+  @protected
+  BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return BeatboxHit.values[inner];
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_32(deserializer));
+  }
+
+  @protected
+  FixtureManifestEntry sse_decode_box_autoadd_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_fixture_manifest_entry(deserializer));
+  }
+
+  @protected
+  ParamPatch sse_decode_box_autoadd_param_patch(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_param_patch(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  CalibrationError sse_decode_calibration_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_required_ = sse_decode_usize(deserializer);
+        var var_collected = sse_decode_usize(deserializer);
+        return CalibrationError_InsufficientSamples(
+          required_: var_required_,
+          collected: var_collected,
+        );
+      case 1:
+        var var_reason = sse_decode_String(deserializer);
+        return CalibrationError_InvalidFeatures(reason: var_reason);
+      case 2:
+        return CalibrationError_NotComplete();
+      case 3:
+        return CalibrationError_AlreadyInProgress();
+      case 4:
+        return CalibrationError_StatePoisoned();
+      case 5:
+        var var_reason = sse_decode_String(deserializer);
+        return CalibrationError_Timeout(reason: var_reason);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  CalibrationErrorCodes sse_decode_calibration_error_codes(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CalibrationErrorCodes();
+  }
+
+  @protected
+  CalibrationProgress sse_decode_calibration_progress(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_currentSound = sse_decode_calibration_sound(deserializer);
+    var var_samplesCollected = sse_decode_u_8(deserializer);
+    var var_samplesNeeded = sse_decode_u_8(deserializer);
+    return CalibrationProgress(
+      currentSound: var_currentSound,
+      samplesCollected: var_samplesCollected,
+      samplesNeeded: var_samplesNeeded,
+    );
+  }
+
+  @protected
+  CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CalibrationSound.values[inner];
+  }
+
+  @protected
+  ClassificationResult sse_decode_classification_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sound = sse_decode_beatbox_hit(deserializer);
+    var var_timing = sse_decode_timing_feedback(deserializer);
+    var var_timestampMs = sse_decode_u_64(deserializer);
+    var var_confidence = sse_decode_f_32(deserializer);
+    return ClassificationResult(
+      sound: var_sound,
+      timing: var_timing,
+      timestampMs: var_timestampMs,
+      confidence: var_confidence,
+    );
+  }
+
+  @protected
+  DiagnosticError sse_decode_diagnostic_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return DiagnosticError.values[inner];
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
+  }
+
+  @protected
+  FixtureBpmRange sse_decode_fixture_bpm_range(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_min = sse_decode_u_32(deserializer);
+    var var_max = sse_decode_u_32(deserializer);
+    return FixtureBpmRange(min: var_min, max: var_max);
+  }
+
+  @protected
+  FixtureManifestEntry sse_decode_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_description = sse_decode_opt_String(deserializer);
+    var var_source = sse_decode_fixture_source_descriptor(deserializer);
+    var var_sampleRate = sse_decode_u_32(deserializer);
+    var var_durationMs = sse_decode_u_32(deserializer);
+    var var_loopCount = sse_decode_u_16(deserializer);
+    var var_channels = sse_decode_u_8(deserializer);
+    var var_metadata = sse_decode_Map_String_String_None(deserializer);
+    var var_bpm = sse_decode_fixture_bpm_range(deserializer);
+    var var_expectedCounts = sse_decode_Map_String_u_32_None(deserializer);
+    var var_anomalyTags = sse_decode_list_String(deserializer);
+    var var_tolerances = sse_decode_fixture_tolerance_envelope(deserializer);
+    return FixtureManifestEntry(
+      id: var_id,
+      description: var_description,
+      source: var_source,
+      sampleRate: var_sampleRate,
+      durationMs: var_durationMs,
+      loopCount: var_loopCount,
+      channels: var_channels,
+      metadata: var_metadata,
+      bpm: var_bpm,
+      expectedCounts: var_expectedCounts,
+      anomalyTags: var_anomalyTags,
+      tolerances: var_tolerances,
+    );
+  }
+
+  @protected
+  FixtureSourceDescriptor sse_decode_fixture_source_descriptor(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_path = sse_decode_String(deserializer);
+        return FixtureSourceDescriptor_WavFile(path: var_path);
+      case 1:
+        var var_pattern = sse_decode_manifest_synthetic_pattern(deserializer);
+        var var_frequencyHz = sse_decode_f_32(deserializer);
+        var var_amplitude = sse_decode_f_32(deserializer);
+        return FixtureSourceDescriptor_Synthetic(
+          pattern: var_pattern,
+          frequencyHz: var_frequencyHz,
+          amplitude: var_amplitude,
+        );
+      case 2:
+        var var_device = sse_decode_opt_String(deserializer);
+        return FixtureSourceDescriptor_Loopback(device: var_device);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  FixtureThreshold sse_decode_fixture_threshold(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_max = sse_decode_f_32(deserializer);
+    return FixtureThreshold(max: var_max);
+  }
+
+  @protected
+  FixtureToleranceEnvelope sse_decode_fixture_tolerance_envelope(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_latencyMs = sse_decode_fixture_threshold(deserializer);
+    var var_classificationDropPct = sse_decode_fixture_threshold(deserializer);
+    var var_bpmDeviationPct = sse_decode_fixture_threshold(deserializer);
+    return FixtureToleranceEnvelope(
+      latencyMs: var_latencyMs,
+      classificationDropPct: var_classificationDropPct,
+      bpmDeviationPct: var_bpmDeviationPct,
+    );
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  LifecyclePhase sse_decode_lifecycle_phase(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return LifecyclePhase.values[inner];
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FixtureManifestEntry> sse_decode_list_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FixtureManifestEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_fixture_manifest_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, String)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_string(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<(String, int)> sse_decode_list_record_string_u_32(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, int)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_u_32(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  ManifestSyntheticPattern sse_decode_manifest_synthetic_pattern(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ManifestSyntheticPattern.values[inner];
+  }
+
+  @protected
+  MetricEvent sse_decode_metric_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_avgMs = sse_decode_f_32(deserializer);
+        var var_maxMs = sse_decode_f_32(deserializer);
+        var var_sampleCount = sse_decode_usize(deserializer);
+        return MetricEvent_Latency(
+          avgMs: var_avgMs,
+          maxMs: var_maxMs,
+          sampleCount: var_sampleCount,
+        );
+      case 1:
+        var var_channel = sse_decode_String(deserializer);
+        var var_percent = sse_decode_f_32(deserializer);
+        return MetricEvent_BufferOccupancy(
+          channel: var_channel,
+          percent: var_percent,
+        );
+      case 2:
+        var var_sound = sse_decode_beatbox_hit(deserializer);
+        var var_confidence = sse_decode_f_32(deserializer);
+        var var_timingErrorMs = sse_decode_f_32(deserializer);
+        return MetricEvent_Classification(
+          sound: var_sound,
+          confidence: var_confidence,
+          timingErrorMs: var_timingErrorMs,
+        );
+      case 3:
+        var var_phase = sse_decode_lifecycle_phase(deserializer);
+        var var_timestampMs = sse_decode_u_64(deserializer);
+        return MetricEvent_JniLifecycle(
+          phase: var_phase,
+          timestampMs: var_timestampMs,
+        );
+      case 4:
+        var var_code = sse_decode_diagnostic_error(deserializer);
+        var var_context = sse_decode_String(deserializer);
+        return MetricEvent_Error(code: var_code, context: var_context);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FixtureManifestEntry? sse_decode_opt_box_autoadd_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_fixture_manifest_entry(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ParamPatch sse_decode_param_patch(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_bpm = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_centroidThreshold = sse_decode_opt_box_autoadd_f_32(deserializer);
+    var var_zcrThreshold = sse_decode_opt_box_autoadd_f_32(deserializer);
+    return ParamPatch(
+      bpm: var_bpm,
+      centroidThreshold: var_centroidThreshold,
+      zcrThreshold: var_zcrThreshold,
+    );
+  }
+
+  @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_String(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
+  (String, int) sse_decode_record_string_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_u_32(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
+  TelemetryEvent sse_decode_telemetry_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_timestampMs = sse_decode_u_64(deserializer);
+    var var_kind = sse_decode_telemetry_event_kind(deserializer);
+    var var_detail = sse_decode_opt_String(deserializer);
+    return TelemetryEvent(
+      timestampMs: var_timestampMs,
+      kind: var_kind,
+      detail: var_detail,
+    );
+  }
+
+  @protected
+  TelemetryEventKind sse_decode_telemetry_event_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_bpm = sse_decode_u_32(deserializer);
+        return TelemetryEventKind_EngineStarted(bpm: var_bpm);
+      case 1:
+        return TelemetryEventKind_EngineStopped();
+      case 2:
+        var var_bpm = sse_decode_u_32(deserializer);
+        return TelemetryEventKind_BpmChanged(bpm: var_bpm);
+      case 3:
+        return TelemetryEventKind_Warning();
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  TimingClassification sse_decode_timing_classification(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TimingClassification.values[inner];
+  }
+
+  @protected
+  TimingFeedback sse_decode_timing_feedback(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_classification = sse_decode_timing_classification(deserializer);
+    var var_errorMs = sse_decode_f_32(deserializer);
+    return TimingFeedback(
+      classification: var_classification,
+      errorMs: var_errorMs,
+    );
+  }
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    FixtureSpec self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as FixtureSpecImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_string(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_Map_String_u_32_None(
+    Map<String, int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_u_32(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    FixtureSpec self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as FixtureSpecImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_calibration_progress_Sse(
+    RustStreamSink<CalibrationProgress> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_calibration_progress,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_classification_result_Sse(
+    RustStreamSink<ClassificationResult> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_classification_result,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_metric_event_Sse(
+    RustStreamSink<MetricEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_metric_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_telemetry_event_Sse(
+    RustStreamSink<TelemetryEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_telemetry_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_audio_error(AudioError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case AudioError_BpmInvalid(bpm: final bpm):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(bpm, serializer);
+      case AudioError_AlreadyRunning():
+        sse_encode_i_32(1, serializer);
+      case AudioError_NotRunning():
+        sse_encode_i_32(2, serializer);
+      case AudioError_HardwareError(details: final details):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(details, serializer);
+      case AudioError_PermissionDenied():
+        sse_encode_i_32(4, serializer);
+      case AudioError_StreamOpenFailed(reason: final reason):
+        sse_encode_i_32(5, serializer);
+        sse_encode_String(reason, serializer);
+      case AudioError_LockPoisoned(component: final component):
+        sse_encode_i_32(6, serializer);
+        sse_encode_String(component, serializer);
+      case AudioError_JniInitFailed(reason: final reason):
+        sse_encode_i_32(7, serializer);
+        sse_encode_String(reason, serializer);
+      case AudioError_ContextNotInitialized():
+        sse_encode_i_32(8, serializer);
+      case AudioError_StreamFailure(reason: final reason):
+        sse_encode_i_32(9, serializer);
+        sse_encode_String(reason, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_audio_error_codes(
+    AudioErrorCodes self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_fixture_manifest_entry(
+    FixtureManifestEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_fixture_manifest_entry(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_param_patch(
+    ParamPatch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_param_patch(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_calibration_error(
+    CalibrationError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case CalibrationError_InsufficientSamples(
+        required_: final required_,
+        collected: final collected,
+      ):
+        sse_encode_i_32(0, serializer);
+        sse_encode_usize(required_, serializer);
+        sse_encode_usize(collected, serializer);
+      case CalibrationError_InvalidFeatures(reason: final reason):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(reason, serializer);
+      case CalibrationError_NotComplete():
+        sse_encode_i_32(2, serializer);
+      case CalibrationError_AlreadyInProgress():
+        sse_encode_i_32(3, serializer);
+      case CalibrationError_StatePoisoned():
+        sse_encode_i_32(4, serializer);
+      case CalibrationError_Timeout(reason: final reason):
+        sse_encode_i_32(5, serializer);
+        sse_encode_String(reason, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_calibration_error_codes(
+    CalibrationErrorCodes self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_calibration_progress(
+    CalibrationProgress self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_calibration_sound(self.currentSound, serializer);
+    sse_encode_u_8(self.samplesCollected, serializer);
+    sse_encode_u_8(self.samplesNeeded, serializer);
+  }
+
+  @protected
+  void sse_encode_calibration_sound(
+    CalibrationSound self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_classification_result(
+    ClassificationResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_beatbox_hit(self.sound, serializer);
+    sse_encode_timing_feedback(self.timing, serializer);
+    sse_encode_u_64(self.timestampMs, serializer);
+    sse_encode_f_32(self.confidence, serializer);
+  }
+
+  @protected
+  void sse_encode_diagnostic_error(
+    DiagnosticError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
+  void sse_encode_fixture_bpm_range(
+    FixtureBpmRange self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.min, serializer);
+    sse_encode_u_32(self.max, serializer);
+  }
+
+  @protected
+  void sse_encode_fixture_manifest_entry(
+    FixtureManifestEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_opt_String(self.description, serializer);
+    sse_encode_fixture_source_descriptor(self.source, serializer);
+    sse_encode_u_32(self.sampleRate, serializer);
+    sse_encode_u_32(self.durationMs, serializer);
+    sse_encode_u_16(self.loopCount, serializer);
+    sse_encode_u_8(self.channels, serializer);
+    sse_encode_Map_String_String_None(self.metadata, serializer);
+    sse_encode_fixture_bpm_range(self.bpm, serializer);
+    sse_encode_Map_String_u_32_None(self.expectedCounts, serializer);
+    sse_encode_list_String(self.anomalyTags, serializer);
+    sse_encode_fixture_tolerance_envelope(self.tolerances, serializer);
+  }
+
+  @protected
+  void sse_encode_fixture_source_descriptor(
+    FixtureSourceDescriptor self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case FixtureSourceDescriptor_WavFile(path: final path):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(path, serializer);
+      case FixtureSourceDescriptor_Synthetic(
+        pattern: final pattern,
+        frequencyHz: final frequencyHz,
+        amplitude: final amplitude,
+      ):
+        sse_encode_i_32(1, serializer);
+        sse_encode_manifest_synthetic_pattern(pattern, serializer);
+        sse_encode_f_32(frequencyHz, serializer);
+        sse_encode_f_32(amplitude, serializer);
+      case FixtureSourceDescriptor_Loopback(device: final device):
+        sse_encode_i_32(2, serializer);
+        sse_encode_opt_String(device, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_fixture_threshold(
+    FixtureThreshold self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.max, serializer);
+  }
+
+  @protected
+  void sse_encode_fixture_tolerance_envelope(
+    FixtureToleranceEnvelope self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_fixture_threshold(self.latencyMs, serializer);
+    sse_encode_fixture_threshold(self.classificationDropPct, serializer);
+    sse_encode_fixture_threshold(self.bpmDeviationPct, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_lifecycle_phase(
+    LifecyclePhase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_fixture_manifest_entry(
+    List<FixtureManifestEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_fixture_manifest_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_string(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_record_string_u_32(
+    List<(String, int)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_u_32(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_manifest_synthetic_pattern(
+    ManifestSyntheticPattern self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_metric_event(MetricEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case MetricEvent_Latency(
+        avgMs: final avgMs,
+        maxMs: final maxMs,
+        sampleCount: final sampleCount,
+      ):
+        sse_encode_i_32(0, serializer);
+        sse_encode_f_32(avgMs, serializer);
+        sse_encode_f_32(maxMs, serializer);
+        sse_encode_usize(sampleCount, serializer);
+      case MetricEvent_BufferOccupancy(
+        channel: final channel,
+        percent: final percent,
+      ):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(channel, serializer);
+        sse_encode_f_32(percent, serializer);
+      case MetricEvent_Classification(
+        sound: final sound,
+        confidence: final confidence,
+        timingErrorMs: final timingErrorMs,
+      ):
+        sse_encode_i_32(2, serializer);
+        sse_encode_beatbox_hit(sound, serializer);
+        sse_encode_f_32(confidence, serializer);
+        sse_encode_f_32(timingErrorMs, serializer);
+      case MetricEvent_JniLifecycle(
+        phase: final phase,
+        timestampMs: final timestampMs,
+      ):
+        sse_encode_i_32(3, serializer);
+        sse_encode_lifecycle_phase(phase, serializer);
+        sse_encode_u_64(timestampMs, serializer);
+      case MetricEvent_Error(code: final code, context: final context):
+        sse_encode_i_32(4, serializer);
+        sse_encode_diagnostic_error(code, serializer);
+        sse_encode_String(context, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_fixture_manifest_entry(
+    FixtureManifestEntry? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_fixture_manifest_entry(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_param_patch(ParamPatch self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_box_autoadd_u_32(self.bpm, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.centroidThreshold, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.zcrThreshold, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_String(self.$2, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_u_32(
+    (String, int) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_u_32(self.$2, serializer);
+  }
+
+  @protected
+  void sse_encode_telemetry_event(
+    TelemetryEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.timestampMs, serializer);
+    sse_encode_telemetry_event_kind(self.kind, serializer);
+    sse_encode_opt_String(self.detail, serializer);
+  }
+
+  @protected
+  void sse_encode_telemetry_event_kind(
+    TelemetryEventKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case TelemetryEventKind_EngineStarted(bpm: final bpm):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(bpm, serializer);
+      case TelemetryEventKind_EngineStopped():
+        sse_encode_i_32(1, serializer);
+      case TelemetryEventKind_BpmChanged(bpm: final bpm):
+        sse_encode_i_32(2, serializer);
+        sse_encode_u_32(bpm, serializer);
+      case TelemetryEventKind_Warning():
+        sse_encode_i_32(3, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_timing_classification(
+    TimingClassification self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_timing_feedback(
+    TimingFeedback self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_timing_classification(self.classification, serializer);
+    sse_encode_f_32(self.errorMs, serializer);
+  }
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self);
+  }
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+}
+
+@sealed
+class FixtureSpecImpl extends RustOpaque implements FixtureSpec {
+  // Not to be used by end users
+  FixtureSpecImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  FixtureSpecImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_FixtureSpec,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_FixtureSpec,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_FixtureSpecPtr,
+  );
+}

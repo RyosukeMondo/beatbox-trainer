@@ -5,17 +5,24 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import '../testing/fixture_manifest.dart';
 import '../testing/fixtures.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `fixture_session_is_running`
 
-            
-
-            /// Start a diagnostics fixture session feeding PCM data into the DSP pipeline.
-Future<void>  startFixtureSession({required FixtureSpec spec }) => RustLib.instance.api.crateApiDiagnosticsStartFixtureSession(spec: spec);
+/// Start a diagnostics fixture session feeding PCM data into the DSP pipeline.
+Future<void> startFixtureSession({required FixtureSpec spec}) =>
+    RustLib.instance.api.crateApiDiagnosticsStartFixtureSession(spec: spec);
 
 /// Stop the currently running diagnostics fixture session, if any.
-void  stopFixtureSession() => RustLib.instance.api.crateApiDiagnosticsStopFixtureSession();
+void stopFixtureSession() =>
+    RustLib.instance.api.crateApiDiagnosticsStopFixtureSession();
 
-            
-            
+/// Return the full fixture metadata catalog for diagnostics consumers.
+List<FixtureManifestEntry> loadFixtureCatalog() =>
+    RustLib.instance.api.crateApiDiagnosticsLoadFixtureCatalog();
+
+/// Return a single fixture metadata entry by id when present.
+FixtureManifestEntry? fixtureMetadataForId({required String id}) =>
+    RustLib.instance.api.crateApiDiagnosticsFixtureMetadataForId(id: id);

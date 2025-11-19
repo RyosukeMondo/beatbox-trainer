@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -359979749;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1203735652;
 
 // Section: executor
 
@@ -155,7 +155,7 @@ fn wire__crate__api__classification_stream_impl(
         },
     )
 }
-fn wire__crate__api__diagnostic_metrics_stream_impl(
+fn wire__crate__api__streams__diagnostic_metrics_stream_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -185,7 +185,7 @@ fn wire__crate__api__diagnostic_metrics_stream_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok({
-                        crate::api::diagnostic_metrics_stream(api_sink);
+                        crate::api::streams::diagnostic_metrics_stream(api_sink);
                     })?;
                     Ok(output_ok)
                 })())
@@ -222,6 +222,36 @@ fn wire__crate__api__finish_calibration_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__diagnostics__fixture_metadata_for_id_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "fixture_metadata_for_id",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, crate::error::AudioError>((move || {
+                let output_ok = crate::api::diagnostics::fixture_metadata_for_id(api_id)?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -445,6 +475,35 @@ fn wire__crate__api__load_calibration_state_impl(
         },
     )
 }
+fn wire__crate__api__diagnostics__load_fixture_catalog_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_fixture_catalog",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, crate::error::AudioError>((move || {
+                let output_ok = crate::api::diagnostics::load_fixture_catalog()?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__set_bpm_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -637,7 +696,7 @@ fn wire__crate__api__diagnostics__stop_fixture_session_impl(
         },
     )
 }
-fn wire__crate__api__telemetry_stream_impl(
+fn wire__crate__api__streams__telemetry_stream_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -667,7 +726,7 @@ fn wire__crate__api__telemetry_stream_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok({
-                        crate::api::telemetry_stream(api_sink);
+                        crate::api::streams::telemetry_stream(api_sink);
                     })?;
                     Ok(output_ok)
                 })())
@@ -699,6 +758,22 @@ impl SseDecode for FixtureSpec {
             flutter_rust_bridge::for_generated::RustAutoOpaqueInner<FixtureSpec>,
         >>::sse_decode(deserializer);
         return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode for std::collections::HashMap<String, String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <Vec<(String, String)>>::sse_decode(deserializer);
+        return inner.into_iter().collect();
+    }
+}
+
+impl SseDecode for std::collections::HashMap<String, u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <Vec<(String, u32)>>::sse_decode(deserializer);
+        return inner.into_iter().collect();
     }
 }
 
@@ -957,6 +1032,117 @@ impl SseDecode for f32 {
     }
 }
 
+impl SseDecode for crate::testing::fixture_manifest::FixtureBpmRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_min = <u32>::sse_decode(deserializer);
+        let mut var_max = <u32>::sse_decode(deserializer);
+        return crate::testing::fixture_manifest::FixtureBpmRange {
+            min: var_min,
+            max: var_max,
+        };
+    }
+}
+
+impl SseDecode for crate::testing::fixture_manifest::FixtureManifestEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_description = <Option<String>>::sse_decode(deserializer);
+        let mut var_source =
+            <crate::testing::fixture_manifest::FixtureSourceDescriptor>::sse_decode(deserializer);
+        let mut var_sampleRate = <u32>::sse_decode(deserializer);
+        let mut var_durationMs = <u32>::sse_decode(deserializer);
+        let mut var_loopCount = <u16>::sse_decode(deserializer);
+        let mut var_channels = <u8>::sse_decode(deserializer);
+        let mut var_metadata =
+            <std::collections::HashMap<String, String>>::sse_decode(deserializer);
+        let mut var_bpm =
+            <crate::testing::fixture_manifest::FixtureBpmRange>::sse_decode(deserializer);
+        let mut var_expectedCounts =
+            <std::collections::HashMap<String, u32>>::sse_decode(deserializer);
+        let mut var_anomalyTags = <Vec<String>>::sse_decode(deserializer);
+        let mut var_tolerances =
+            <crate::testing::fixture_manifest::FixtureToleranceEnvelope>::sse_decode(deserializer);
+        return crate::testing::fixture_manifest::FixtureManifestEntry {
+            id: var_id,
+            description: var_description,
+            source: var_source,
+            sample_rate: var_sampleRate,
+            duration_ms: var_durationMs,
+            loop_count: var_loopCount,
+            channels: var_channels,
+            metadata: var_metadata,
+            bpm: var_bpm,
+            expected_counts: var_expectedCounts,
+            anomaly_tags: var_anomalyTags,
+            tolerances: var_tolerances,
+        };
+    }
+}
+
+impl SseDecode for crate::testing::fixture_manifest::FixtureSourceDescriptor {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_path = <String>::sse_decode(deserializer);
+                return crate::testing::fixture_manifest::FixtureSourceDescriptor::WavFile {
+                    path: var_path,
+                };
+            }
+            1 => {
+                let mut var_pattern =
+                    <crate::testing::fixture_manifest::ManifestSyntheticPattern>::sse_decode(
+                        deserializer,
+                    );
+                let mut var_frequencyHz = <f32>::sse_decode(deserializer);
+                let mut var_amplitude = <f32>::sse_decode(deserializer);
+                return crate::testing::fixture_manifest::FixtureSourceDescriptor::Synthetic {
+                    pattern: var_pattern,
+                    frequency_hz: var_frequencyHz,
+                    amplitude: var_amplitude,
+                };
+            }
+            2 => {
+                let mut var_device = <Option<String>>::sse_decode(deserializer);
+                return crate::testing::fixture_manifest::FixtureSourceDescriptor::Loopback {
+                    device: var_device,
+                };
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
+impl SseDecode for crate::testing::fixture_manifest::FixtureThreshold {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_max = <f32>::sse_decode(deserializer);
+        return crate::testing::fixture_manifest::FixtureThreshold { max: var_max };
+    }
+}
+
+impl SseDecode for crate::testing::fixture_manifest::FixtureToleranceEnvelope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_latencyMs =
+            <crate::testing::fixture_manifest::FixtureThreshold>::sse_decode(deserializer);
+        let mut var_classificationDropPct =
+            <crate::testing::fixture_manifest::FixtureThreshold>::sse_decode(deserializer);
+        let mut var_bpmDeviationPct =
+            <crate::testing::fixture_manifest::FixtureThreshold>::sse_decode(deserializer);
+        return crate::testing::fixture_manifest::FixtureToleranceEnvelope {
+            latency_ms: var_latencyMs,
+            classification_drop_pct: var_classificationDropPct,
+            bpm_deviation_pct: var_bpmDeviationPct,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -979,6 +1165,32 @@ impl SseDecode for crate::telemetry::events::LifecyclePhase {
     }
 }
 
+impl SseDecode for Vec<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<String>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::testing::fixture_manifest::FixtureManifestEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::testing::fixture_manifest::FixtureManifestEntry>::sse_decode(deserializer),
+            );
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -988,6 +1200,44 @@ impl SseDecode for Vec<u8> {
             ans_.push(<u8>::sse_decode(deserializer));
         }
         return ans_;
+    }
+}
+
+impl SseDecode for Vec<(String, String)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<(String, String)>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<(String, u32)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<(String, u32)>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for crate::testing::fixture_manifest::ManifestSyntheticPattern {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::testing::fixture_manifest::ManifestSyntheticPattern::Sine,
+            1 => crate::testing::fixture_manifest::ManifestSyntheticPattern::Square,
+            2 => crate::testing::fixture_manifest::ManifestSyntheticPattern::WhiteNoise,
+            3 => crate::testing::fixture_manifest::ManifestSyntheticPattern::ImpulseTrain,
+            _ => unreachable!("Invalid variant for ManifestSyntheticPattern: {}", inner),
+        };
     }
 }
 
@@ -1072,6 +1322,19 @@ impl SseDecode for Option<f32> {
     }
 }
 
+impl SseDecode for Option<crate::testing::fixture_manifest::FixtureManifestEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <crate::testing::fixture_manifest::FixtureManifestEntry>::sse_decode(deserializer),
+            );
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1094,6 +1357,24 @@ impl SseDecode for crate::engine::core::ParamPatch {
             centroid_threshold: var_centroidThreshold,
             zcr_threshold: var_zcrThreshold,
         };
+    }
+}
+
+impl SseDecode for (String, String) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <String>::sse_decode(deserializer);
+        return (var_field0, var_field1);
+    }
+}
+
+impl SseDecode for (String, u32) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <u32>::sse_decode(deserializer);
+        return (var_field0, var_field1);
     }
 }
 
@@ -1163,6 +1444,13 @@ impl SseDecode for crate::analysis::quantizer::TimingFeedback {
     }
 }
 
+impl SseDecode for u16 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u16::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1215,22 +1503,27 @@ fn pde_ffi_dispatcher_primary_impl(
         1 => wire__crate__api__apply_params_impl(port, ptr, rust_vec_len, data_len),
         2 => wire__crate__api__calibration_stream_impl(port, ptr, rust_vec_len, data_len),
         3 => wire__crate__api__classification_stream_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__diagnostic_metrics_stream_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__diagnostics__start_fixture_session_impl(
+        4 => wire__crate__api__streams__diagnostic_metrics_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__diagnostics__start_fixture_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        19 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1243,11 +1536,15 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        6 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
+        6 => {
+            wire__crate__api__diagnostics__fixture_metadata_for_id_impl(ptr, rust_vec_len, data_len)
+        }
+        7 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1494,6 +1791,135 @@ impl flutter_rust_bridge::IntoIntoDart<crate::telemetry::events::DiagnosticError
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::FixtureBpmRange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.min.into_into_dart().into_dart(),
+            self.max.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::FixtureBpmRange
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::FixtureBpmRange>
+    for crate::testing::fixture_manifest::FixtureBpmRange
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::FixtureBpmRange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::FixtureManifestEntry {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.description.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+            self.sample_rate.into_into_dart().into_dart(),
+            self.duration_ms.into_into_dart().into_dart(),
+            self.loop_count.into_into_dart().into_dart(),
+            self.channels.into_into_dart().into_dart(),
+            self.metadata.into_into_dart().into_dart(),
+            self.bpm.into_into_dart().into_dart(),
+            self.expected_counts.into_into_dart().into_dart(),
+            self.anomaly_tags.into_into_dart().into_dart(),
+            self.tolerances.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::FixtureManifestEntry
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::FixtureManifestEntry>
+    for crate::testing::fixture_manifest::FixtureManifestEntry
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::FixtureManifestEntry {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::FixtureSourceDescriptor {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::WavFile { path } => {
+                [0.into_dart(), path.into_into_dart().into_dart()].into_dart()
+            }
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::Synthetic {
+                pattern,
+                frequency_hz,
+                amplitude,
+            } => [
+                1.into_dart(),
+                pattern.into_into_dart().into_dart(),
+                frequency_hz.into_into_dart().into_dart(),
+                amplitude.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::Loopback { device } => {
+                [2.into_dart(), device.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::FixtureSourceDescriptor
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::FixtureSourceDescriptor>
+    for crate::testing::fixture_manifest::FixtureSourceDescriptor
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::FixtureSourceDescriptor {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::FixtureThreshold {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [self.max.into_into_dart().into_dart()].into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::FixtureThreshold
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::FixtureThreshold>
+    for crate::testing::fixture_manifest::FixtureThreshold
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::FixtureThreshold {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::FixtureToleranceEnvelope {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.latency_ms.into_into_dart().into_dart(),
+            self.classification_drop_pct.into_into_dart().into_dart(),
+            self.bpm_deviation_pct.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::FixtureToleranceEnvelope
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::FixtureToleranceEnvelope>
+    for crate::testing::fixture_manifest::FixtureToleranceEnvelope
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::FixtureToleranceEnvelope {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::telemetry::events::LifecyclePhase {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -1514,6 +1940,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::telemetry::events::LifecyclePhase>
     for crate::telemetry::events::LifecyclePhase
 {
     fn into_into_dart(self) -> crate::telemetry::events::LifecyclePhase {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::testing::fixture_manifest::ManifestSyntheticPattern {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Sine => 0.into_dart(),
+            Self::Square => 1.into_dart(),
+            Self::WhiteNoise => 2.into_dart(),
+            Self::ImpulseTrain => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::testing::fixture_manifest::ManifestSyntheticPattern
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::testing::fixture_manifest::ManifestSyntheticPattern>
+    for crate::testing::fixture_manifest::ManifestSyntheticPattern
+{
+    fn into_into_dart(self) -> crate::testing::fixture_manifest::ManifestSyntheticPattern {
         self
     }
 }
@@ -1709,6 +2158,20 @@ impl SseEncode for FixtureSpec {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<FixtureSpec>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
+impl SseEncode for std::collections::HashMap<String, String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<(String, String)>>::sse_encode(self.into_iter().collect(), serializer);
+    }
+}
+
+impl SseEncode for std::collections::HashMap<String, u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<(String, u32)>>::sse_encode(self.into_iter().collect(), serializer);
     }
 }
 
@@ -1956,6 +2419,94 @@ impl SseEncode for f32 {
     }
 }
 
+impl SseEncode for crate::testing::fixture_manifest::FixtureBpmRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.min, serializer);
+        <u32>::sse_encode(self.max, serializer);
+    }
+}
+
+impl SseEncode for crate::testing::fixture_manifest::FixtureManifestEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <Option<String>>::sse_encode(self.description, serializer);
+        <crate::testing::fixture_manifest::FixtureSourceDescriptor>::sse_encode(
+            self.source,
+            serializer,
+        );
+        <u32>::sse_encode(self.sample_rate, serializer);
+        <u32>::sse_encode(self.duration_ms, serializer);
+        <u16>::sse_encode(self.loop_count, serializer);
+        <u8>::sse_encode(self.channels, serializer);
+        <std::collections::HashMap<String, String>>::sse_encode(self.metadata, serializer);
+        <crate::testing::fixture_manifest::FixtureBpmRange>::sse_encode(self.bpm, serializer);
+        <std::collections::HashMap<String, u32>>::sse_encode(self.expected_counts, serializer);
+        <Vec<String>>::sse_encode(self.anomaly_tags, serializer);
+        <crate::testing::fixture_manifest::FixtureToleranceEnvelope>::sse_encode(
+            self.tolerances,
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::testing::fixture_manifest::FixtureSourceDescriptor {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::WavFile { path } => {
+                <i32>::sse_encode(0, serializer);
+                <String>::sse_encode(path, serializer);
+            }
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::Synthetic {
+                pattern,
+                frequency_hz,
+                amplitude,
+            } => {
+                <i32>::sse_encode(1, serializer);
+                <crate::testing::fixture_manifest::ManifestSyntheticPattern>::sse_encode(
+                    pattern, serializer,
+                );
+                <f32>::sse_encode(frequency_hz, serializer);
+                <f32>::sse_encode(amplitude, serializer);
+            }
+            crate::testing::fixture_manifest::FixtureSourceDescriptor::Loopback { device } => {
+                <i32>::sse_encode(2, serializer);
+                <Option<String>>::sse_encode(device, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
+impl SseEncode for crate::testing::fixture_manifest::FixtureThreshold {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.max, serializer);
+    }
+}
+
+impl SseEncode for crate::testing::fixture_manifest::FixtureToleranceEnvelope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::testing::fixture_manifest::FixtureThreshold>::sse_encode(
+            self.latency_ms,
+            serializer,
+        );
+        <crate::testing::fixture_manifest::FixtureThreshold>::sse_encode(
+            self.classification_drop_pct,
+            serializer,
+        );
+        <crate::testing::fixture_manifest::FixtureThreshold>::sse_encode(
+            self.bpm_deviation_pct,
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1982,6 +2533,26 @@ impl SseEncode for crate::telemetry::events::LifecyclePhase {
     }
 }
 
+impl SseEncode for Vec<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <String>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::testing::fixture_manifest::FixtureManifestEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::testing::fixture_manifest::FixtureManifestEntry>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1989,6 +2560,44 @@ impl SseEncode for Vec<u8> {
         for item in self {
             <u8>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for Vec<(String, String)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <(String, String)>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<(String, u32)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <(String, u32)>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for crate::testing::fixture_manifest::ManifestSyntheticPattern {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::testing::fixture_manifest::ManifestSyntheticPattern::Sine => 0,
+                crate::testing::fixture_manifest::ManifestSyntheticPattern::Square => 1,
+                crate::testing::fixture_manifest::ManifestSyntheticPattern::WhiteNoise => 2,
+                crate::testing::fixture_manifest::ManifestSyntheticPattern::ImpulseTrain => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
@@ -2061,6 +2670,16 @@ impl SseEncode for Option<f32> {
     }
 }
 
+impl SseEncode for Option<crate::testing::fixture_manifest::FixtureManifestEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::testing::fixture_manifest::FixtureManifestEntry>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2077,6 +2696,22 @@ impl SseEncode for crate::engine::core::ParamPatch {
         <Option<u32>>::sse_encode(self.bpm, serializer);
         <Option<f32>>::sse_encode(self.centroid_threshold, serializer);
         <Option<f32>>::sse_encode(self.zcr_threshold, serializer);
+    }
+}
+
+impl SseEncode for (String, String) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <String>::sse_encode(self.1, serializer);
+    }
+}
+
+impl SseEncode for (String, u32) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <u32>::sse_encode(self.1, serializer);
     }
 }
 
@@ -2139,6 +2774,13 @@ impl SseEncode for crate::analysis::quantizer::TimingFeedback {
             serializer,
         );
         <f32>::sse_encode(self.error_ms, serializer);
+    }
+}
+
+impl SseEncode for u16 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u16::<NativeEndian>(self).unwrap();
     }
 }
 

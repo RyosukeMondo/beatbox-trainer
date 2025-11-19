@@ -16,7 +16,7 @@
   - _Leverage: design §§Components (DiagnosticsPlaybookParser, PlaybookRunner), Architecture diagram_
   - _Prompt: Role: Diagnostics CLI developer | Task: Implement parser + runner with clear logging and ANSI status output, wiring into existing run.sh | Restrictions: No external deps beyond Dart SDK/stdlib, keep runner cross-platform | Success: Running `./tools/cli/diagnostics/run.sh --scenario keynote-latency` executes manifest-defined steps and writes logs under `logs/diagnostics/keynote-latency/<timestamp>`_
 
-- [ ] 3. Create fixture metadata registry
+- [x] 3. Create fixture metadata registry
   - Files: `rust/fixtures/catalog.json`, `rust/src/testing/fixture_manifest.rs`, `lib/bridge/api.dart` (FRB), `lib/services/debug/fixture_metadata_service.dart`
   - Define manifest schema (source, BPM bounds, expected counts, anomaly tags, tolerances)
   - Implement Rust loader + validator returning typed metadata; expose via FRB for Dart consumers

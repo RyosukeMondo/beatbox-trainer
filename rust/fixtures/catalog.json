@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "basic_hits",
+      "description": "Baseline WAV loop covering alternating kick + hi-hat hits for smoke runs.",
+      "source": {
+        "kind": "wav_file",
+        "path": "rust/fixtures/basic_hits.wav"
+      },
+      "sample_rate": 48000,
+      "channels": 1,
+      "duration_ms": 1000,
+      "loop_count": 1,
+      "expected_bpm": { "min": 118, "max": 122 },
+      "expected_counts": { "kick": 16, "snare": 0, "hihat": 16 },
+      "anomaly_tags": ["baseline", "smoke"],
+      "tolerances": {
+        "latency_ms": { "max": 8.0 },
+        "classification_drop_pct": { "max": 5.0 },
+        "bpm_deviation_pct": { "max": 1.0 }
+      },
+      "metadata": {
+        "fixture_profile": "default-smoke",
+        "notes": "Used by CLI default scenario"
+      }
+    },
+    {
+      "id": "keynote_latency",
+      "description": "Impulse train synthesizer that exaggerates transient drift for keynote rehearsals.",
+      "source": {
+        "kind": "synthetic",
+        "pattern": "impulse_train",
+        "frequency_hz": 2.0,
+        "amplitude": 0.7
+      },
+      "sample_rate": 48000,
+      "channels": 1,
+      "duration_ms": 2000,
+      "loop_count": 2,
+      "expected_bpm": { "min": 90, "max": 110 },
+      "expected_counts": { "kick": 32, "snare": 32, "hihat": 32 },
+      "anomaly_tags": ["latency", "keynote"],
+      "tolerances": {
+        "latency_ms": { "max": 5.0 },
+        "classification_drop_pct": { "max": 3.0 },
+        "bpm_deviation_pct": { "max": 0.5 }
+      },
+      "metadata": {
+        "fixture_profile": "keynote-latency",
+        "severity": "high"
+      }
+    },
+    {
+      "id": "calibration_stress",
+      "description": "Noisy hats + loopback kicks to stress calibration thresholds.",
+      "source": {
+        "kind": "loopback",
+        "device": "studio-loop"
+      },
+      "sample_rate": 48000,
+      "channels": 1,
+      "duration_ms": 1500,
+      "loop_count": 3,
+      "expected_bpm": { "min": 100, "max": 140 },
+      "expected_counts": { "kick": 24, "snare": 24, "hihat": 24 },
+      "anomaly_tags": ["calibration", "noise"],
+      "tolerances": {
+        "latency_ms": { "max": 12.0 },
+        "classification_drop_pct": { "max": 7.5 },
+        "bpm_deviation_pct": { "max": 2.5 }
+      },
+      "metadata": {
+        "fixture_profile": "calibration-stress",
+        "notes": "Used by stress toggles"
+      }
+    }
+  ]
+}

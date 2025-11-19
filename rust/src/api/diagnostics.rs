@@ -3,6 +3,7 @@ use super::ENGINE_HANDLE;
 use crate::error::AudioError;
 #[cfg(any(test, feature = "diagnostics_fixtures"))]
 use crate::testing::fixture_engine::{self, FixtureHandle};
+use crate::testing::fixture_manifest::{FixtureManifestCatalog, FixtureManifestEntry};
 use crate::testing::fixtures::FixtureSpec;
 use flutter_rust_bridge::frb;
 #[cfg(any(test, feature = "diagnostics_fixtures"))]
@@ -65,6 +66,20 @@ pub fn stop_fixture_session() -> Result<(), AudioError> {
             reason: "diagnostics fixtures disabled in this build".to_string(),
         })
     }
+}
+
+/// Return the full fixture metadata catalog for diagnostics consumers.
+#[frb(sync)]
+pub fn load_fixture_catalog() -> Result<Vec<FixtureManifestEntry>, AudioError> {
+    let catalog = FixtureManifestCatalog::load_from_default()?;
+    Ok(catalog.fixtures)
+}
+
+/// Return a single fixture metadata entry by id when present.
+#[frb(sync)]
+pub fn fixture_metadata_for_id(id: String) -> Result<Option<FixtureManifestEntry>, AudioError> {
+    let catalog = FixtureManifestCatalog::load_from_default()?;
+    Ok(catalog.find(&id).cloned())
 }
 
 pub(crate) fn fixture_session_is_running() -> bool {

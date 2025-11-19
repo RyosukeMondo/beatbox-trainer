@@ -12,10 +12,12 @@ use crate::calibration::CalibrationProgress;
 use crate::engine::core::{EngineHandle, ParamPatch};
 use crate::error::{AudioError, CalibrationError};
 pub mod diagnostics;
-mod streams;
+pub mod streams;
 mod types;
 
-pub use diagnostics::{start_fixture_session, stop_fixture_session};
+pub use diagnostics::{
+    fixture_metadata_for_id, load_fixture_catalog, start_fixture_session, stop_fixture_session,
+};
 pub use streams::{
     audio_metrics_stream, diagnostic_metrics_stream, onset_events_stream, telemetry_stream,
 };

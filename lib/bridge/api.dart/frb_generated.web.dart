@@ -3,7 +3,6 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
@@ -12,6 +11,7 @@ import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'api.dart';
 import 'api/diagnostics.dart';
+import 'api/streams.dart';
 import 'calibration/progress.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -20,272 +20,732 @@ import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 import 'telemetry/events.dart';
+import 'testing/fixture_manifest.dart';
 import 'testing/fixtures.dart';
 
+abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
+  RustLibApiImplPlatform({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_FixtureSpecPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
 
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
 
-                abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
-                  RustLibApiImplPlatform({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
+  @protected
+  FixtureSpec
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    dynamic raw,
+  );
 
-                  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FixtureSpecPtr => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec;
+  @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
 
+  @protected
+  Map<String, int> dco_decode_Map_String_u_32_None(dynamic raw);
 
+  @protected
+  FixtureSpec
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    dynamic raw,
+  );
 
-                  @protected AnyhowException dco_decode_AnyhowException(dynamic raw);
+  @protected
+  RustStreamSink<CalibrationProgress>
+  dco_decode_StreamSink_calibration_progress_Sse(dynamic raw);
 
-@protected FixtureSpec dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw);
+  @protected
+  RustStreamSink<ClassificationResult>
+  dco_decode_StreamSink_classification_result_Sse(dynamic raw);
 
-@protected FixtureSpec dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(dynamic raw);
+  @protected
+  RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(
+    dynamic raw,
+  );
 
-@protected RustStreamSink<CalibrationProgress> dco_decode_StreamSink_calibration_progress_Sse(dynamic raw);
+  @protected
+  RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(
+    dynamic raw,
+  );
 
-@protected RustStreamSink<ClassificationResult> dco_decode_StreamSink_classification_result_Sse(dynamic raw);
+  @protected
+  String dco_decode_String(dynamic raw);
 
-@protected RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(dynamic raw);
+  @protected
+  AudioError dco_decode_audio_error(dynamic raw);
 
-@protected RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(dynamic raw);
+  @protected
+  AudioErrorCodes dco_decode_audio_error_codes(dynamic raw);
 
-@protected String dco_decode_String(dynamic raw);
+  @protected
+  BeatboxHit dco_decode_beatbox_hit(dynamic raw);
 
-@protected AudioError dco_decode_audio_error(dynamic raw);
+  @protected
+  double dco_decode_box_autoadd_f_32(dynamic raw);
 
-@protected AudioErrorCodes dco_decode_audio_error_codes(dynamic raw);
+  @protected
+  FixtureManifestEntry dco_decode_box_autoadd_fixture_manifest_entry(
+    dynamic raw,
+  );
 
-@protected BeatboxHit dco_decode_beatbox_hit(dynamic raw);
+  @protected
+  ParamPatch dco_decode_box_autoadd_param_patch(dynamic raw);
 
-@protected double dco_decode_box_autoadd_f_32(dynamic raw);
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
 
-@protected ParamPatch dco_decode_box_autoadd_param_patch(dynamic raw);
+  @protected
+  CalibrationError dco_decode_calibration_error(dynamic raw);
 
-@protected int dco_decode_box_autoadd_u_32(dynamic raw);
+  @protected
+  CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw);
 
-@protected CalibrationError dco_decode_calibration_error(dynamic raw);
+  @protected
+  CalibrationProgress dco_decode_calibration_progress(dynamic raw);
 
-@protected CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw);
+  @protected
+  CalibrationSound dco_decode_calibration_sound(dynamic raw);
 
-@protected CalibrationProgress dco_decode_calibration_progress(dynamic raw);
+  @protected
+  ClassificationResult dco_decode_classification_result(dynamic raw);
 
-@protected CalibrationSound dco_decode_calibration_sound(dynamic raw);
+  @protected
+  DiagnosticError dco_decode_diagnostic_error(dynamic raw);
 
-@protected ClassificationResult dco_decode_classification_result(dynamic raw);
+  @protected
+  double dco_decode_f_32(dynamic raw);
 
-@protected DiagnosticError dco_decode_diagnostic_error(dynamic raw);
+  @protected
+  FixtureBpmRange dco_decode_fixture_bpm_range(dynamic raw);
 
-@protected double dco_decode_f_32(dynamic raw);
+  @protected
+  FixtureManifestEntry dco_decode_fixture_manifest_entry(dynamic raw);
 
-@protected int dco_decode_i_32(dynamic raw);
+  @protected
+  FixtureSourceDescriptor dco_decode_fixture_source_descriptor(dynamic raw);
 
-@protected LifecyclePhase dco_decode_lifecycle_phase(dynamic raw);
+  @protected
+  FixtureThreshold dco_decode_fixture_threshold(dynamic raw);
 
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+  @protected
+  FixtureToleranceEnvelope dco_decode_fixture_tolerance_envelope(dynamic raw);
 
-@protected MetricEvent dco_decode_metric_event(dynamic raw);
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
-@protected String? dco_decode_opt_String(dynamic raw);
+  @protected
+  LifecyclePhase dco_decode_lifecycle_phase(dynamic raw);
 
-@protected double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
 
-@protected int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+  @protected
+  List<FixtureManifestEntry> dco_decode_list_fixture_manifest_entry(
+    dynamic raw,
+  );
 
-@protected ParamPatch dco_decode_param_patch(dynamic raw);
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
-@protected TelemetryEvent dco_decode_telemetry_event(dynamic raw);
+  @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw);
 
-@protected TelemetryEventKind dco_decode_telemetry_event_kind(dynamic raw);
+  @protected
+  List<(String, int)> dco_decode_list_record_string_u_32(dynamic raw);
 
-@protected TimingClassification dco_decode_timing_classification(dynamic raw);
+  @protected
+  ManifestSyntheticPattern dco_decode_manifest_synthetic_pattern(dynamic raw);
 
-@protected TimingFeedback dco_decode_timing_feedback(dynamic raw);
+  @protected
+  MetricEvent dco_decode_metric_event(dynamic raw);
 
-@protected int dco_decode_u_32(dynamic raw);
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
 
-@protected BigInt dco_decode_u_64(dynamic raw);
+  @protected
+  double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
 
-@protected int dco_decode_u_8(dynamic raw);
+  @protected
+  FixtureManifestEntry? dco_decode_opt_box_autoadd_fixture_manifest_entry(
+    dynamic raw,
+  );
 
-@protected void dco_decode_unit(dynamic raw);
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
-@protected BigInt dco_decode_usize(dynamic raw);
+  @protected
+  ParamPatch dco_decode_param_patch(dynamic raw);
 
-@protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+  @protected
+  (String, String) dco_decode_record_string_string(dynamic raw);
 
-@protected FixtureSpec sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer);
+  @protected
+  (String, int) dco_decode_record_string_u_32(dynamic raw);
 
-@protected FixtureSpec sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(SseDeserializer deserializer);
+  @protected
+  TelemetryEvent dco_decode_telemetry_event(dynamic raw);
 
-@protected RustStreamSink<CalibrationProgress> sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer);
+  @protected
+  TelemetryEventKind dco_decode_telemetry_event_kind(dynamic raw);
 
-@protected RustStreamSink<ClassificationResult> sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer);
+  @protected
+  TimingClassification dco_decode_timing_classification(dynamic raw);
 
-@protected RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(SseDeserializer deserializer);
+  @protected
+  TimingFeedback dco_decode_timing_feedback(dynamic raw);
 
-@protected RustStreamSink<TelemetryEvent> sse_decode_StreamSink_telemetry_event_Sse(SseDeserializer deserializer);
+  @protected
+  int dco_decode_u_16(dynamic raw);
 
-@protected String sse_decode_String(SseDeserializer deserializer);
+  @protected
+  int dco_decode_u_32(dynamic raw);
 
-@protected AudioError sse_decode_audio_error(SseDeserializer deserializer);
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
-@protected AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer);
+  @protected
+  int dco_decode_u_8(dynamic raw);
 
-@protected BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer);
+  @protected
+  void dco_decode_unit(dynamic raw);
 
-@protected double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
+  @protected
+  BigInt dco_decode_usize(dynamic raw);
 
-@protected ParamPatch sse_decode_box_autoadd_param_patch(SseDeserializer deserializer);
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
-@protected int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+  @protected
+  FixtureSpec
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    SseDeserializer deserializer,
+  );
 
-@protected CalibrationError sse_decode_calibration_error(SseDeserializer deserializer);
+  @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  );
 
-@protected CalibrationErrorCodes sse_decode_calibration_error_codes(SseDeserializer deserializer);
+  @protected
+  Map<String, int> sse_decode_Map_String_u_32_None(
+    SseDeserializer deserializer,
+  );
 
-@protected CalibrationProgress sse_decode_calibration_progress(SseDeserializer deserializer);
+  @protected
+  FixtureSpec
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    SseDeserializer deserializer,
+  );
 
-@protected CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer);
+  @protected
+  RustStreamSink<CalibrationProgress>
+  sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer);
 
-@protected ClassificationResult sse_decode_classification_result(SseDeserializer deserializer);
+  @protected
+  RustStreamSink<ClassificationResult>
+  sse_decode_StreamSink_classification_result_Sse(SseDeserializer deserializer);
 
-@protected DiagnosticError sse_decode_diagnostic_error(SseDeserializer deserializer);
+  @protected
+  RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(
+    SseDeserializer deserializer,
+  );
 
-@protected double sse_decode_f_32(SseDeserializer deserializer);
+  @protected
+  RustStreamSink<TelemetryEvent> sse_decode_StreamSink_telemetry_event_Sse(
+    SseDeserializer deserializer,
+  );
 
-@protected int sse_decode_i_32(SseDeserializer deserializer);
+  @protected
+  String sse_decode_String(SseDeserializer deserializer);
 
-@protected LifecyclePhase sse_decode_lifecycle_phase(SseDeserializer deserializer);
+  @protected
+  AudioError sse_decode_audio_error(SseDeserializer deserializer);
 
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+  @protected
+  AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer);
 
-@protected MetricEvent sse_decode_metric_event(SseDeserializer deserializer);
+  @protected
+  BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer);
 
-@protected String? sse_decode_opt_String(SseDeserializer deserializer);
+  @protected
+  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
 
-@protected double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
+  @protected
+  FixtureManifestEntry sse_decode_box_autoadd_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  );
 
-@protected int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+  @protected
+  ParamPatch sse_decode_box_autoadd_param_patch(SseDeserializer deserializer);
 
-@protected ParamPatch sse_decode_param_patch(SseDeserializer deserializer);
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
-@protected TelemetryEvent sse_decode_telemetry_event(SseDeserializer deserializer);
+  @protected
+  CalibrationError sse_decode_calibration_error(SseDeserializer deserializer);
 
-@protected TelemetryEventKind sse_decode_telemetry_event_kind(SseDeserializer deserializer);
+  @protected
+  CalibrationErrorCodes sse_decode_calibration_error_codes(
+    SseDeserializer deserializer,
+  );
 
-@protected TimingClassification sse_decode_timing_classification(SseDeserializer deserializer);
+  @protected
+  CalibrationProgress sse_decode_calibration_progress(
+    SseDeserializer deserializer,
+  );
 
-@protected TimingFeedback sse_decode_timing_feedback(SseDeserializer deserializer);
+  @protected
+  CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer);
 
-@protected int sse_decode_u_32(SseDeserializer deserializer);
+  @protected
+  ClassificationResult sse_decode_classification_result(
+    SseDeserializer deserializer,
+  );
 
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer);
+  @protected
+  DiagnosticError sse_decode_diagnostic_error(SseDeserializer deserializer);
 
-@protected int sse_decode_u_8(SseDeserializer deserializer);
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
 
-@protected void sse_decode_unit(SseDeserializer deserializer);
+  @protected
+  FixtureBpmRange sse_decode_fixture_bpm_range(SseDeserializer deserializer);
 
-@protected BigInt sse_decode_usize(SseDeserializer deserializer);
+  @protected
+  FixtureManifestEntry sse_decode_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  );
 
-@protected bool sse_decode_bool(SseDeserializer deserializer);
+  @protected
+  FixtureSourceDescriptor sse_decode_fixture_source_descriptor(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer);
+  @protected
+  FixtureThreshold sse_decode_fixture_threshold(SseDeserializer deserializer);
 
-@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer);
+  @protected
+  FixtureToleranceEnvelope sse_decode_fixture_tolerance_envelope(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(FixtureSpec self, SseSerializer serializer);
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
-@protected void sse_encode_StreamSink_calibration_progress_Sse(RustStreamSink<CalibrationProgress> self, SseSerializer serializer);
+  @protected
+  LifecyclePhase sse_decode_lifecycle_phase(SseDeserializer deserializer);
 
-@protected void sse_encode_StreamSink_classification_result_Sse(RustStreamSink<ClassificationResult> self, SseSerializer serializer);
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
 
-@protected void sse_encode_StreamSink_metric_event_Sse(RustStreamSink<MetricEvent> self, SseSerializer serializer);
+  @protected
+  List<FixtureManifestEntry> sse_decode_list_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_StreamSink_telemetry_event_Sse(RustStreamSink<TelemetryEvent> self, SseSerializer serializer);
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
-@protected void sse_encode_String(String self, SseSerializer serializer);
+  @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_audio_error(AudioError self, SseSerializer serializer);
+  @protected
+  List<(String, int)> sse_decode_list_record_string_u_32(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_audio_error_codes(AudioErrorCodes self, SseSerializer serializer);
+  @protected
+  ManifestSyntheticPattern sse_decode_manifest_synthetic_pattern(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer);
+  @protected
+  MetricEvent sse_decode_metric_event(SseDeserializer deserializer);
 
-@protected void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
-@protected void sse_encode_box_autoadd_param_patch(ParamPatch self, SseSerializer serializer);
+  @protected
+  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
 
-@protected void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+  @protected
+  FixtureManifestEntry? sse_decode_opt_box_autoadd_fixture_manifest_entry(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_calibration_error(CalibrationError self, SseSerializer serializer);
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
-@protected void sse_encode_calibration_error_codes(CalibrationErrorCodes self, SseSerializer serializer);
+  @protected
+  ParamPatch sse_decode_param_patch(SseDeserializer deserializer);
 
-@protected void sse_encode_calibration_progress(CalibrationProgress self, SseSerializer serializer);
+  @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_calibration_sound(CalibrationSound self, SseSerializer serializer);
+  @protected
+  (String, int) sse_decode_record_string_u_32(SseDeserializer deserializer);
 
-@protected void sse_encode_classification_result(ClassificationResult self, SseSerializer serializer);
+  @protected
+  TelemetryEvent sse_decode_telemetry_event(SseDeserializer deserializer);
 
-@protected void sse_encode_diagnostic_error(DiagnosticError self, SseSerializer serializer);
+  @protected
+  TelemetryEventKind sse_decode_telemetry_event_kind(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_f_32(double self, SseSerializer serializer);
+  @protected
+  TimingClassification sse_decode_timing_classification(
+    SseDeserializer deserializer,
+  );
 
-@protected void sse_encode_i_32(int self, SseSerializer serializer);
+  @protected
+  TimingFeedback sse_decode_timing_feedback(SseDeserializer deserializer);
 
-@protected void sse_encode_lifecycle_phase(LifecyclePhase self, SseSerializer serializer);
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
 
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
 
-@protected void sse_encode_metric_event(MetricEvent self, SseSerializer serializer);
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer);
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer);
 
-@protected void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer);
 
-@protected void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
 
-@protected void sse_encode_param_patch(ParamPatch self, SseSerializer serializer);
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
 
-@protected void sse_encode_telemetry_event(TelemetryEvent self, SseSerializer serializer);
+  @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_telemetry_event_kind(TelemetryEventKind self, SseSerializer serializer);
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    FixtureSpec self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_timing_classification(TimingClassification self, SseSerializer serializer);
+  @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_timing_feedback(TimingFeedback self, SseSerializer serializer);
+  @protected
+  void sse_encode_Map_String_u_32_None(
+    Map<String, int> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_u_32(int self, SseSerializer serializer);
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    FixtureSpec self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer);
+  @protected
+  void sse_encode_StreamSink_calibration_progress_Sse(
+    RustStreamSink<CalibrationProgress> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_u_8(int self, SseSerializer serializer);
+  @protected
+  void sse_encode_StreamSink_classification_result_Sse(
+    RustStreamSink<ClassificationResult> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_unit(void self, SseSerializer serializer);
-
-@protected void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-@protected void sse_encode_bool(bool self, SseSerializer serializer);
-                }
-                
-
+  @protected
+  void sse_encode_StreamSink_metric_event_Sse(
+    RustStreamSink<MetricEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_telemetry_event_Sse(
+    RustStreamSink<TelemetryEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_error(AudioError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_error_codes(
+    AudioErrorCodes self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_fixture_manifest_entry(
+    FixtureManifestEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_param_patch(
+    ParamPatch self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_calibration_error(
+    CalibrationError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_error_codes(
+    CalibrationErrorCodes self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_progress(
+    CalibrationProgress self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_sound(
+    CalibrationSound self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_classification_result(
+    ClassificationResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_diagnostic_error(
+    DiagnosticError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fixture_bpm_range(
+    FixtureBpmRange self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_fixture_manifest_entry(
+    FixtureManifestEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_fixture_source_descriptor(
+    FixtureSourceDescriptor self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_fixture_threshold(
+    FixtureThreshold self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_fixture_tolerance_envelope(
+    FixtureToleranceEnvelope self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_lifecycle_phase(
+    LifecyclePhase self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_fixture_manifest_entry(
+    List<FixtureManifestEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_record_string_u_32(
+    List<(String, int)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_manifest_synthetic_pattern(
+    ManifestSyntheticPattern self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_metric_event(MetricEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_fixture_manifest_entry(
+    FixtureManifestEntry? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_param_patch(ParamPatch self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_record_string_u_32(
+    (String, int) self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_telemetry_event(
+    TelemetryEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_telemetry_event_kind(
+    TelemetryEventKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_timing_classification(
+    TimingClassification self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_timing_feedback(
+    TimingFeedback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+}
 
 // Section: wire_class
 
 class RustLibWire implements BaseWire {
-            RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+  RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
-            void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr) => wasmModule.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(ptr);
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+        ptr,
+      );
 
-void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr) => wasmModule.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(ptr);
-        }
-        @JS('wasm_bindgen') external RustLibWasmModule get wasmModule;
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+        ptr,
+      );
+}
 
-        @JS() @anonymous extension type RustLibWasmModule._(JSObject _) implements JSObject {
-            external void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr);
+@JS('wasm_bindgen')
+external RustLibWasmModule get wasmModule;
 
-external void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(int ptr);
-        }
-        
+@JS()
+@anonymous
+extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFixtureSpec(
+    int ptr,
+  );
+}

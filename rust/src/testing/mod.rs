@@ -6,4 +6,5 @@
 //! development.
 
 pub mod fixture_engine;
+pub mod fixture_manifest;
 pub mod fixtures;

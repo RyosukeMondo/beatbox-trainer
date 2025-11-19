@@ -9,43 +9,42 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'events.freezed.dart';
 
-            
-
-            
-
-            /// Diagnostic error codes surfaced via telemetry metrics.
-enum DiagnosticError {
-                    fixtureLoad,
-bufferDrain,
-streamBackpressure,
-unknown,
-                    ;
-                    
-                }
+/// Diagnostic error codes surfaced via telemetry metrics.
+enum DiagnosticError { fixtureLoad, bufferDrain, streamBackpressure, unknown }
 
 /// High-level lifecycle stages reported by JNI/engine instrumentation.
 enum LifecyclePhase {
-                    libraryLoaded,
-contextInitialized,
-permissionsGranted,
-permissionsDenied,
-libraryUnloaded,
-                    ;
-                    
-                }
+  libraryLoaded,
+  contextInitialized,
+  permissionsGranted,
+  permissionsDenied,
+  libraryUnloaded,
+}
 
 @freezed
-                sealed class MetricEvent with _$MetricEvent  {
-                    const MetricEvent._();
+sealed class MetricEvent with _$MetricEvent {
+  const MetricEvent._();
 
-                     const factory MetricEvent.latency({   required double avgMs ,  required double maxMs ,  required BigInt sampleCount , }) = MetricEvent_Latency;
- const factory MetricEvent.bufferOccupancy({   required String channel ,  required double percent , }) = MetricEvent_BufferOccupancy;
- const factory MetricEvent.classification({   required BeatboxHit sound ,  required double confidence ,  required double timingErrorMs , }) = MetricEvent_Classification;
- const factory MetricEvent.jniLifecycle({   required LifecyclePhase phase ,  required BigInt timestampMs , }) = MetricEvent_JniLifecycle;
- const factory MetricEvent.error({   required DiagnosticError code ,  required String context , }) = MetricEvent_Error;
-
-                    
-
-                    
-                }
-            
+  const factory MetricEvent.latency({
+    required double avgMs,
+    required double maxMs,
+    required BigInt sampleCount,
+  }) = MetricEvent_Latency;
+  const factory MetricEvent.bufferOccupancy({
+    required String channel,
+    required double percent,
+  }) = MetricEvent_BufferOccupancy;
+  const factory MetricEvent.classification({
+    required BeatboxHit sound,
+    required double confidence,
+    required double timingErrorMs,
+  }) = MetricEvent_Classification;
+  const factory MetricEvent.jniLifecycle({
+    required LifecyclePhase phase,
+    required BigInt timestampMs,
+  }) = MetricEvent_JniLifecycle;
+  const factory MetricEvent.error({
+    required DiagnosticError code,
+    required String context,
+  }) = MetricEvent_Error;
+}

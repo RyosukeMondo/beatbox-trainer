@@ -8,39 +8,47 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'error.freezed.dart';
 
-            
+@freezed
+sealed class AudioError with _$AudioError implements FrbException {
+  const AudioError._();
 
-            
+  /// BPM value is invalid (must be > 0, typically 40-240)
+  const factory AudioError.bpmInvalid({required int bpm}) =
+      AudioError_BpmInvalid;
 
-            @freezed
-                sealed class AudioError with _$AudioError implements FrbException {
-                    const AudioError._();
+  /// Audio engine is already running
+  const factory AudioError.alreadyRunning() = AudioError_AlreadyRunning;
 
-                     /// BPM value is invalid (must be > 0, typically 40-240)
-const factory AudioError.bpmInvalid({   required int bpm , }) = AudioError_BpmInvalid;
- /// Audio engine is already running
-const factory AudioError.alreadyRunning() = AudioError_AlreadyRunning;
- /// Audio engine is not running
-const factory AudioError.notRunning() = AudioError_NotRunning;
- /// Hardware error occurred
-const factory AudioError.hardwareError({   required String details , }) = AudioError_HardwareError;
- /// Microphone permission denied
-const factory AudioError.permissionDenied() = AudioError_PermissionDenied;
- /// Failed to open audio stream
-const factory AudioError.streamOpenFailed({   required String reason , }) = AudioError_StreamOpenFailed;
- /// Mutex/RwLock was poisoned
-const factory AudioError.lockPoisoned({   required String component , }) = AudioError_LockPoisoned;
- /// JNI initialization failed on Android
-const factory AudioError.jniInitFailed({   required String reason , }) = AudioError_JniInitFailed;
- /// Android context was not initialized before audio engine start
-const factory AudioError.contextNotInitialized() = AudioError_ContextNotInitialized;
- /// Stream channel disconnected unexpectedly
-const factory AudioError.streamFailure({   required String reason , }) = AudioError_StreamFailure;
+  /// Audio engine is not running
+  const factory AudioError.notRunning() = AudioError_NotRunning;
 
-                    
+  /// Hardware error occurred
+  const factory AudioError.hardwareError({required String details}) =
+      AudioError_HardwareError;
 
-                    
-                }
+  /// Microphone permission denied
+  const factory AudioError.permissionDenied() = AudioError_PermissionDenied;
+
+  /// Failed to open audio stream
+  const factory AudioError.streamOpenFailed({required String reason}) =
+      AudioError_StreamOpenFailed;
+
+  /// Mutex/RwLock was poisoned
+  const factory AudioError.lockPoisoned({required String component}) =
+      AudioError_LockPoisoned;
+
+  /// JNI initialization failed on Android
+  const factory AudioError.jniInitFailed({required String reason}) =
+      AudioError_JniInitFailed;
+
+  /// Android context was not initialized before audio engine start
+  const factory AudioError.contextNotInitialized() =
+      AudioError_ContextNotInitialized;
+
+  /// Stream channel disconnected unexpectedly
+  const factory AudioError.streamFailure({required String reason}) =
+      AudioError_StreamFailure;
+}
 
 /// Audio error code constants exposed to Dart via FFI
 ///
@@ -49,50 +57,47 @@ const factory AudioError.streamFailure({   required String reason , }) = AudioEr
 /// generate corresponding Dart constants.
 ///
 /// Error code range: 1001-1010
-class AudioErrorCodes  {
-                
+class AudioErrorCodes {
+  const AudioErrorCodes();
 
-                const AudioErrorCodes();
+  @override
+  int get hashCode => 0;
 
-                
-                
-
-                
-        @override
-        int get hashCode => 0;
-        
-
-                
-        @override
-        bool operator ==(Object other) =>
-            identical(this, other) ||
-            other is AudioErrorCodes &&
-                runtimeType == other.runtimeType
-                ;
-        
-            }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AudioErrorCodes && runtimeType == other.runtimeType;
+}
 
 @freezed
-                sealed class CalibrationError with _$CalibrationError implements FrbException {
-                    const CalibrationError._();
+sealed class CalibrationError with _$CalibrationError implements FrbException {
+  const CalibrationError._();
 
-                     /// Insufficient samples collected for calibration
-const factory CalibrationError.insufficientSamples({   required BigInt required_ ,  required BigInt collected , }) = CalibrationError_InsufficientSamples;
- /// Invalid features extracted from samples
-const factory CalibrationError.invalidFeatures({   required String reason , }) = CalibrationError_InvalidFeatures;
- /// Calibration not complete
-const factory CalibrationError.notComplete() = CalibrationError_NotComplete;
- /// Calibration already in progress
-const factory CalibrationError.alreadyInProgress() = CalibrationError_AlreadyInProgress;
- /// Calibration state RwLock was poisoned
-const factory CalibrationError.statePoisoned() = CalibrationError_StatePoisoned;
- /// Calibration timed out waiting for native engine coordination
-const factory CalibrationError.timeout({   required String reason , }) = CalibrationError_Timeout;
+  /// Insufficient samples collected for calibration
+  const factory CalibrationError.insufficientSamples({
+    required BigInt required_,
+    required BigInt collected,
+  }) = CalibrationError_InsufficientSamples;
 
-                    
+  /// Invalid features extracted from samples
+  const factory CalibrationError.invalidFeatures({required String reason}) =
+      CalibrationError_InvalidFeatures;
 
-                    
-                }
+  /// Calibration not complete
+  const factory CalibrationError.notComplete() = CalibrationError_NotComplete;
+
+  /// Calibration already in progress
+  const factory CalibrationError.alreadyInProgress() =
+      CalibrationError_AlreadyInProgress;
+
+  /// Calibration state RwLock was poisoned
+  const factory CalibrationError.statePoisoned() =
+      CalibrationError_StatePoisoned;
+
+  /// Calibration timed out waiting for native engine coordination
+  const factory CalibrationError.timeout({required String reason}) =
+      CalibrationError_Timeout;
+}
 
 /// Calibration error code constants exposed to Dart via FFI
 ///
@@ -101,26 +106,14 @@ const factory CalibrationError.timeout({   required String reason , }) = Calibra
 /// generate corresponding Dart constants.
 ///
 /// Error code range: 2001-2006
-class CalibrationErrorCodes  {
-                
+class CalibrationErrorCodes {
+  const CalibrationErrorCodes();
 
-                const CalibrationErrorCodes();
+  @override
+  int get hashCode => 0;
 
-                
-                
-
-                
-        @override
-        int get hashCode => 0;
-        
-
-                
-        @override
-        bool operator ==(Object other) =>
-            identical(this, other) ||
-            other is CalibrationErrorCodes &&
-                runtimeType == other.runtimeType
-                ;
-        
-            }
-            
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalibrationErrorCodes && runtimeType == other.runtimeType;
+}

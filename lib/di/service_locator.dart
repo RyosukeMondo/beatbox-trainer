@@ -7,6 +7,7 @@ import '../services/debug/i_debug_service.dart';
 import '../services/debug/i_audio_metrics_provider.dart';
 import '../services/debug/i_onset_event_provider.dart';
 import '../services/debug/i_log_exporter.dart';
+import '../services/debug/fixture_metadata_service.dart';
 import '../services/error_handler/error_handler.dart';
 import '../services/navigation/go_router_navigation_service.dart';
 import '../services/navigation/i_navigation_service.dart';
@@ -116,6 +117,11 @@ Future<void> setupServiceLocator(GoRouter router) async {
   getIt.registerSingleton<IAudioMetricsProvider>(debugServiceInstance);
   getIt.registerSingleton<IOnsetEventProvider>(debugServiceInstance);
   getIt.registerSingleton<ILogExporter>(debugServiceInstance);
+
+  // Register fixture metadata registry service shared by Debug Lab/CLI overlays.
+  getIt.registerLazySingleton<IFixtureMetadataService>(
+    () => FixtureMetadataService(),
+  );
 
   // Register NavigationService with the provided router instance
   getIt.registerLazySingleton<INavigationService>(
