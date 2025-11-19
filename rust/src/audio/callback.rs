@@ -21,10 +21,15 @@
 //!               └─> Generate audio samples [Lock-free atomic reads]
 //! ```
 
-use oboe::{AudioOutputCallback, AudioOutputStreamSafe, DataCallbackResult};
+use log::{info, warn};
+use oboe::{
+    AudioInputStreamSync, AudioOutputCallback, AudioOutputStreamSafe, AudioStreamSync,
+    DataCallbackResult, Input,
+};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
+use super::buffer_pool::AudioThreadChannels;
 use super::metronome::is_on_beat;
 
 /// Output audio callback for metronome generation
@@ -63,6 +68,10 @@ pub struct OutputCallback {
     click_samples: Arc<Vec<f32>>,
     /// Current position in click sample playback
     click_position: Arc<AtomicU64>,
+    /// Input audio stream for microphone capture
+    input_stream: Arc<std::sync::Mutex<Option<AudioStreamSync<Input, (f32, oboe::Mono)>>>>,
+    /// Buffer pool channels for sending audio to analysis thread
+    audio_channels: Arc<std::sync::Mutex<Option<AudioThreadChannels>>>,
 }
 
 impl OutputCallback {
@@ -74,12 +83,16 @@ impl OutputCallback {
     /// * `sample_rate` - Sample rate in Hz
     /// * `click_samples` - Pre-generated metronome click samples
     /// * `click_position` - Shared atomic click position tracker
+    /// * `input_stream` - Input stream for microphone capture
+    /// * `audio_channels` - Buffer pool channels for audio data transfer
     pub fn new(
         frame_counter: Arc<AtomicU64>,
         bpm: Arc<AtomicU32>,
         sample_rate: u32,
         click_samples: Arc<Vec<f32>>,
         click_position: Arc<AtomicU64>,
+        input_stream: Arc<std::sync::Mutex<Option<AudioStreamSync<Input, (f32, oboe::Mono)>>>>,
+        audio_channels: Arc<std::sync::Mutex<Option<AudioThreadChannels>>>,
     ) -> Self {
         Self {
             frame_counter,
@@ -87,6 +100,8 @@ impl OutputCallback {
             sample_rate,
             click_samples,
             click_position,
+            input_stream,
+            audio_channels,
         }
     }
 }
@@ -106,7 +121,49 @@ impl AudioOutputCallback for OutputCallback {
         let current_bpm = self.bpm.load(Ordering::Relaxed);
         let mut click_pos = self.click_position.load(Ordering::Relaxed) as usize;
 
-        // Process each output frame
+        // Read from input stream (microphone) - NON-BLOCKING
+        // try_lock() is used to avoid blocking the real-time thread
+        if let Ok(mut input_guard) = self.input_stream.try_lock() {
+            if let Some(ref mut input) = *input_guard {
+                // Read audio from input stream (non-blocking)
+                let mut input_buffer = vec![0.0f32; frames.len()];
+                let frames_read = input.read(&mut input_buffer, 0).unwrap_or(0);
+
+                if frames_read > 0 {
+                    // Push to buffer pool for analysis thread
+                    if let Ok(mut channels_guard) = self.audio_channels.try_lock() {
+                        if let Some(ref mut channels) = *channels_guard {
+                            // Try to get an empty buffer from pool
+                            if let Ok(mut buffer) = channels.pool_consumer.pop() {
+                                buffer.clear();
+                                buffer.extend_from_slice(&input_buffer[..(frames_read as usize)]);
+                                // Push filled buffer to analysis thread
+                                let _ = channels.data_producer.push(buffer);
+                                // Silently drop if queue full - this is expected under load
+                            }
+                            // Silently skip if no buffer available - this is expected under load
+                        } else {
+                            warn!("[AudioCallback] audio_channels is None");
+                        }
+                    }
+                } else {
+                    static mut READ_FAIL_COUNT: u64 = 0;
+                    unsafe {
+                        READ_FAIL_COUNT += 1;
+                        if READ_FAIL_COUNT % 100 == 0 {
+                            warn!(
+                                "[AudioCallback] No frames read from input (count: {})",
+                                READ_FAIL_COUNT
+                            );
+                        }
+                    }
+                }
+            } else {
+                warn!("[AudioCallback] input_stream is None");
+            }
+        }
+
+        // Process each output frame (metronome generation)
         for (i, sample) in frames.iter_mut().enumerate() {
             // Calculate current frame index for this sample
             let frame = current_frame + i as u64;
