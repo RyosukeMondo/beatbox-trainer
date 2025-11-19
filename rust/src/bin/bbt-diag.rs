@@ -11,6 +11,8 @@ use anyhow::{anyhow, Context};
 use anyhow::{bail, Result};
 #[cfg(feature = "diagnostics_fixtures")]
 use beatbox_trainer::telemetry;
+#[cfg(feature = "diagnostics_fixtures")]
+use beatbox_trainer::testing::fixture_engine;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 #[cfg(feature = "diagnostics_fixtures")]
 use tokio::sync::mpsc::error::TryRecvError;
@@ -20,6 +22,12 @@ use tokio::sync::mpsc::error::TryRecvError;
 mod telemetry_utils;
 #[cfg(feature = "diagnostics_fixtures")]
 use telemetry_utils::{drain_metrics, RecordPayload, TelemetryAggregator};
+
+#[cfg(feature = "diagnostics_fixtures")]
+#[path = "bbt_diag/validation.rs"]
+mod validation;
+#[cfg(feature = "diagnostics_fixtures")]
+use validation::{drain_classification_events, enforce_fixture_metadata};
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -252,6 +260,9 @@ fn run_impl(args: RunArgs) -> Result<()> {
 
     args.fixture.validate()?;
     let spec = build_fixture_spec(&args.fixture)?;
+    let fixture_id = spec.id.clone();
+    let mut classification_rx = engine_handle().subscribe_classification();
+    let mut observed_events: Vec<ClassificationResult> = Vec::new();
     let mut handle = fixture_engine::start_fixture_session_internal(engine_handle(), spec)
         .context("starting fixture session")?;
     let mut telemetry_rx = telemetry::hub().collector().subscribe();
@@ -260,9 +271,11 @@ fn run_impl(args: RunArgs) -> Result<()> {
 
     while handle.is_running() && Instant::now() < deadline {
         drain_metrics(&mut telemetry_rx, &mut aggregator);
+        drain_classification_events(&mut classification_rx, &mut observed_events);
         thread::sleep(Duration::from_millis(25));
     }
     drain_metrics(&mut telemetry_rx, &mut aggregator);
+    drain_classification_events(&mut classification_rx, &mut observed_events);
     handle.stop().context("stopping fixture session")?;
 
     let snapshot = telemetry::hub().snapshot();
@@ -271,6 +284,8 @@ fn run_impl(args: RunArgs) -> Result<()> {
         TelemetryFormat::Json => report.print_json()?,
         TelemetryFormat::Table => report.print_table(),
     }
+
+    enforce_fixture_metadata(&fixture_id, &observed_events, "bbt-diag run")?;
 
     Ok(())
 }
@@ -301,6 +316,7 @@ fn record_impl(args: RecordArgs) -> Result<()> {
     }
 
     handle.stop().context("stopping fixture session")?;
+    drain_classification_events(&mut classification_rx, &mut captured);
 
     let payload = RecordPayload {
         fixture_id,
@@ -312,6 +328,7 @@ fn record_impl(args: RecordArgs) -> Result<()> {
         serde_json::to_string_pretty(&payload).context("serializing classification payload")?;
     std::fs::write(&args.output, json)
         .with_context(|| format!("writing classification log to {}", args.output.display()))?;
+    enforce_fixture_metadata(&payload.fixture_id, &payload.events, "bbt-diag record")?;
     println!(
         "Captured {} events to {}",
         payload.event_count,

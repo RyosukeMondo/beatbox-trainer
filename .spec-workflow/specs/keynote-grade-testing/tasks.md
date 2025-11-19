@@ -24,7 +24,7 @@
   - _Leverage: requirements §2, design §§FixtureMetadataRegistry, Data Models_
   - _Prompt: Role: Rust/Dart FFI engineer | Task: Build shared metadata access + validation bridging Rust manifest to Dart | Restrictions: Keep manifest parsing in Rust (serde_json), ensure FRB codegen stays deterministic, tests cover malformed manifests | Success: `bbt-diag run --fixture basic_hits` automatically reads metadata, Debug Lab can query same data_
 
-- [ ] 4. Validate fixtures during CLI + Debug Lab flows
+- [x] 4. Validate fixtures during CLI + Debug Lab flows
   - Files: `rust/src/testing/fixture_engine.rs`, `rust/src/bin/bbt-diag.rs`, `lib/controllers/debug/debug_lab_controller.dart`, `lib/ui/screens/debug_lab_screen.dart`, `lib/ui/widgets/debug/anomaly_banner.dart`
   - Extend fixture engine + bbt-diag to enforce BPM/expected count tolerances, writing anomalies to `logs/smoke/debug_lab_anomalies.log`
   - Add Debug Lab ValueNotifier + UI banner that highlights mismatches with actionable text and links to log artifact

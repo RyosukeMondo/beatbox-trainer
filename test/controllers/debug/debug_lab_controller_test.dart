@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beatbox_trainer/controllers/debug/debug_lab_controller.dart';
 import 'package:beatbox_trainer/models/calibration_progress.dart';
@@ -9,9 +11,17 @@ import 'package:beatbox_trainer/services/audio/telemetry_stream.dart';
 import 'package:beatbox_trainer/models/telemetry_event.dart';
 import 'package:beatbox_trainer/services/audio/i_audio_service.dart';
 import 'package:beatbox_trainer/services/debug/debug_sse_client.dart';
+import 'package:beatbox_trainer/services/debug/fixture_metadata_service.dart';
 import 'package:beatbox_trainer/services/debug/i_debug_service.dart';
+import 'package:beatbox_trainer/bridge/api.dart/testing/fixture_manifest.dart';
 
 void main() {
+  _testLogsDeviceStream();
+  _testSyntheticToggle();
+  _testFixtureValidation();
+}
+
+void _testLogsDeviceStream() {
   test('DebugLabController logs device stream events', () async {
     final audio = _FakeAudioService();
     final debug = _FakeDebugService();
@@ -20,6 +30,8 @@ void main() {
       debugService: debug,
       sseClient: _MockDebugSseClient(Stream.empty()),
       syntheticInterval: const Duration(milliseconds: 5),
+      fixtureMetadataService: _FakeMetadataService(),
+      anomalyLogPath: _tempLogPath(),
     );
 
     await controller.init();
@@ -31,7 +43,9 @@ void main() {
       equals(BeatboxHit.kick),
     );
   });
+}
 
+void _testSyntheticToggle() {
   test('Synthetic input toggle generates entries', () async {
     final audio = _FakeAudioService();
     final debug = _FakeDebugService();
@@ -40,6 +54,8 @@ void main() {
       debugService: debug,
       sseClient: _MockDebugSseClient(Stream.empty()),
       syntheticInterval: const Duration(milliseconds: 5),
+      fixtureMetadataService: _FakeMetadataService(),
+      anomalyLogPath: _tempLogPath(),
     );
 
     await controller.init();
@@ -51,6 +67,28 @@ void main() {
       ),
       isTrue,
     );
+  });
+}
+
+void _testFixtureValidation() {
+  test('Fixture validation surfaces anomalies', () async {
+    final audio = _FakeAudioService();
+    final debug = _FakeDebugService();
+    final metadata = _FakeMetadataService(entry: _manifestEntry());
+    final controller = DebugLabController(
+      audioService: audio,
+      debugService: debug,
+      sseClient: _MockDebugSseClient(Stream.empty()),
+      syntheticInterval: const Duration(milliseconds: 5),
+      fixtureMetadataService: metadata,
+      anomalyLogPath: _tempLogPath(),
+    );
+
+    await controller.init();
+    await controller.setFixtureUnderTest('basic_hits');
+    audio.emitClassification(_sampleResult());
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(controller.fixtureAnomaly.value, isNotNull);
   });
 }
 
@@ -140,4 +178,64 @@ class _MockDebugSseClient extends DebugSseClient {
 
   @override
   Future<void> dispose() async {}
+}
+
+class _FakeMetadataService implements IFixtureMetadataService {
+  _FakeMetadataService({FixtureManifestEntry? entry}) : _entry = entry;
+  final FixtureManifestEntry? _entry;
+
+  @override
+  bool get hasCache => _entry != null;
+
+  @override
+  Future<List<FixtureManifestEntry>> loadCatalog({
+    bool forceRefresh = false,
+  }) async {
+    return _entry == null
+        ? <FixtureManifestEntry>[]
+        : <FixtureManifestEntry>[_entry!];
+  }
+
+  @override
+  Future<FixtureManifestEntry?> loadById(
+    String id, {
+    bool forceRefresh = false,
+  }) async {
+    return _entry;
+  }
+}
+
+String _tempLogPath() {
+  final dir = Directory.systemTemp.createTempSync('debug_lab_test');
+  addTearDown(() {
+    if (dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+    }
+  });
+  return File.fromUri(dir.uri.resolve('anomalies.log')).path;
+}
+
+FixtureManifestEntry _manifestEntry() {
+  return FixtureManifestEntry(
+    id: 'basic_hits',
+    description: null,
+    source: const FixtureSourceDescriptor.synthetic(
+      pattern: ManifestSyntheticPattern.sine,
+      frequencyHz: 1.0,
+      amplitude: 0.5,
+    ),
+    sampleRate: 48000,
+    durationMs: 1000,
+    loopCount: 1,
+    channels: 1,
+    metadata: const {},
+    bpm: const FixtureBpmRange(min: 100, max: 120),
+    expectedCounts: const {'kick': 2},
+    anomalyTags: const ['smoke'],
+    tolerances: FixtureToleranceEnvelope(
+      latencyMs: const FixtureThreshold(max: 10),
+      classificationDropPct: const FixtureThreshold(max: 0.0),
+      bpmDeviationPct: const FixtureThreshold(max: 1.0),
+    ),
+  );
 }

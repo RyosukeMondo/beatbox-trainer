@@ -184,6 +184,10 @@ cfg_if::cfg_if! {
 
 pub use enabled::{start_fixture_session_internal, FixtureHandle};
 
+pub use crate::testing::fixture_validation::{
+    validate_fixture_run, FixtureAnomaly, FixtureAnomalyKind, FixtureRunStats, FixtureValidation,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
