@@ -82,8 +82,8 @@ class _SplashScreenState extends State<SplashScreen> {
       }
 
       // Step 4: Load calibration into Rust backend
-      // Convert CalibrationData to JSON string for FFI
-      final calibrationJson = jsonEncode(calibrationData.toJson());
+      // Convert CalibrationData to Rust CalibrationState format
+      final calibrationJson = jsonEncode(calibrationData.toRustJson());
       await api.loadCalibrationState(json: calibrationJson);
 
       // Step 5: Navigate to training screen
