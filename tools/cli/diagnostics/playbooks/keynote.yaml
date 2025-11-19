@@ -1,0 +1,250 @@
+schemaVersion: 1
+metadata:
+  name: keynote-grade-testing
+  description: Declarative diagnostics playbooks used for keynote sign-off smoke/burn-in coverage.
+  owner: qa-tooling@beatbox-trainer
+  generated: 2025-11-19
+  notes: |
+    This manifest is parsed by DiagnosticsPlaybookParser and consumed by the CLI runner.
+    All paths are relative to the project root unless noted otherwise.
+defaults:
+  logRoot: logs/diagnostics
+  scenarioEnv:
+    BBT_DIAG_FEATURES: diagnostics_fixtures
+    BBT_DIAG_PROFILE: release
+    RUST_LOG: info
+  retries:
+    maxAttempts: 1
+    initialBackoffSeconds: 5
+    backoffMultiplier: 2
+  stepTimeoutSeconds: 300
+  artifactTemplates:
+    scenarioDir: "{{logRoot}}/{{scenario}}/{{timestamp}}"
+    stepLog: "{{scenarioDir}}/{{stepId}}.log"
+    attachmentsDir: "{{scenarioDir}}/artifacts"
+schema:
+  scenario:
+    required:
+      - summary
+      - steps
+    optional:
+      - env
+      - tags
+      - artifacts
+      - guards
+  step:
+    required:
+      - id
+      - run
+    optional:
+      - description
+      - args
+      - env
+      - timeoutSeconds
+      - retries
+      - artifacts
+      - continueOnFailure
+      - produces
+scenarios:
+  default-smoke:
+    summary: Fast CI-friendly pass/fail sweep for CLI regressions.
+    tags: [smoke, ci, default]
+    env:
+      BBT_DIAG_PROFILE: debug
+      RUST_LOG: warn
+    artifacts:
+      - name: metrics-snapshot
+        path: "{{scenarioDir}}/metrics/default-smoke.json"
+        type: json
+        description: Aggregated telemetry emitted after capture-telemetry.
+    steps:
+      - id: warmup
+        description: Spin up DSP graph using sine synth fixture.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --synthetic
+          - sine
+          - --duration-ms
+          - "8000"
+          - --telemetry-format
+          - table
+        timeoutSeconds: 90
+        artifacts:
+          - name: warmup-log
+            path: "{{stepLog}}"
+            type: log
+            required: true
+      - id: capture-telemetry
+        description: Capture JSON telemetry for later diffing.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --synthetic
+          - pulse
+          - --duration-ms
+          - "6000"
+          - --telemetry-format
+          - json
+          - --telemetry-out
+          - "{{scenarioDir}}/metrics/default-smoke.json"
+        timeoutSeconds: 120
+        retries:
+          maxAttempts: 2
+          initialBackoffSeconds: 10
+          backoffMultiplier: 2
+        artifacts:
+          - name: telemetry-json
+            path: "{{scenarioDir}}/metrics/default-smoke.json"
+            type: json
+            required: true
+      - id: archive-sample
+        description: Persist a quick diagnostic snapshot for manual diffing.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - record
+          - --fixture
+          - rust/fixtures/basic_hits.wav
+          - --output
+          - "{{scenarioDir}}/artifacts/default-smoke-recording.json"
+        timeoutSeconds: 60
+        artifacts:
+          - name: recording-json
+            path: "{{scenarioDir}}/artifacts/default-smoke-recording.json"
+            type: json
+            required: false
+  keynote-latency:
+    summary: High-fidelity latency sweep used for keynote demos.
+    tags: [latency, keynote, blocking]
+    env:
+      BBT_DIAG_FEATURES: diagnostics_fixtures,latency_probes
+      BBT_DIAG_PROFILE: release
+      BBT_DIAG_LATENCY_TARGET_MS: "25"
+    guards:
+      requiresHardware: true
+      minBatteryPercent: 30
+    steps:
+      - id: preflight-audio
+        description: Ensure hardware inputs are enumerated before running latency loops.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --synthetic
+          - noise
+          - --duration-ms
+          - "4000"
+          - --telemetry-format
+          - table
+        timeoutSeconds: 60
+        artifacts:
+          - name: preflight-log
+            path: "{{stepLog}}"
+            type: log
+            required: true
+      - id: latency-pass
+        description: Execute keynote latency scenario with dual captures.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --scenario
+          - keynote-latency
+          - --telemetry-format
+          - json
+          - --telemetry-out
+          - "{{scenarioDir}}/metrics/keynote-latency.json"
+          - --watch-ms
+          - "0"
+        timeoutSeconds: 240
+        retries:
+          maxAttempts: 3
+          initialBackoffSeconds: 15
+          backoffMultiplier: 2
+        artifacts:
+          - name: latency-json
+            path: "{{scenarioDir}}/metrics/keynote-latency.json"
+            type: json
+            required: true
+          - name: latency-log
+            path: "{{stepLog}}"
+            type: log
+            required: true
+      - id: export-waveform
+        description: Dump waveform artifact for keynote playback.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - record
+          - --fixture
+          - rust/fixtures/basic_hits.wav
+          - --output
+          - "{{scenarioDir}}/artifacts/keynote-basic_hits.json"
+        timeoutSeconds: 120
+        artifacts:
+          - name: waveform-json
+            path: "{{scenarioDir}}/artifacts/keynote-basic_hits.json"
+            type: json
+            required: true
+  calibration-stress:
+    summary: Extended run meant to surface thermal drift and BPM misalignment.
+    tags: [stress, calibration, overnight]
+    env:
+      BBT_DIAG_PROFILE: release
+      RUST_LOG: diagnostics=trace
+      BBT_DIAG_MAX_RUNTIME_MIN: "45"
+    steps:
+      - id: drift-baseline
+        description: Capture a reference baseline for calibration diffing.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --synthetic
+          - sine
+          - --duration-ms
+          - "12000"
+          - --telemetry-format
+          - json
+          - --telemetry-out
+          - "{{scenarioDir}}/metrics/calibration-baseline.json"
+        timeoutSeconds: 180
+        artifacts:
+          - name: baseline-telemetry
+            path: "{{scenarioDir}}/metrics/calibration-baseline.json"
+            type: json
+            required: true
+      - id: stress-loop
+        description: Loop CLI runner with fixture inputs until tolerances are hit.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --synthetic
+          - impulse
+          - --duration-ms
+          - "600000"
+          - --telemetry-format
+          - json
+        timeoutSeconds: 2700
+        retries:
+          maxAttempts: 2
+          initialBackoffSeconds: 60
+          backoffMultiplier: 2
+        artifacts:
+          - name: stress-log
+            path: "{{stepLog}}"
+            type: log
+            required: true
+      - id: capture-summary
+        description: Emit structured summary JSON for anomaly review.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - run
+          - --scenario
+          - calibration-stress
+          - --telemetry-format
+          - json
+          - --telemetry-out
+          - "{{scenarioDir}}/metrics/calibration-summary.json"
+        timeoutSeconds: 300
+        artifacts:
+          - name: anomaly-report
+            path: "{{scenarioDir}}/metrics/calibration-summary.json"
+            type: json
+            required: true
