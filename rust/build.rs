@@ -16,6 +16,12 @@ fn main() {
     // Tell cargo to rerun this build script if api.rs changes
     println!("cargo:rerun-if-changed=src/api.rs");
 
+    // Ensure Android builds link against libc++_shared so symbols like
+    // __cxa_pure_virtual resolve correctly on all ABIs (arm/x86).
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android") {
+        println!("cargo:rustc-link-lib=c++_shared");
+    }
+
     // Note: Code generation should be run manually via CLI or integrated into
     // your build pipeline. Running it automatically in build.rs can cause issues
     // with cargo builds.
