@@ -32,7 +32,7 @@
     - Document endpoint schemas + example responses; add integration tests hitting routes with mocked telemetry data.
   - Requirements: Requirement 2 (HTTP server criteria)
 
-- [ ] 5. Create Dart harness + bridge mocks
+- [x] 5. Create Dart harness + bridge mocks
   - Files: `lib/services/audio/test_harness/harness_audio_source.dart`, `lib/services/audio/test_harness/diagnostics_controller.dart`, `test/services/audio/test_harness/...`, updates to `lib/services/audio/audio_controller.dart`
   - Actions:
     - Define abstract `HarnessAudioSource` plus implementations for microphone proxy, fixture file, and synthetic pattern; allow injection into `AudioController`.
