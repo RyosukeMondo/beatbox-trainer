@@ -9,10 +9,12 @@ import '../../models/debug/fixture_anomaly_notice.dart';
 import '../../models/debug_log_entry.dart';
 import '../../models/telemetry_event.dart';
 import '../../models/timing_feedback.dart';
+import '../../bridge/api.dart/testing/fixture_manifest.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/debug/debug_sse_client.dart';
 import '../../services/debug/fixture_metadata_service.dart';
 import '../../services/debug/i_debug_service.dart';
+import '../../services/debug/i_log_exporter.dart';
 import 'fixture_validation_tracker.dart';
 
 /// Controller orchestrating Debug Lab streams and commands.
@@ -33,6 +35,7 @@ class DebugLabController {
 
   static const String _defaultAnomalyLogPath =
       'logs/smoke/debug_lab_anomalies.log';
+  static const int _maxEvidenceSamples = 512;
 
   final IAudioService _audioService;
   final IDebugService _debugService;
@@ -51,6 +54,7 @@ class DebugLabController {
   StreamSubscription<ClassificationResult>? _classificationSub;
   StreamSubscription<TelemetryEvent>? _telemetrySub;
   StreamSubscription<AudioMetrics>? _metricsSub;
+  StreamSubscription<OnsetEvent>? _onsetSub;
   StreamSubscription<ClassificationResult>? _remoteSub;
   Timer? _syntheticTimer;
 
@@ -66,6 +70,11 @@ class DebugLabController {
   String? _activeFixtureId;
   FixtureValidationTracker? _validationTracker;
   bool _anomalyLogged = false;
+  Uri? _remoteBaseUri;
+  String? _remoteToken;
+  final List<AudioMetrics> _audioMetricEvidence = [];
+  final List<OnsetEvent> _onsetEvidence = [];
+  final List<ParamPatchEvent> _paramPatchEvents = [];
 
   /// Initialize stream subscriptions.
   Future<void> init() async {
@@ -98,12 +107,23 @@ class DebugLabController {
       _metricsSub = _debugService.getAudioMetricsStream().listen(
         (metrics) {
           _metricsController.add(metrics);
+          _recordMetricSample(metrics);
         },
         onError: (error) =>
             _pushLog(DebugLogEntry.error('Metrics stream error', '$error')),
       );
     } catch (error) {
       _pushLog(DebugLogEntry.error('Metrics unavailable', '$error'));
+    }
+
+    try {
+      _onsetSub = _debugService.getOnsetEventsStream().listen(
+        _recordOnsetSample,
+        onError: (error) =>
+            _pushLog(DebugLogEntry.error('Onset stream error', '$error')),
+      );
+    } catch (error) {
+      _pushLog(DebugLogEntry.error('Onset stream unavailable', '$error'));
     }
   }
 
@@ -120,11 +140,29 @@ class DebugLabController {
     double? centroidThreshold,
     double? zcrThreshold,
   }) {
-    return _audioService.applyParamPatch(
+    final request = ParamPatchEvent(
+      timestamp: DateTime.now(),
+      status: ParamPatchStatus.success,
       bpm: bpm,
       centroidThreshold: centroidThreshold,
       zcrThreshold: zcrThreshold,
     );
+    return _audioService
+        .applyParamPatch(
+          bpm: bpm,
+          centroidThreshold: centroidThreshold,
+          zcrThreshold: zcrThreshold,
+        )
+        .then((_) => _recordParamPatch(request))
+        .catchError((error) {
+          _recordParamPatch(
+            request.copyWith(
+              status: ParamPatchStatus.failure,
+              error: error.toString(),
+            ),
+          );
+          throw error;
+        });
   }
 
   /// Connect to remote SSE stream.
@@ -134,6 +172,8 @@ class DebugLabController {
   }) async {
     remoteError.value = null;
     remoteConnected.value = true;
+    _remoteBaseUri = baseUri;
+    _remoteToken = token;
     await _remoteSub?.cancel();
     _remoteSub = _sseClient
         .connectClassificationStream(baseUri: baseUri, token: token)
@@ -163,6 +203,7 @@ class DebugLabController {
     remoteError.value = null;
     await _remoteSub?.cancel();
     _remoteSub = null;
+    _remoteToken = null;
   }
 
   /// Enable or disable synthetic fixtures for offline visualization.
@@ -207,10 +248,32 @@ class DebugLabController {
     logEntries.value = current;
   }
 
+  void _recordMetricSample(AudioMetrics sample) {
+    if (_audioMetricEvidence.length >= _maxEvidenceSamples) {
+      _audioMetricEvidence.removeAt(0);
+    }
+    _audioMetricEvidence.add(sample);
+  }
+
+  void _recordOnsetSample(OnsetEvent event) {
+    if (_onsetEvidence.length >= _maxEvidenceSamples) {
+      _onsetEvidence.removeAt(0);
+    }
+    _onsetEvidence.add(event);
+  }
+
+  void _recordParamPatch(ParamPatchEvent event) {
+    if (_paramPatchEvents.length >= _maxEvidenceSamples) {
+      _paramPatchEvents.removeAt(0);
+    }
+    _paramPatchEvents.add(event);
+  }
+
   Future<void> dispose() async {
     await _classificationSub?.cancel();
     await _telemetrySub?.cancel();
     await _metricsSub?.cancel();
+    await _onsetSub?.cancel();
     await _remoteSub?.cancel();
     await _classificationController.close();
     await _telemetryController.close();
@@ -218,6 +281,21 @@ class DebugLabController {
     await _sseClient.dispose();
     _syntheticTimer?.cancel();
     fixtureAnomaly.dispose();
+  }
+
+  /// Build request payload for Debug Lab evidence export.
+  LogExportRequest buildExportRequest() {
+    return LogExportRequest(
+      logEntries: List<DebugLogEntry>.from(logEntries.value),
+      audioMetrics: List<AudioMetrics>.from(_audioMetricEvidence),
+      onsetEvents: List<OnsetEvent>.from(_onsetEvidence),
+      paramPatches: List<ParamPatchEvent>.from(_paramPatchEvents),
+      cliReferences: _buildCliReferences(),
+      fixtureId: _activeFixtureId,
+      fixtureLogPath: _anomalyLogFile.path,
+      metricsEndpoint: _metricsEndpoint,
+      metricsToken: _remoteToken,
+    );
   }
 
   Future<void> setFixtureUnderTest(String? fixtureId) async {
@@ -244,7 +322,7 @@ class DebugLabController {
         return;
       }
       _activeFixture = entry;
-      _validationTracker = _FixtureValidationTracker();
+      _validationTracker = FixtureValidationTracker();
       _pushLog(
         DebugLogEntry(
           timestamp: DateTime.now(),
@@ -325,5 +403,30 @@ class DebugLabController {
       flush: true,
     );
     return _anomalyLogFile.path;
+  }
+
+  Uri? get _metricsEndpoint {
+    final base = _remoteBaseUri;
+    if (base == null) {
+      return null;
+    }
+    final normalizedPath = base.path.endsWith('/')
+        ? '${base.path}metrics'
+        : '${base.path}/metrics';
+    return base.replace(path: normalizedPath);
+  }
+
+  List<String> _buildCliReferences() {
+    final references = <String>[
+      'bbt-diag run --fixture ${_activeFixtureId ?? 'basic_hits'} --telemetry-format json',
+    ];
+    final metricsUri = _metricsEndpoint;
+    if (metricsUri != null) {
+      references.add(
+        'curl -H "Authorization: Bearer ***" ${metricsUri.toString()}',
+      );
+    }
+    references.add('ls logs/smoke/export');
+    return references;
   }
 }

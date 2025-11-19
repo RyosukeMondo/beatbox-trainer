@@ -19,6 +19,7 @@ void main() {
   _testLogsDeviceStream();
   _testSyntheticToggle();
   _testFixtureValidation();
+  _testExportRequestIncludesContext();
 }
 
 void _testLogsDeviceStream() {
@@ -92,6 +93,29 @@ void _testFixtureValidation() {
   });
 }
 
+void _testExportRequestIncludesContext() {
+  test('buildExportRequest captures fixture id and CLI references', () async {
+    final audio = _FakeAudioService();
+    final debug = _FakeDebugService();
+    final controller = DebugLabController(
+      audioService: audio,
+      debugService: debug,
+      sseClient: _MockDebugSseClient(Stream.empty()),
+      syntheticInterval: const Duration(milliseconds: 5),
+      fixtureMetadataService: _FakeMetadataService(entry: _manifestEntry()),
+      anomalyLogPath: _tempLogPath(),
+    );
+
+    await controller.init();
+    await controller.setFixtureUnderTest('basic_hits');
+
+    final request = controller.buildExportRequest();
+    expect(request.fixtureId, equals('basic_hits'));
+    expect(request.cliReferences.first, contains('basic_hits'));
+    expect(request.cliReferences.last, equals('ls logs/smoke/export'));
+  });
+}
+
 ClassificationResult _sampleResult() {
   return ClassificationResult(
     sound: BeatboxHit.kick,
@@ -161,9 +185,6 @@ class _FakeDebugService implements IDebugService {
 
   @override
   Stream<OnsetEvent> getOnsetEventsStream() => const Stream<OnsetEvent>.empty();
-
-  @override
-  Future<String> exportLogs() async => '{}';
 }
 
 class _MockDebugSseClient extends DebugSseClient {

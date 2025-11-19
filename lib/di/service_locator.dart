@@ -7,6 +7,7 @@ import '../services/debug/i_debug_service.dart';
 import '../services/debug/i_audio_metrics_provider.dart';
 import '../services/debug/i_onset_event_provider.dart';
 import '../services/debug/i_log_exporter.dart';
+import '../services/debug/log_exporter_impl.dart';
 import '../services/debug/fixture_metadata_service.dart';
 import '../services/error_handler/error_handler.dart';
 import '../services/navigation/go_router_navigation_service.dart';
@@ -48,10 +49,10 @@ final getIt = GetIt.instance;
 /// Services are registered as lazy singletons, meaning they are instantiated
 /// only when first requested and then reused throughout the app lifecycle.
 ///
-/// **Note**: DebugServiceImpl is registered as all four debug interfaces
-/// (IDebugService, IAudioMetricsProvider, IOnsetEventProvider, ILogExporter).
-/// All four registrations return the same singleton instance, supporting
-/// both the legacy interface and the new ISP-compliant interfaces.
+/// **Note**: DebugServiceImpl is registered as the three runtime debug
+/// interfaces (IDebugService, IAudioMetricsProvider, IOnsetEventProvider).
+/// The more expensive log exporter is registered separately so it can evolve
+/// independently from the streaming service.
 ///
 /// Services that require async initialization (SettingsService, StorageService,
 /// DebugService) are registered but not initialized here. Initialization
@@ -104,11 +105,10 @@ Future<void> setupServiceLocator(GoRouter router) async {
   getIt.registerLazySingleton<IStorageService>(() => StorageServiceImpl());
 
   // Register DebugService as a singleton instance
-  // This single instance is registered under all four interfaces:
+  // This single instance is registered under three interfaces:
   // - IDebugService (legacy interface for backward compatibility)
   // - IAudioMetricsProvider (ISP: audio metrics streaming)
   // - IOnsetEventProvider (ISP: onset event streaming)
-  // - ILogExporter (ISP: log export functionality)
   final debugServiceInstance = DebugServiceImpl();
   await debugServiceInstance.init();
 
@@ -116,7 +116,9 @@ Future<void> setupServiceLocator(GoRouter router) async {
   getIt.registerSingleton<IDebugService>(debugServiceInstance);
   getIt.registerSingleton<IAudioMetricsProvider>(debugServiceInstance);
   getIt.registerSingleton<IOnsetEventProvider>(debugServiceInstance);
-  getIt.registerSingleton<ILogExporter>(debugServiceInstance);
+
+  // Register dedicated log exporter for Debug Lab evidence bundles.
+  getIt.registerLazySingleton<ILogExporter>(() => LogExporterImpl());
 
   // Register fixture metadata registry service shared by Debug Lab/CLI overlays.
   getIt.registerLazySingleton<IFixtureMetadataService>(
@@ -146,8 +148,8 @@ Future<void> setupServiceLocator(GoRouter router) async {
 ///
 /// This function is safe to call even if no services are registered.
 ///
-/// **Note**: Since DebugServiceImpl is registered as four interfaces
-/// (IDebugService, IAudioMetricsProvider, IOnsetEventProvider, ILogExporter),
+/// **Note**: Since DebugServiceImpl is registered as three interfaces
+/// (IDebugService, IAudioMetricsProvider, IOnsetEventProvider),
 /// we only need to dispose it once. We check for any of the interfaces to
 /// avoid redundant disposal calls.
 ///
@@ -165,7 +167,7 @@ Future<void> setupServiceLocator(GoRouter router) async {
 /// ```
 Future<void> resetServiceLocator() async {
   // Dispose any services that need cleanup
-  // Note: DebugServiceImpl is registered as four interfaces, but we only
+  // Note: DebugServiceImpl is registered as three interfaces, but we only
   // need to dispose it once. Check for IDebugService which is always registered.
   if (getIt.isRegistered<IDebugService>()) {
     final debugService = getIt<IDebugService>();

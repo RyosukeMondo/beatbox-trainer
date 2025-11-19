@@ -207,31 +207,36 @@ void main() {
       // Act
       await setupServiceLocator(createTestRouter());
 
-      // Assert - verify all four debug interfaces are registered
+      // Assert - verify streaming + exporter interfaces are registered
       expect(getIt.isRegistered<IDebugService>(), true);
       expect(getIt.isRegistered<IAudioMetricsProvider>(), true);
       expect(getIt.isRegistered<IOnsetEventProvider>(), true);
       expect(getIt.isRegistered<ILogExporter>(), true);
     });
 
-    test('all debug interfaces resolve to same instance', () async {
-      // Arrange
-      await setupServiceLocator(createTestRouter());
+    test(
+      'streaming interfaces share DebugService while exporter is isolated',
+      () async {
+        // Arrange
+        await setupServiceLocator(createTestRouter());
 
-      // Act - resolve all four debug interfaces
-      final debugService = getIt<IDebugService>();
-      final metricsProvider = getIt<IAudioMetricsProvider>();
-      final onsetProvider = getIt<IOnsetEventProvider>();
-      final logExporter = getIt<ILogExporter>();
+        // Act - resolve debug-related interfaces
+        final debugService = getIt<IDebugService>();
+        final metricsProvider = getIt<IAudioMetricsProvider>();
+        final onsetProvider = getIt<IOnsetEventProvider>();
+        final logExporter = getIt<ILogExporter>();
 
-      // Assert - all should resolve to the same instance (singleton pattern)
-      expect(identical(debugService, metricsProvider), true);
-      expect(identical(debugService, onsetProvider), true);
-      expect(identical(debugService, logExporter), true);
-      expect(identical(metricsProvider, onsetProvider), true);
-      expect(identical(metricsProvider, logExporter), true);
-      expect(identical(onsetProvider, logExporter), true);
-    });
+        // Assert - streaming interfaces reuse DebugService
+        expect(identical(debugService, metricsProvider), true);
+        expect(identical(debugService, onsetProvider), true);
+        expect(identical(metricsProvider, onsetProvider), true);
+
+        // Exporter should be decoupled for background file I/O.
+        expect(identical(debugService, logExporter), false);
+        expect(identical(metricsProvider, logExporter), false);
+        expect(identical(onsetProvider, logExporter), false);
+      },
+    );
 
     test('can resolve individual ISP interfaces independently', () async {
       // Arrange

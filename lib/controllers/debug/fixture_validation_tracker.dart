@@ -18,11 +18,10 @@ class FixtureValidationTracker {
     final tolerance = fixture.tolerances.bpmDeviationPct.max;
     final expectedMin = fixture.bpm.min.toDouble();
     final expectedMax = fixture.bpm.max.toDouble();
-    final paddedMin = (expectedMin - expectedMin * tolerance / 100).clamp(
-      0,
-      double.infinity,
-    );
-    final paddedMax = expectedMax + expectedMax * tolerance / 100;
+    final paddedMin = (expectedMin - expectedMin * tolerance / 100)
+        .clamp(0, double.infinity)
+        .toDouble();
+    final double paddedMax = expectedMax + expectedMax * tolerance / 100;
     final observed = observedBpm;
 
     if (observed == null || observed < paddedMin || observed > paddedMax) {

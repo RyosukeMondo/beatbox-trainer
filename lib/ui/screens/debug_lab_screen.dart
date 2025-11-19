@@ -284,10 +284,22 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
   }
 
   Future<void> _exportLogs() async {
-    final exported = await widget.logExporter.exportLogs();
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Logs exported:\n$exported')));
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final request = widget.controller.buildExportRequest();
+      final result = await widget.logExporter.exportLogs(request);
+      if (!mounted) return;
+      debugPrint('Debug Lab export ready: ${result.zipPath}');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Evidence export ready:\n${result.zipPath}\nCLI notes: ${result.cliNotesPath}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $error')));
+    }
   }
 }

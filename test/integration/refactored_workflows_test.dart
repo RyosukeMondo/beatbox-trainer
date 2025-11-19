@@ -82,18 +82,20 @@ void main() {
     });
 
     test(
-      'DebugService registered as all four interfaces with same instance',
+      'DebugService backs streaming interfaces while exporter stands alone',
       () {
-        // Resolve all four debug interfaces
+        // Resolve debug-related interfaces
         final debugService = getIt<IDebugService>();
         final metricsProvider = getIt<IAudioMetricsProvider>();
         final onsetProvider = getIt<IOnsetEventProvider>();
         final logExporter = getIt<ILogExporter>();
 
-        // Verify all are the same instance
+        // Streaming interfaces reuse the same singleton instance
         expect(identical(debugService, metricsProvider), isTrue);
         expect(identical(debugService, onsetProvider), isTrue);
-        expect(identical(debugService, logExporter), isTrue);
+
+        // Log exporter should be dedicated to background I/O work
+        expect(identical(debugService, logExporter), isFalse);
       },
     );
 

@@ -251,6 +251,20 @@ attachments next to existing smoke logs for easy upload to QA tickets.
 Attach the smoke logs, coverage summary, and any exported Debug Lab transcripts
 whenever you demo diagnostics functionality or close out spec tasks.
 
+### Debug Lab evidence exports
+
+- Tap the **notebook** icon in Debug Lab to generate a ZIP under
+  `logs/smoke/export/debug_lab_<timestamp>.zip`. Each archive bundles FRB audio
+  metrics, onset samples, `/metrics` snapshots, fixture metadata, anomaly logs,
+  and ParamPatch history.
+- A companion `debug_lab_<timestamp>.txt` file mirrors the CLI references stored
+  inside the ZIP (for keynote decks). Tokens are automatically redacted to `***`.
+- CLI references default to `bbt-diag run --fixture <id> --telemetry-format json`
+  plus a cURL snippet for `/metrics`. Update the fixture field before exporting
+  so the manifest reflects the correct metadata row.
+- Evidence exports are safe to attach to PRs and demo invites—file names never
+  include raw tokens, and the manifest always links back to `logs/smoke/`.
+
 ## Troubleshooting Checklist
 
 | Symptom | Likely cause | Fix |

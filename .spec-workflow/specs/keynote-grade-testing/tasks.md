@@ -39,7 +39,7 @@
   - _Leverage: requirements §3, design §§BaselineDiffEngine_
   - _Prompt: Role: Tooling engineer specializing in developer experience | Task: Deliver watch + diff loop for diagnostics telemetry | Restrictions: Use portable shell/Dart only (no long-running Python deps), ensure watch loop debounces to ≥5s, keep baselines versioned in repo | Success: `tools/cli/diagnostics/watch.sh` highlights regressions live; failing diffs block pre-commit with actionable instructions_
 
-- [ ] 6. Bundle Debug Lab exports with evidence artifacts
+- [x] 6. Bundle Debug Lab exports with evidence artifacts
   - Files: `lib/services/debug/i_log_exporter.dart`, `lib/services/debug/log_exporter_impl.dart`, `lib/controllers/debug/debug_lab_controller.dart`, `logs/smoke/export/`
   - Extend exporter to collect FRB stream samples, `/metrics` snapshots, fixture IDs, and ParamPatch events into single ZIP per export
   - Ensure CLI references (paths, tokens redacted) accompany zipped artifact for keynote sharing

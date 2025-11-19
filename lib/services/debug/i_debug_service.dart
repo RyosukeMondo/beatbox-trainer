@@ -53,22 +53,6 @@ abstract class IDebugService {
   /// }
   /// ```
   Stream<OnsetEvent> getOnsetEventsStream();
-
-  /// Export recent logs to JSON file.
-  ///
-  /// Serializes recent debug events (last 1000 events) to a JSON file
-  /// for offline analysis. Useful for sharing debug data with developers
-  /// or analyzing patterns over time.
-  ///
-  /// Returns:
-  /// - String path to the exported JSON file
-  ///
-  /// Example:
-  /// ```dart
-  /// final logPath = await debugService.exportLogs();
-  /// print('Logs exported to: $logPath');
-  /// ```
-  Future<String> exportLogs();
 }
 
 /// Audio metrics from the DSP pipeline.

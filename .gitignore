@@ -34,7 +34,12 @@ migrate_working_dir/
 /build/
 /coverage/
 .flutter-sdk/
-logs/
+logs/*
+!logs/smoke/
+logs/smoke/*
+!logs/smoke/export/
+logs/smoke/export/*
+!logs/smoke/export/README.md
 
 # Symbolication related
 app.*.symbols
