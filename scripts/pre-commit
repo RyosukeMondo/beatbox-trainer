@@ -496,6 +496,57 @@ run_http_smoke_checks() {
     fi
 }
 
+run_diagnostics_baseline_diff() {
+    print_header "Checking diagnostics telemetry baselines"
+    local baseline_file="$PROJECT_ROOT/logs/smoke/baselines/default-smoke.json"
+    if [ ! -f "$baseline_file" ]; then
+        print_warning "No default-smoke baseline snapshot found; skipping diff"
+        return 0
+    fi
+
+    local changed_files=$(git diff --cached --name-only --diff-filter=ACM || true)
+    if [ -z "$changed_files" ]; then
+        print_success "No staged files, skipping baseline diff"
+        return 0
+    fi
+
+    local should_run=0
+    while IFS= read -r file; do
+        case "$file" in
+            rust/src/*|rust/src/bin/*|tools/cli/diagnostics/*|lib/services/audio/*|lib/controllers/debug/*|scripts/pre-commit|logs/smoke/baselines/*)
+                should_run=1
+                break
+                ;;
+        esac
+    done <<< "$changed_files"
+
+    if [ $should_run -eq 0 ]; then
+        print_success "No diagnostics-sensitive files changed"
+        return 0
+    fi
+
+    if ! command_exists dart; then
+        print_warning "dart command not found; skipping diagnostics baseline diff"
+        return 0
+    fi
+
+    local baseline_log="$PROJECT_ROOT/logs/keynote-grade-testing/task_5.log"
+    mkdir -p "$(dirname "$baseline_log")"
+
+    if dart run tools/cli/diagnostics/lib/baseline_diff.dart \
+        --project-root "$PROJECT_ROOT" \
+        --scenario default-smoke \
+        --baseline "$baseline_file" \
+        --run-playbook \
+        >"$baseline_log" 2>&1; then
+        print_success "Diagnostics baseline matches (default-smoke)"
+    else
+        print_error "Diagnostics baseline drift detected (see $baseline_log)"
+        tail -n 200 "$baseline_log"
+        return 1
+    fi
+}
+
 check_bridge_stubs() {
     print_header "Scanning bridge layers for TODO/FIXME stubs"
     local paths=(
@@ -559,6 +610,7 @@ main() {
     run_tests || true
     run_cli_smoke_tests || true
     run_http_smoke_checks || true
+    run_diagnostics_baseline_diff || true
     check_bridge_stubs || true
 
     # End timer

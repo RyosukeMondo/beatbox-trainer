@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "scenario": "default-smoke",
+  "logRoot": "logs/diagnostics",
+  "metricsArtifact": "metrics/default-smoke.json",
+  "regenerateCommand": "./tools/cli/diagnostics/run.sh --scenario default-smoke",
+  "capturedAt": null,
+  "sourceArtifact": null,
+  "metrics": [
+    {
+      "id": "latency-avg",
+      "label": "Latency avg (ms)",
+      "path": "latency.avg_ms",
+      "expected": 20.0,
+      "tolerance": { "absolute": 5.0 }
+    },
+    {
+      "id": "latency-max",
+      "label": "Latency max (ms)",
+      "path": "latency.max_ms",
+      "expected": 25.0,
+      "tolerance": { "absolute": 5.0 }
+    },
+    {
+      "id": "collector-dropped",
+      "label": "Collector dropped frames",
+      "path": "collector_dropped",
+      "expected": 0.0,
+      "tolerance": { "absolute": 0.0 }
+    },
+    {
+      "id": "classification-count",
+      "label": "Classification count",
+      "path": "classification_count",
+      "expected": 50.0,
+      "tolerance": { "percent": 25.0 }
+    },
+    {
+      "id": "lagged-events",
+      "label": "Lagged telemetry events",
+      "path": "lagged_events",
+      "expected": 0.0,
+      "tolerance": { "absolute": 1.0 }
+    }
+  ]
+}

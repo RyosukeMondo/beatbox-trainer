@@ -72,6 +72,36 @@ QA can attach `artifacts/*` to tickets, link `metrics/*.json` in reports, and fo
 `warmup.log`/`latency-log` for engineering follow-up.  Additional structured files should reuse the same
 directories to stay compatible with automation.
 
+## Baseline diffs
+
+Telemetry drift checks live under `logs/smoke/baselines/`.  Compare the latest run
+against the committed snapshot with:
+
+```bash
+dart run tools/cli/diagnostics/lib/baseline_diff.dart \
+  --scenario default-smoke \
+  --run-playbook
+```
+
+Use `--metrics <file>` and `--regenerate` to stamp a new baseline after reviewing
+the diff output. The CLI prints PASS/FAIL summaries plus the regeneration command
+needed to update the JSON snapshot.
+
+## Watch loops
+
+`tools/cli/diagnostics/watch.sh` wraps the baseline diff CLI in watch mode. The
+script monitors DSP-critical paths (Rust DSP, diagnostics tooling, Debug Lab
+controllers, and scripts) via the Dart `Directory.watch` API and reruns the
+scenario after a 5-second debounce. Example:
+
+```bash
+./tools/cli/diagnostics/watch.sh --scenario default-smoke
+```
+
+Add `--watch-path <dir>` entries to monitor additional folders (e.g.,
+`lib/services/audio`). The playbook output streams inline, followed by the
+baseline diff verdict so regressions are highlighted immediately.
+
 ## Sample scenarios
 
 | Scenario | Purpose | Highlights |

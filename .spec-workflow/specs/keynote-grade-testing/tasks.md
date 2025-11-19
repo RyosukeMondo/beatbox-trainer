@@ -31,7 +31,7 @@
   - _Leverage: requirements §2 acceptance criteria, design §§DebugLabAnomalyOverlay_
   - _Prompt: Role: Diagnostics UX engineer | Task: Surface metadata mismatches in both CLI output and Debug Lab UI | Restrictions: Keep UI under 500 lines, logs redacted for tokens, highlight card must be dismissible | Success: Running synthetic toggle that deviates beyond tolerance shows warning banner + structured log entry_
 
-- [ ] 5. Implement baseline diff + watch loops
+- [x] 5. Implement baseline diff + watch loops
   - Files: `scripts/pre-commit`, `tools/cli/diagnostics/lib/baseline_diff.dart`, `tools/cli/diagnostics/watch.sh`, `logs/smoke/baselines/README.md`
   - Create baseline storage format (JSON snapshots per scenario) and diff engine with tolerances; output human-readable delta + regeneration command
   - Add watch mode script (fsnotify/inotifywait) that reruns playbooks when DSP-critical files change and streams status inline
