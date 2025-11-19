@@ -38,15 +38,12 @@ Future<bool> _runComparisonOnce(BaselineDiffCliOptions options) async {
 
   final metricsPath = await _resolveMetricsPath(baseline, options);
   final telemetry = await _loadTelemetry(metricsPath);
-  final comparison =
-      BaselineDiffEngine().compare(baseline: baseline, telemetry: telemetry);
-
-  _printComparison(
-    comparison,
-    baseline,
-    metricsPath,
-    options.projectRoot,
+  final comparison = BaselineDiffEngine().compare(
+    baseline: baseline,
+    telemetry: telemetry,
   );
+
+  _printComparison(comparison, baseline, metricsPath, options.projectRoot);
 
   if (options.regenerate) {
     final updated = baseline.rebaseline(
@@ -62,7 +59,8 @@ Future<bool> _runComparisonOnce(BaselineDiffCliOptions options) async {
   if (!comparison.withinTolerance) {
     stdout.writeln('');
     stdout.writeln(
-        'Regenerate the baseline with: ${_regenerateCommand(options, metricsPath)}');
+      'Regenerate the baseline with: ${_regenerateCommand(options, metricsPath)}',
+    );
   }
 
   return comparison.withinTolerance;
@@ -100,15 +98,18 @@ Future<void> _runWatchLoop(BaselineDiffCliOptions options) async {
 
   void schedule(String reason) {
     debounceTimer?.cancel();
-    debounceTimer =
-        Timer(Duration(seconds: options.debounceSeconds), () => runCycle(reason));
+    debounceTimer = Timer(
+      Duration(seconds: options.debounceSeconds),
+      () => runCycle(reason),
+    );
   }
 
   for (final path in paths) {
     final directory = Directory(path);
     if (!directory.existsSync()) {
       stdout.writeln(
-          '[watch] Skipping missing path ${relativePath(options.projectRoot, path)}');
+        '[watch] Skipping missing path ${relativePath(options.projectRoot, path)}',
+      );
       continue;
     }
     final subscription = directory
@@ -129,8 +130,7 @@ Future<void> _runWatchLoop(BaselineDiffCliOptions options) async {
 }
 
 Future<void> _runPlaybook(BaselineDiffCliOptions options) async {
-  final script =
-      File('${options.projectRoot}/tools/cli/diagnostics/run.sh');
+  final script = File('${options.projectRoot}/tools/cli/diagnostics/run.sh');
   if (!script.existsSync()) {
     throw BaselineDiffException(
       'diagnostics runner missing at ${relativePath(options.projectRoot, script.path)}',
@@ -148,9 +148,7 @@ Future<void> _runPlaybook(BaselineDiffCliOptions options) async {
   );
   final exitCode = await process.exitCode;
   if (exitCode != 0) {
-    throw BaselineDiffException(
-      'playbook run failed with exit code $exitCode',
-    );
+    throw BaselineDiffException('playbook run failed with exit code $exitCode');
   }
 }
 
@@ -165,8 +163,10 @@ Future<String> _resolveMetricsPath(
     }
     return path;
   }
-  final logRoot =
-      absolutePath(baseline.logRoot ?? 'logs/diagnostics', options.projectRoot);
+  final logRoot = absolutePath(
+    baseline.logRoot ?? 'logs/diagnostics',
+    options.projectRoot,
+  );
   final scenarioDir = Directory('$logRoot/${options.scenarioId}');
   if (!scenarioDir.existsSync()) {
     throw BaselineDiffException(
@@ -200,13 +200,16 @@ Future<Map<String, dynamic>> _loadTelemetry(String path) async {
       return decoded;
     }
     throw BaselineDiffException(
-        'telemetry payload at $path is not a JSON object');
+      'telemetry payload at $path is not a JSON object',
+    );
   } on FormatException catch (error) {
     throw BaselineDiffException(
-        'telemetry payload at $path is invalid JSON: ${error.message}');
-  } on IOException catch (error) {
+      'telemetry payload at $path is invalid JSON: ${error.message}',
+    );
+  } on FileSystemException catch (error) {
     throw BaselineDiffException(
-        'failed to read telemetry payload at $path (${error.osError?.message ?? ''})');
+      'failed to read telemetry payload at $path (${error.osError?.message ?? ''})',
+    );
   }
 }
 
@@ -217,31 +220,32 @@ void _printComparison(
   String projectRoot,
 ) {
   stdout.writeln(
-      'Scenario ${baseline.scenarioId} vs baseline (${relativePath(projectRoot, baseline.path)})');
+    'Scenario ${baseline.scenarioId} vs baseline (${relativePath(projectRoot, baseline.path)})',
+  );
   stdout.writeln('Telemetry: ${relativePath(projectRoot, metricsPath)}');
   for (final metric in comparison.metrics) {
     final icon = metric.withinTolerance ? '✔' : '✖';
     final label = metric.expectation.label ?? metric.expectation.id;
-    final actualString =
-        metric.actualValue != null ? metric.actualValue!.toStringAsFixed(3) : 'n/a';
+    final actualString = metric.actualValue != null
+        ? metric.actualValue!.toStringAsFixed(3)
+        : 'n/a';
     final delta = metric.actualValue != null
         ? (metric.actualValue! - metric.expectation.expected).toStringAsFixed(3)
         : 'n/a';
-    final tolerance =
-        metric.expectation.tolerance.describe(metric.expectation.expected);
+    final tolerance = metric.expectation.tolerance.describe(
+      metric.expectation.expected,
+    );
     stdout.writeln(
-        '  $icon $label → actual=$actualString expected=${metric.expectation.expected} '
-        'Δ=$delta tolerance=$tolerance');
+      '  $icon $label → actual=$actualString expected=${metric.expectation.expected} '
+      'Δ=$delta tolerance=$tolerance',
+    );
     if (!metric.withinTolerance) {
       stdout.writeln('    ↳ reason: ${metric.failureReason}');
     }
   }
 }
 
-String _regenerateCommand(
-  BaselineDiffCliOptions options,
-  String metricsPath,
-) {
+String _regenerateCommand(BaselineDiffCliOptions options, String metricsPath) {
   final relativeMetrics = relativePath(options.projectRoot, metricsPath);
   final buffer = StringBuffer()
     ..write('dart run tools/cli/diagnostics/lib/baseline_diff.dart')
@@ -251,7 +255,8 @@ String _regenerateCommand(
   if (options.baselinePath !=
       '${options.projectRoot}/logs/smoke/baselines/${options.scenarioId}.json') {
     buffer.write(
-        ' --baseline ${relativePath(options.projectRoot, options.baselinePath)}');
+      ' --baseline ${relativePath(options.projectRoot, options.baselinePath)}',
+    );
   }
   return buffer.toString();
 }
@@ -272,15 +277,31 @@ void _printUsage() {
   stdout.writeln('Diagnostics baseline diff utility');
   stdout.writeln('Usage: dart run baseline_diff.dart [options]');
   stdout.writeln('Options:');
-  stdout.writeln('  --scenario <id>            Scenario id to diff (default-smoke)');
+  stdout.writeln(
+    '  --scenario <id>            Scenario id to diff (default-smoke)',
+  );
   stdout.writeln('  --baseline <path>          Path to baseline snapshot');
-  stdout.writeln('  --metrics <path>           Path to telemetry JSON (auto-detect otherwise)');
+  stdout.writeln(
+    '  --metrics <path>           Path to telemetry JSON (auto-detect otherwise)',
+  );
   stdout.writeln('  --manifest <path>          Playbook manifest path');
-  stdout.writeln('  --project-root <path>      Repository root (auto-detected)');
-  stdout.writeln('  --run-playbook             Execute playbook before diffing');
-  stdout.writeln('  --regenerate               Update baseline expected values from metrics');
-  stdout.writeln('  --watch                    Watch mode (requires --run-playbook)');
-  stdout.writeln('  --debounce-seconds <int>   Debounce duration for watch mode (default 5)');
-  stdout.writeln('  --watch-path <path>        Directory to watch (may repeat)');
+  stdout.writeln(
+    '  --project-root <path>      Repository root (auto-detected)',
+  );
+  stdout.writeln(
+    '  --run-playbook             Execute playbook before diffing',
+  );
+  stdout.writeln(
+    '  --regenerate               Update baseline expected values from metrics',
+  );
+  stdout.writeln(
+    '  --watch                    Watch mode (requires --run-playbook)',
+  );
+  stdout.writeln(
+    '  --debounce-seconds <int>   Debounce duration for watch mode (default 5)',
+  );
+  stdout.writeln(
+    '  --watch-path <path>        Directory to watch (may repeat)',
+  );
   stdout.writeln('  --help                     Show this message');
 }

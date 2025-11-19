@@ -3,6 +3,7 @@ import '../../models/classification_result.dart';
 import '../../models/telemetry_event.dart';
 import '../../models/timing_feedback.dart';
 import '../../bridge/api.dart/api.dart' as api;
+import '../../bridge/api.dart/api/streams.dart' as api_streams;
 import '../../bridge/api.dart/analysis.dart' as ffi_analysis;
 import '../../bridge/api.dart/analysis/classifier.dart' as ffi_classifier;
 import '../../bridge/api.dart/analysis/quantizer.dart' as ffi_quantizer;
@@ -110,7 +111,7 @@ class AudioServiceImpl implements IAudioService {
   @override
   Stream<TelemetryEvent> getTelemetryStream() {
     try {
-      return api
+      return api_streams
           .telemetryStream()
           .map(_mapFfiToTelemetryEvent)
           .handleError((error) {
@@ -124,11 +125,11 @@ class AudioServiceImpl implements IAudioService {
   @override
   Stream<DiagnosticMetric> getDiagnosticMetricsStream() {
     try {
-      return mapDiagnosticMetrics(api.diagnosticMetricsStream()).handleError(
-        (error) {
-          throw _errorHandler.createAudioException(error.toString());
-        },
-      );
+      return mapDiagnosticMetrics(
+        api_streams.diagnosticMetricsStream(),
+      ).handleError((error) {
+        throw _errorHandler.createAudioException(error.toString());
+      });
     } catch (e) {
       throw _errorHandler.createAudioException(e.toString());
     }
@@ -294,9 +295,7 @@ class AudioServiceImpl implements IAudioService {
     }
   }
 
-  TelemetryEvent _mapFfiToTelemetryEvent(
-    ffi_engine.TelemetryEvent ffiEvent,
-  ) {
+  TelemetryEvent _mapFfiToTelemetryEvent(ffi_engine.TelemetryEvent ffiEvent) {
     final timestamp = ffiEvent.timestampMs.toInt();
     final detail = ffiEvent.detail;
     final kind = ffiEvent.kind;

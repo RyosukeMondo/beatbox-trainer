@@ -13,8 +13,8 @@ class PlaybookRunner {
     required String projectRoot,
     this.dryRun = false,
     DateTime Function()? now,
-  })  : projectRoot = Directory(projectRoot).absolute.path,
-        _now = now ?? DateTime.now;
+  }) : projectRoot = Directory(projectRoot).absolute.path,
+       _now = now ?? DateTime.now;
 
   final DiagnosticsPlaybook playbook;
   final String scenarioId;
@@ -64,8 +64,10 @@ class PlaybookRunner {
     List<ResolvedArtifact> accumulator,
   ) {
     final summaries = <StepRunSummary>[];
-    stdout.writeln('[dry-run] Scenario ${context.scenario.id} -> '
-        '${context.scenario.summary}');
+    stdout.writeln(
+      '[dry-run] Scenario ${context.scenario.id} -> '
+      '${context.scenario.summary}',
+    );
     for (final step in context.scenario.steps) {
       final plan = _buildStepPlan(context, step);
       accumulator.addAll(plan.artifacts);
@@ -103,8 +105,10 @@ class PlaybookRunner {
 
   _StepPlan _buildStepPlan(_ScenarioContext context, PlaybookStep step) {
     final values = context.valuesForStep(step.id);
-    final logPath =
-        _interpolate(context.defaults.artifactTemplates.stepLog, values);
+    final logPath = _interpolate(
+      context.defaults.artifactTemplates.stepLog,
+      values,
+    );
     final logFile = File(context.absolutePath(logPath));
     logFile.parent.createSync(recursive: true);
     final artifacts = _resolveArtifacts(
@@ -140,8 +144,10 @@ class PlaybookRunner {
     for (var attempt = 1; attempt <= plan.retryPolicy.maxAttempts; attempt++) {
       final outcome = await _runSingleAttempt(plan, attempt);
       if (outcome.exitCode == 0) {
-        stdout.writeln('${ansiGreen}✔$ansiReset [${plan.step.id}] '
-            'Completed in ${outcome.elapsed.inSeconds}s');
+        stdout.writeln(
+          '$ansiGreen✔$ansiReset [${plan.step.id}] '
+          'Completed in ${outcome.elapsed.inSeconds}s',
+        );
         return StepRunSummary(
           id: plan.step.id,
           succeeded: true,
@@ -154,13 +160,17 @@ class PlaybookRunner {
       lastMessage = outcome.message;
       if (attempt < plan.retryPolicy.maxAttempts) {
         final delaySeconds = _backoffDelaySeconds(plan.retryPolicy, attempt);
-        stdout.writeln('${ansiYellow}!$ansiReset [${plan.step.id}] '
-            'Retrying in ${delaySeconds}s ($lastMessage)');
+        stdout.writeln(
+          '$ansiYellow!$ansiReset [${plan.step.id}] '
+          'Retrying in ${delaySeconds}s ($lastMessage)',
+        );
         await Future.delayed(Duration(seconds: delaySeconds));
       }
     }
-    stdout.writeln('${ansiRed}✖$ansiReset [${plan.step.id}] Failed '
-        '($lastMessage)');
+    stdout.writeln(
+      '$ansiRed✖$ansiReset [${plan.step.id}] Failed '
+      '($lastMessage)',
+    );
     return StepRunSummary(
       id: plan.step.id,
       succeeded: false,
@@ -171,24 +181,27 @@ class PlaybookRunner {
     );
   }
 
-  Future<_AttemptOutcome> _runSingleAttempt(
-    _StepPlan plan,
-    int attempt,
-  ) async {
+  Future<_AttemptOutcome> _runSingleAttempt(_StepPlan plan, int attempt) async {
     final sink = plan.logFile.openWrite(
       mode: attempt == 1 ? FileMode.writeOnly : FileMode.append,
     );
     final stopwatch = Stopwatch()..start();
-    sink.writeln('===== ${plan.step.id} attempt $attempt/'
-        '${plan.retryPolicy.maxAttempts} '
-        '(${DateTime.now().toIso8601String()}) =====');
-    stdout.writeln('${ansiBlue}⇒$ansiReset [${plan.step.id}] Attempt '
-        '$attempt/${plan.retryPolicy.maxAttempts}');
+    sink.writeln(
+      '===== ${plan.step.id} attempt $attempt/'
+      '${plan.retryPolicy.maxAttempts} '
+      '(${DateTime.now().toIso8601String()}) =====',
+    );
+    stdout.writeln(
+      '$ansiBlue⇒$ansiReset [${plan.step.id}] Attempt '
+      '$attempt/${plan.retryPolicy.maxAttempts}',
+    );
     try {
       final exitCode = await _spawnProcess(plan, sink);
       stopwatch.stop();
-      sink.writeln('===== exitCode=$exitCode '
-          'duration=${stopwatch.elapsed} =====');
+      sink.writeln(
+        '===== exitCode=$exitCode '
+        'duration=${stopwatch.elapsed} =====',
+      );
       return _AttemptOutcome(
         exitCode: exitCode,
         elapsed: stopwatch.elapsed,
@@ -196,8 +209,10 @@ class PlaybookRunner {
       );
     } on TimeoutException catch (error) {
       stopwatch.stop();
-      sink.writeln('[runner] Timed out after '
-          '${plan.timeout.inSeconds}s');
+      sink.writeln(
+        '[runner] Timed out after '
+        '${plan.timeout.inSeconds}s',
+      );
       return _AttemptOutcome(
         exitCode: -1,
         elapsed: stopwatch.elapsed,
@@ -252,19 +267,23 @@ class _ScenarioContext {
     required this.scenario,
     required String projectRoot,
     required this.timestamp,
-  })  : projectRoot = Directory(projectRoot).absolute.path,
-        baseValues = {
-          'logRoot': defaults.logRoot,
-          'scenario': scenario.id,
-          'timestamp': timestamp,
-        } {
-    final scenarioDirRelative =
-        _interpolate(defaults.artifactTemplates.scenarioDir, baseValues);
+  }) : projectRoot = Directory(projectRoot).absolute.path,
+       baseValues = {
+         'logRoot': defaults.logRoot,
+         'scenario': scenario.id,
+         'timestamp': timestamp,
+       } {
+    final scenarioDirRelative = _interpolate(
+      defaults.artifactTemplates.scenarioDir,
+      baseValues,
+    );
     baseValues['scenarioDir'] = scenarioDirRelative;
     scenarioDir = _absolutePath(this.projectRoot, scenarioDirRelative);
     Directory(scenarioDir).createSync(recursive: true);
-    final attachmentsRelative =
-        _interpolate(defaults.artifactTemplates.attachmentsDir, baseValues);
+    final attachmentsRelative = _interpolate(
+      defaults.artifactTemplates.attachmentsDir,
+      baseValues,
+    );
     attachmentsDir = _absolutePath(this.projectRoot, attachmentsRelative);
     Directory(attachmentsDir).createSync(recursive: true);
   }
@@ -323,8 +342,8 @@ class _ProcessPipes {
     required String stepId,
     required this.logSink,
     required Process process,
-  })  : stdoutPrinter = PrefixedPrinter('[${stepId}]', stdout),
-        stderrPrinter = PrefixedPrinter('[${stepId}][stderr]', stderr) {
+  }) : stdoutPrinter = PrefixedPrinter('[$stepId]', stdout),
+       stderrPrinter = PrefixedPrinter('[$stepId][stderr]', stderr) {
     stdoutSubscription = process.stdout.listen(_handleStdout);
     stderrSubscription = process.stderr.listen(_handleStderr);
   }

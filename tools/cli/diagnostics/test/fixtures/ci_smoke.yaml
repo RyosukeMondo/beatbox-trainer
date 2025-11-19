@@ -1,0 +1,34 @@
+schemaVersion: 1
+metadata:
+  name: diagnostics-ci-trimmed
+  description: Minimal shell commands that validate runner wiring in CI.
+  owner: qa-tooling@beatbox-trainer
+  generated: 2025-11-20
+defaults:
+  logRoot: logs/diagnostics
+  scenarioEnv: {}
+  retries:
+    maxAttempts: 1
+    initialBackoffSeconds: 1
+    backoffMultiplier: 2
+  stepTimeoutSeconds: 30
+  artifactTemplates:
+    scenarioDir: "{{logRoot}}/{{scenario}}/{{timestamp}}"
+    stepLog: "{{scenarioDir}}/{{stepId}}.log"
+    attachmentsDir: "{{scenarioDir}}/artifacts"
+scenarios:
+  ci-trimmed:
+    summary: Fast sanity checks that command orchestration works.
+    steps:
+      - id: greet
+        description: Emits greeting to confirm process spawn and logging.
+        run: bash
+        args:
+          - -lc
+          - 'echo "hello from ci-trimmed"'
+      - id: summarize
+        description: Writes summary line so tests can verify log contents.
+        run: bash
+        args:
+          - -lc
+          - 'echo "runner ok"'

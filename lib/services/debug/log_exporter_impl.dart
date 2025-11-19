@@ -82,7 +82,7 @@ class LogExporterImpl implements ILogExporter {
           !endpoint.queryParameters.containsKey('token');
       final uri = needsQueryToken
           ? endpoint.replace(
-              queryParameters: {...endpoint.queryParameters, 'token': token!},
+              queryParameters: {...endpoint.queryParameters, 'token': token},
             )
           : endpoint;
       final request = await _httpClient.getUrl(uri);

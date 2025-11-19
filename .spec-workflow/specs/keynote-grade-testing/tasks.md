@@ -46,7 +46,7 @@
   - _Leverage: requirements §3 acceptance criteria #3, design §§Overview, Components (DebugLabAnomalyOverlay)_
   - _Prompt: Role: Flutter services engineer | Task: Improve Debug Lab export so QA can hand evidence to stakeholders | Restrictions: Keep exports off main thread, reuse existing log storage conventions, surface success/failure toast in UI | Success: Tapping export icon creates zipped package logged in console and accessible through path banner_
 
-- [ ] 7. Testing matrix for keynote-grade workflows
+- [x] 7. Testing matrix for keynote-grade workflows
   - Files: `tools/cli/diagnostics/test/playbook_parser_test.dart`, `rust/src/testing/fixture_manifest.rs` (unit tests), `test/ui/debug/debug_lab_screen_test.dart`, CI docs in `docs/guides/qa/diagnostics.md`
   - Add parser unit tests (valid/invalid manifests), Rust metadata validation tests, widget tests for anomaly banner, and integration test running a trimmed playbook in CI
   - Update diagnostics guide with instructions for running new tests + interpreting artifacts

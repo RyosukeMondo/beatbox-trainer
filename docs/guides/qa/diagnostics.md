@@ -265,6 +265,36 @@ whenever you demo diagnostics functionality or close out spec tasks.
 - Evidence exports are safe to attach to PRs and demo invites—file names never
   include raw tokens, and the manifest always links back to `logs/smoke/`.
 
+## Testing Matrix for Keynote Workflows
+
+Keep the following suites green before sharing diagnostics evidence:
+
+1. **CLI parser + runner smoke:** `dart test tools/cli/diagnostics/test` parses
+   the keynote manifest, runs the trimmed `ci-trimmed` scenario defined in
+   `tools/cli/diagnostics/test/fixtures/ci_smoke.yaml`, and asserts step logs
+   contain the expected greetings. Pass `--name ci-trimmed` to rerun a
+   single scenario while iterating on automation scripts.
+2. **Rust metadata validation:** `cd rust && cargo test fixture_manifest`
+   exercises `rust/src/testing/fixture_manifest.rs`, covering duplicate ids,
+   BPM ranges, anomaly tags, and tolerance thresholds that gate `bbt-diag run`.
+3. **Debug Lab widget coverage:** `flutter test test/ui/debug/debug_lab_screen_test.dart`
+   ensures the anomaly banner appears/dismisses as controllers publish notices.
+4. **Full Flutter suite:** continue running `flutter test` at the repo root so
+   Debug Lab controller tests stay in sync with UI wiring.
+
+To manually exercise the trimmed playbook, run:
+
+```bash
+dart run tools/cli/diagnostics/lib/playbook_runner.dart \
+  --manifest tools/cli/diagnostics/test/fixtures/ci_smoke.yaml \
+  --scenario ci-trimmed \
+  --project-root "$(mktemp -d)"
+```
+
+The runner mirrors CI behavior, generates logs under the supplied project root,
+and is safe to execute on developer machines because the steps only invoke
+portable shell commands.
+
 ## Troubleshooting Checklist
 
 | Symptom | Likely cause | Fix |
