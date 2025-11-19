@@ -35,6 +35,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # YAML parsing for diagnostics playbook tooling
+  yaml: ^3.1.3
+
   # Flutter Rust Bridge for FFI integration with Rust
   flutter_rust_bridge: ^2.0.0
 

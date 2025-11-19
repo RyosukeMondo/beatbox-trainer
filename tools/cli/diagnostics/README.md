@@ -9,19 +9,26 @@ at [`playbooks/keynote.yaml`](playbooks/keynote.yaml).
 
 ## Running playbooks
 
-Until the parser + runner are wired in, QA can still reference the manifest for manual execution:
+The playbook parser + runner now power the same CLI wrapper. To execute a
+scenario, pass `--scenario <id>` (defaults to `default-smoke`):
 
 ```bash
-# Default to the CI smoke sweep
-SCENARIO=default-smoke
-./tools/cli/diagnostics/run.sh run --scenario "$SCENARIO"
+# Run the default smoke suite
+./tools/cli/diagnostics/run.sh --scenario
+
+# Keynote latency rehearsal
+./tools/cli/diagnostics/run.sh --scenario keynote-latency
+
+# Preview a scenario without executing commands
+./tools/cli/diagnostics/run.sh --scenario calibration-stress --dry-run
 ```
 
-Once the runner lands, it will automatically:
-1. Load `keynote.yaml`.
-2. Resolve `defaults` and scenario-level overrides.
-3. Execute the ordered steps, honoring per-step retries and timeouts.
-4. Stream stdout/err into `logs/diagnostics/<scenario>/<timestamp>/` while persisting declared artifacts.
+Under the hood the Dart runner:
+1. Loads `playbooks/keynote.yaml`.
+2. Resolves `defaults` plus scenario/step overrides.
+3. Executes each ordered step with retries, timeouts, and env merging.
+4. Streams stdout/stderr to `logs/diagnostics/<scenario>/<timestamp>/`
+   and prints a PASS/FAIL summary with resolved artifact paths.
 
 ## Schema overview
 

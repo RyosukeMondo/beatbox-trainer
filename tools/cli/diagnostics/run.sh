@@ -9,6 +9,61 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 LOG_DIR="$PROJECT_ROOT/logs/diagnostics"
 mkdir -p "$LOG_DIR"
 
+if [ $# -gt 0 ] && [ "$1" = "--scenario" ]; then
+    shift
+    SCENARIO="default-smoke"
+    if [ $# -gt 0 ] && [[ "$1" != --* ]]; then
+        SCENARIO="$1"
+        shift
+    fi
+
+    MANIFEST_PATH="$PROJECT_ROOT/tools/cli/diagnostics/playbooks/keynote.yaml"
+    EXTRA_ARGS=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --manifest|-m)
+                if [ $# -lt 2 ]; then
+                    echo "Missing value for $1" >&2
+                    exit 64
+                fi
+                shift
+                if [[ "$1" = /* ]]; then
+                    MANIFEST_PATH="$1"
+                else
+                    MANIFEST_PATH="$PROJECT_ROOT/$1"
+                fi
+                ;;
+            --dry-run)
+                EXTRA_ARGS+=(--dry-run)
+                ;;
+            --help|-h)
+                EXTRA_ARGS+=(--help)
+                ;;
+            *)
+                echo "Unknown playbook runner flag: $1" >&2
+                exit 64
+                ;;
+        esac
+        shift
+    done
+
+    RUNNER_ARGS=(
+        --project-root "$PROJECT_ROOT"
+        --manifest "$MANIFEST_PATH"
+        --scenario "$SCENARIO"
+    )
+
+    if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
+        RUNNER_ARGS+=("${EXTRA_ARGS[@]}")
+    fi
+
+    (
+        cd "$PROJECT_ROOT"
+        dart run tools/cli/diagnostics/lib/playbook_runner.dart "${RUNNER_ARGS[@]}"
+    )
+    exit $?
+fi
+
 FEATURES="${BBT_DIAG_FEATURES:-diagnostics_fixtures}"
 CARGO_PROFILE="${BBT_DIAG_PROFILE:-debug}"
 ARGS=("$@")
