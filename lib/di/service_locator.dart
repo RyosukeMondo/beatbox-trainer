@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../services/audio/audio_service_impl.dart';
@@ -18,6 +19,7 @@ import '../services/settings/i_settings_service.dart';
 import '../services/settings/settings_service_impl.dart';
 import '../services/storage/i_storage_service.dart';
 import '../services/storage/storage_service_impl.dart';
+import '../services/debug/i_debug_capabilities.dart';
 
 /// Global service locator instance for dependency injection.
 ///
@@ -109,13 +111,24 @@ Future<void> setupServiceLocator(GoRouter router) async {
   // - IDebugService (legacy interface for backward compatibility)
   // - IAudioMetricsProvider (ISP: audio metrics streaming)
   // - IOnsetEventProvider (ISP: onset event streaming)
-  final debugServiceInstance = DebugServiceImpl();
-  await debugServiceInstance.init();
-
-  // Register the same instance under all four interfaces
-  getIt.registerSingleton<IDebugService>(debugServiceInstance);
-  getIt.registerSingleton<IAudioMetricsProvider>(debugServiceInstance);
-  getIt.registerSingleton<IOnsetEventProvider>(debugServiceInstance);
+  // Telemetry availability is false until FFI streams are wired; failures
+  // fall back to a no-op debug service so app startup is resilient.
+  try {
+    final debugServiceInstance = DebugServiceImpl(telemetryAvailable: false);
+    await debugServiceInstance.init();
+    getIt.registerSingleton<IDebugService>(debugServiceInstance);
+    getIt.registerSingleton<IAudioMetricsProvider>(debugServiceInstance);
+    getIt.registerSingleton<IOnsetEventProvider>(debugServiceInstance);
+  } catch (error, stackTrace) {
+    debugPrint(
+      'DebugServiceImpl init failed, using fallback debug service: $error',
+    );
+    debugPrintStack(stackTrace: stackTrace);
+    final fallbackDebug = _NoopDebugService();
+    getIt.registerSingleton<IDebugService>(fallbackDebug);
+    getIt.registerSingleton<IAudioMetricsProvider>(fallbackDebug);
+    getIt.registerSingleton<IOnsetEventProvider>(fallbackDebug);
+  }
 
   // Register dedicated log exporter for Debug Lab evidence bundles.
   getIt.registerLazySingleton<ILogExporter>(() => LogExporterImpl());
@@ -178,4 +191,20 @@ Future<void> resetServiceLocator() async {
 
   // Reset the GetIt instance (unregisters all services)
   await getIt.reset();
+}
+
+class _NoopDebugService
+    implements
+        IDebugService,
+        IAudioMetricsProvider,
+        IOnsetEventProvider,
+        DebugTelemetryAvailability {
+  @override
+  final bool telemetryAvailable = false;
+
+  @override
+  Stream<AudioMetrics> getAudioMetricsStream() => const Stream.empty();
+
+  @override
+  Stream<OnsetEvent> getOnsetEventsStream() => const Stream.empty();
 }

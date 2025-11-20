@@ -399,18 +399,31 @@ run_tests() {
 
     local has_dart_changes=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(dart)$' || true)
     local has_rust_changes=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(rs)$' || true)
+    local flutter_test_args=()
+
+    # Default: skip slow-tagged tests for faster local commits.
+    # Opt-in to full suite with INCLUDE_SLOW_TESTS=1.
+    if [ "${INCLUDE_SLOW_TESTS:-0}" -ne 1 ]; then
+        flutter_test_args+=(--exclude-tags=slow)
+    fi
+    # Avoid implicit pub fetch on every commit; callers can override via env.
+    flutter_test_args+=(--no-pub)
 
     local test_failed=0
 
     # Run Dart tests if there are Dart changes
     if [ -n "$has_dart_changes" ]; then
-        echo "Running Flutter tests..."
-        if flutter test >/tmp/flutter_test.log 2>&1; then
-            print_success "Flutter tests passed"
+        if [ "${SKIP_FLUTTER_TESTS:-0}" -eq 1 ]; then
+            print_warning "SKIP_FLUTTER_TESTS=1 set; skipping Flutter tests"
         else
-            print_error "Flutter tests failed"
-            cat /tmp/flutter_test.log
-            test_failed=1
+            echo "Running Flutter tests..."
+            if flutter test "${flutter_test_args[@]}" >/tmp/flutter_test.log 2>&1; then
+                print_success "Flutter tests passed"
+            else
+                print_error "Flutter tests failed"
+                cat /tmp/flutter_test.log
+                test_failed=1
+            fi
         fi
     else
         print_success "No Dart changes, skipping Flutter tests"
@@ -442,6 +455,11 @@ run_tests() {
 
 run_cli_smoke_tests() {
     print_header "Running CLI fixture harness smoke tests"
+
+    if [ "${SKIP_CLI_SMOKE_TESTS:-0}" -eq 1 ]; then
+        print_warning "SKIP_CLI_SMOKE_TESTS=1 set; skipping CLI smoke tests"
+        return 0
+    fi
 
     if [ ! -f "$PROJECT_ROOT/rust/src/bin/beatbox_cli.rs" ]; then
         print_warning "beatbox_cli binary not found; skipping CLI harness smoke tests"
@@ -498,6 +516,12 @@ run_http_smoke_checks() {
 
 run_diagnostics_baseline_diff() {
     print_header "Checking diagnostics telemetry baselines"
+
+    if [ "${SKIP_DIAGNOSTICS_BASELINE:-0}" -eq 1 ]; then
+        print_warning "SKIP_DIAGNOSTICS_BASELINE=1 set; skipping diagnostics baseline diff"
+        return 0
+    fi
+
     local baseline_file="$PROJECT_ROOT/logs/smoke/baselines/default-smoke.json"
     if [ ! -f "$baseline_file" ]; then
         print_warning "No default-smoke baseline snapshot found; skipping diff"

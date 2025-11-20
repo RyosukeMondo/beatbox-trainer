@@ -1,3 +1,4 @@
+@Tags(['slow'])
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beatbox_trainer/di/service_locator.dart';

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'i_debug_service.dart';
 import 'i_audio_metrics_provider.dart';
 import 'i_onset_event_provider.dart';
+import 'i_debug_capabilities.dart';
 
 /// Implementation of debug service interfaces wrapping FFI debug streams.
 ///
@@ -25,10 +26,20 @@ import 'i_onset_event_provider.dart';
 /// Temporary workaround: Empty streams until FFI generation is resolved.
 /// See: lib/bridge/api.dart/api.dart line 12 for generation errors.
 class DebugServiceImpl
-    implements IDebugService, IAudioMetricsProvider, IOnsetEventProvider {
+    implements
+        IDebugService,
+        IAudioMetricsProvider,
+        IOnsetEventProvider,
+        DebugTelemetryAvailability {
   /// Stream controllers for debug data
   StreamController<AudioMetrics>? _metricsController;
   StreamController<OnsetEvent>? _onsetController;
+
+  /// Whether real telemetry streams are available (FFI wired).
+  @override
+  final bool telemetryAvailable;
+
+  DebugServiceImpl({this.telemetryAvailable = false});
 
   /// Initialize the debug service
   ///
@@ -64,6 +75,12 @@ class DebugServiceImpl
 
   @override
   Stream<AudioMetrics> getAudioMetricsStream() {
+    if (!telemetryAvailable) {
+      return Stream<AudioMetrics>.error(
+        DebugException('Telemetry unavailable (FFI stream not wired)'),
+      );
+    }
+
     if (_metricsController == null) {
       throw DebugException('DebugService not initialized. Call init() first.');
     }
@@ -75,6 +92,12 @@ class DebugServiceImpl
 
   @override
   Stream<OnsetEvent> getOnsetEventsStream() {
+    if (!telemetryAvailable) {
+      return Stream<OnsetEvent>.error(
+        DebugException('Telemetry unavailable (FFI stream not wired)'),
+      );
+    }
+
     if (_onsetController == null) {
       throw DebugException('DebugService not initialized. Call init() first.');
     }

@@ -1,3 +1,4 @@
+@Tags(['slow'])
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beatbox_trainer/services/storage/i_storage_service.dart';

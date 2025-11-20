@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
-import '../../models/classification_result.dart';
 import '../../controllers/training/training_controller.dart';
 import '../../services/debug/i_debug_service.dart';
+import '../../services/debug/i_debug_capabilities.dart';
 import '../widgets/error_dialog.dart';
-import '../widgets/loading_overlay.dart';
 import '../widgets/debug_overlay.dart';
+import '../widgets/training_classification_section.dart';
 import '../utils/display_formatters.dart';
 
 /// TrainingScreen provides the main training UI with real-time feedback
@@ -102,46 +102,38 @@ class TrainingScreen extends StatefulWidget {
 
 class _TrainingScreenState extends State<TrainingScreen>
     with SingleTickerProviderStateMixin {
-  /// Current classification result (null when idle)
-  ClassificationResult? _currentResult;
+  /// Current BPM value reflected in the UI slider
+  double _bpmValue = 120;
+
+  /// Avoid overlapping BPM commits while slider settles
+  bool _isUpdatingBpm = false;
 
   /// Whether debug mode is enabled (loaded from settings)
   bool _debugModeEnabled = false;
 
+  /// Whether telemetry streams are available from the debug service
+  bool _telemetryAvailable = true;
+
   /// Whether debug overlay is currently visible
   bool _debugOverlayVisible = false;
-
-  /// Animation controller for fade-out effect of classification feedback
-  late AnimationController _fadeAnimationController;
-
-  /// Fade animation for classification feedback (1.0 = fully visible, 0.0 = invisible)
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _bpmValue = widget.controller.currentBpm.toDouble();
     _loadDebugSettings();
-
-    // Initialize fade animation controller (500ms fade-out)
-    _fadeAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-
-    // Create fade animation (linear fade from 1.0 to 0.0)
-    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeOut),
-    );
   }
 
   /// Load debug mode setting from controller's settings service
   Future<void> _loadDebugSettings() async {
     try {
       final debugMode = await widget.controller.getDebugMode();
+      final telemetryAvailable = _resolveTelemetryAvailability();
       if (mounted) {
         setState(() {
           _debugModeEnabled = debugMode;
-          _debugOverlayVisible = debugMode;
+          _telemetryAvailable = telemetryAvailable;
+          _debugOverlayVisible = debugMode && telemetryAvailable;
         });
       }
     } catch (e) {
@@ -155,7 +147,6 @@ class _TrainingScreenState extends State<TrainingScreen>
     // Note: We call dispose without awaiting since Widget.dispose() is synchronous
     // The controller will handle async cleanup internally
     widget.controller.dispose();
-    _fadeAnimationController.dispose();
     super.dispose();
   }
 
@@ -163,7 +154,9 @@ class _TrainingScreenState extends State<TrainingScreen>
   Future<void> _handleStartTraining() async {
     try {
       await widget.controller.startTraining();
-      setState(() {}); // Refresh UI after state change
+      setState(() {
+        _bpmValue = widget.controller.currentBpm.toDouble();
+      }); // Refresh UI after state change
     } on PermissionException catch (e) {
       if (mounted) {
         await _showPermissionDialog(e.message);
@@ -192,17 +185,50 @@ class _TrainingScreenState extends State<TrainingScreen>
   }
 
   /// Handle BPM slider change
-  Future<void> _handleBpmChange(int newBpm) async {
+  void _handleBpmDrag(double newValue) {
+    if (_isUpdatingBpm) {
+      return;
+    }
+    setState(() {
+      _bpmValue = newValue;
+    });
+  }
+
+  /// Commit BPM change when slider drag ends to avoid spamming FFI + storage
+  Future<void> _commitBpmChange(double newValue) async {
+    if (_isUpdatingBpm) {
+      return;
+    }
+
+    final newBpm = newValue.round();
+    setState(() {
+      _isUpdatingBpm = true;
+      _bpmValue = newValue;
+    });
+
     try {
       await widget.controller.updateBpm(newBpm);
-      setState(() {}); // Refresh UI to show new BPM
+      if (mounted) {
+        setState(() {
+          _bpmValue = widget.controller.currentBpm.toDouble();
+        });
+      }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _bpmValue = widget.controller.currentBpm.toDouble();
+        });
         await ErrorDialog.show(
           context,
           title: 'BPM Update Error',
           message: 'Failed to update BPM: $e',
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingBpm = false;
+        });
       }
     }
   }
@@ -218,9 +244,24 @@ class _TrainingScreenState extends State<TrainingScreen>
 
   /// Toggle debug overlay visibility
   void _toggleDebugOverlay() {
+    if (!_telemetryAvailable) {
+      return;
+    }
     setState(() {
       _debugOverlayVisible = !_debugOverlayVisible;
     });
+  }
+
+  /// Whether debug overlay affordances should be visible
+  bool get _canShowDebugOverlay => _debugModeEnabled && _telemetryAvailable;
+
+  bool _resolveTelemetryAvailability() {
+    final candidate = widget.debugService;
+    if (candidate is DebugTelemetryAvailability) {
+      final availability = candidate as DebugTelemetryAvailability;
+      return availability.telemetryAvailable;
+    }
+    return true;
   }
 
   @override
@@ -232,7 +273,7 @@ class _TrainingScreenState extends State<TrainingScreen>
     );
 
     // Wrap with DebugOverlay if debug mode is enabled and overlay is visible
-    if (_debugModeEnabled && _debugOverlayVisible) {
+    if (_canShowDebugOverlay && _debugOverlayVisible) {
       return DebugOverlay(
         debugService: widget.debugService,
         onClose: _toggleDebugOverlay,
@@ -249,7 +290,7 @@ class _TrainingScreenState extends State<TrainingScreen>
       title: const Text('Beatbox Trainer'),
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       actions: [
-        if (_debugModeEnabled)
+        if (_canShowDebugOverlay)
           IconButton(
             icon: Icon(
               _debugOverlayVisible
@@ -282,7 +323,12 @@ class _TrainingScreenState extends State<TrainingScreen>
           const SizedBox(height: 16),
           _buildBpmSlider(),
           const SizedBox(height: 32),
-          Expanded(child: _buildClassificationArea()),
+          Expanded(
+            child: TrainingClassificationSection(
+              isTraining: widget.controller.isTraining,
+              classificationStream: widget.controller.classificationStream,
+            ),
+          ),
         ],
       ),
     );
@@ -291,7 +337,7 @@ class _TrainingScreenState extends State<TrainingScreen>
   /// Build BPM display text
   Widget _buildBpmDisplay(BuildContext context) {
     return Text(
-      DisplayFormatters.formatBpm(widget.controller.currentBpm),
+      DisplayFormatters.formatBpm(_bpmValue.round()),
       style: Theme.of(
         context,
       ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -301,246 +347,14 @@ class _TrainingScreenState extends State<TrainingScreen>
 
   /// Build BPM slider control
   Widget _buildBpmSlider() {
-    final currentBpm = widget.controller.currentBpm;
     return Slider(
-      value: currentBpm.toDouble(),
+      value: _bpmValue,
       min: 40,
       max: 240,
       divisions: 200,
-      label: DisplayFormatters.formatBpm(currentBpm),
-      onChanged: (value) => _handleBpmChange(value.round()),
-    );
-  }
-
-  /// Build classification results area
-  Widget _buildClassificationArea() {
-    if (!widget.controller.isTraining) {
-      return _buildIdleState();
-    }
-
-    return StreamBuilder<ClassificationResult>(
-      stream: widget.controller.classificationStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingOverlay(message: 'Starting audio engine...');
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState(snapshot.error.toString());
-        }
-
-        if (snapshot.hasData) {
-          _currentResult = snapshot.data;
-          // Restart fade animation on each new result
-          _fadeAnimationController.forward(from: 0.0);
-          return _buildClassificationDisplay(_currentResult!);
-        }
-
-        // Waiting for first classification
-        return _buildWaitingForSoundState();
-      },
-    );
-  }
-
-  /// Build idle state (not training)
-  Widget _buildIdleState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.play_circle_outline, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'Press Start to begin training',
-            style: TextStyle(fontSize: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build waiting for sound state (training but no results yet)
-  Widget _buildWaitingForSoundState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.mic, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'Make a beatbox sound!',
-            style: TextStyle(fontSize: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build error state
-  Widget _buildErrorState(String error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          Text(
-            'Stream error: $error',
-            style: const TextStyle(color: Colors.red),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build classification result display widget with fade animation
-  Widget _buildClassificationDisplay(ClassificationResult result) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildSoundTypeDisplay(result),
-            const SizedBox(height: 32),
-            _buildTimingFeedbackDisplay(result),
-            const SizedBox(height: 24),
-            _buildConfidenceMeter(result),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build sound type display with colored container
-  Widget _buildSoundTypeDisplay(ClassificationResult result) {
-    final soundColor = DisplayFormatters.getSoundColor(result.sound);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      decoration: BoxDecoration(
-        color: soundColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        result.sound.displayName,
-        style: const TextStyle(
-          fontSize: 48,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  /// Build timing feedback display with formatted error
-  Widget _buildTimingFeedbackDisplay(ClassificationResult result) {
-    final timingColor = DisplayFormatters.getTimingColor(
-      result.timing.classification,
-    );
-
-    final errorMs = result.timing.errorMs;
-    final timingText = _formatTimingText(errorMs);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: timingColor.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: timingColor, width: 2),
-      ),
-      child: Text(
-        timingText,
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: timingColor,
-        ),
-      ),
-    );
-  }
-
-  /// Format timing error text with sign
-  String _formatTimingText(double errorMs) {
-    if (errorMs > 0) {
-      return '${DisplayFormatters.formatTimingError(errorMs)} LATE';
-    } else if (errorMs < 0) {
-      return '${DisplayFormatters.formatTimingError(errorMs)} EARLY';
-    } else {
-      return '${DisplayFormatters.formatTimingError(errorMs)} ON-TIME';
-    }
-  }
-
-  /// Build confidence meter with color-coded progress bar
-  Widget _buildConfidenceMeter(ClassificationResult result) {
-    final confidencePercentage = (result.confidence * 100).round();
-    final confidenceColor = _getConfidenceColor(result.confidence);
-
-    return Container(
-      width: 300,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildConfidenceHeader(confidencePercentage, confidenceColor),
-          const SizedBox(height: 8),
-          _buildConfidenceBar(result.confidence, confidenceColor),
-        ],
-      ),
-    );
-  }
-
-  /// Get confidence color based on confidence level
-  Color _getConfidenceColor(double confidence) {
-    if (confidence > 0.8) {
-      return Colors.green;
-    } else if (confidence >= 0.5) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  /// Build confidence header row
-  Widget _buildConfidenceHeader(int percentage, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Confidence',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        Text(
-          '$percentage%',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Build confidence progress bar
-  Widget _buildConfidenceBar(double confidence, Color color) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: LinearProgressIndicator(
-        value: confidence,
-        backgroundColor: Colors.grey[300],
-        valueColor: AlwaysStoppedAnimation<Color>(color),
-        minHeight: 20,
-      ),
+      label: DisplayFormatters.formatBpm(_bpmValue.round()),
+      onChanged: _isUpdatingBpm ? null : _handleBpmDrag,
+      onChangeEnd: _commitBpmChange,
     );
   }
 

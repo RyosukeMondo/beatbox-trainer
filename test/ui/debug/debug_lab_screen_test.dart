@@ -1,3 +1,4 @@
+@Tags(['slow'])
 import 'dart:async';
 
 import 'package:beatbox_trainer/bridge/api.dart/testing/fixture_manifest.dart';

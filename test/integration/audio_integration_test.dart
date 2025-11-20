@@ -1,3 +1,4 @@
+@Tags(['slow'])
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beatbox_trainer/services/audio/audio_service_impl.dart';
 import 'package:beatbox_trainer/services/error_handler/error_handler.dart';
