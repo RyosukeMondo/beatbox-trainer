@@ -6,7 +6,8 @@ import 'i_debug_service.dart';
 
 /// Lightweight SSE client for consuming the debug HTTP classification stream.
 class DebugSseClient {
-  DebugSseClient({HttpClient? httpClient}) : _httpClient = httpClient ?? HttpClient();
+  DebugSseClient({HttpClient? httpClient})
+    : _httpClient = httpClient ?? HttpClient();
 
   final HttpClient _httpClient;
   HttpClientRequest? _activeRequest;
@@ -35,8 +36,9 @@ class DebugSseClient {
           );
         }
 
-        final lines =
-            response.transform(utf8.decoder).transform(const LineSplitter());
+        final lines = response
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
 
         var payloadBuffer = '';
         await for (final line in lines) {
@@ -82,17 +84,13 @@ class DebugSseClient {
       return ClassificationResult.fromJson(data);
     }
     if (data is Map) {
-      return ClassificationResult.fromJson(
-        Map<String, dynamic>.from(data),
-      );
+      return ClassificationResult.fromJson(Map<String, dynamic>.from(data));
     }
     throw DebugException('Unexpected SSE payload shape: $data');
   }
 
   Uri _buildUri(Uri base, String suffix, String token) {
-    final normalizedPath = suffix.startsWith('/')
-        ? suffix
-        : '/$suffix';
+    final normalizedPath = suffix.startsWith('/') ? suffix : '/$suffix';
     final existing = Map<String, String>.from(base.queryParameters);
     existing.putIfAbsent('token', () => token);
     return base.replace(

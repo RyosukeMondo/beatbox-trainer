@@ -20,10 +20,8 @@ class DebugServerPanel extends StatefulWidget {
 }
 
 class _DebugServerPanelState extends State<DebugServerPanel> {
-  final _urlController =
-      TextEditingController(text: 'http://127.0.0.1:8787');
-  final _tokenController =
-      TextEditingController(text: 'beatbox-debug');
+  final _urlController = TextEditingController(text: 'http://127.0.0.1:8787');
+  final _tokenController = TextEditingController(text: 'beatbox-debug');
 
   @override
   void dispose() {

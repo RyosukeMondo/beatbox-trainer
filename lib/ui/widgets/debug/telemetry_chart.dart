@@ -5,10 +5,7 @@ import '../../../models/telemetry_event.dart';
 
 /// Mini line chart for telemetry BPM events.
 class TelemetryChart extends StatefulWidget {
-  const TelemetryChart({
-    super.key,
-    required this.stream,
-  });
+  const TelemetryChart({super.key, required this.stream});
 
   final Stream<TelemetryEvent> stream;
 
@@ -29,10 +26,7 @@ class _TelemetryChartState extends State<TelemetryChart> {
       setState(() {
         _points.insert(
           0,
-          _ChartPoint(
-            bpm: event.bpm!,
-            timestamp: DateTime.now(),
-          ),
+          _ChartPoint(bpm: event.bpm!, timestamp: DateTime.now()),
         );
         if (_points.length > _maxPoints) {
           _points.removeLast();

@@ -26,10 +26,7 @@ class TimingFeedback {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'classification': classification.name,
-      'error_ms': errorMs,
-    };
+    return {'classification': classification.name, 'error_ms': errorMs};
   }
 
   /// Format error as string with sign (e.g., "+12.5ms", "-5.0ms", "0.0ms")

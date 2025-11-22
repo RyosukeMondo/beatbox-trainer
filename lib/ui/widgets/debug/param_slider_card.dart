@@ -43,7 +43,10 @@ class _ParamSliderCardState extends State<ParamSliderCard> {
           children: [
             Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text(widget.description, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              widget.description,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             Slider(
               value: _value,
               min: widget.min,

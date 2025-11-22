@@ -147,10 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildBpmSetting(),
                 const Divider(),
                 _buildDebugModeSetting(),
-                if (_debugMode) ...[
-                  const Divider(),
-                  _buildDebugLabEntry(),
-                ],
+                if (_debugMode) ...[const Divider(), _buildDebugLabEntry()],
                 const Divider(),
                 _buildClassifierLevelSetting(),
                 const Divider(),

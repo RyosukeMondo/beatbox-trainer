@@ -37,10 +37,7 @@ class DiagnosticMetric {
       bufferOccupancy: (value) {
         return DiagnosticMetric(
           type: DiagnosticMetricType.bufferOccupancy,
-          payload: {
-            'channel': value.channel,
-            'percent': value.percent,
-          },
+          payload: {'channel': value.channel, 'percent': value.percent},
           timestamp: DateTime.now(),
         );
       },
@@ -58,9 +55,7 @@ class DiagnosticMetric {
       jniLifecycle: (value) {
         return DiagnosticMetric(
           type: DiagnosticMetricType.jniLifecycle,
-          payload: {
-            'phase': value.phase.name,
-          },
+          payload: {'phase': value.phase.name},
           timestamp: DateTime.fromMillisecondsSinceEpoch(
             value.timestampMs.toInt(),
             isUtc: true,
@@ -70,10 +65,7 @@ class DiagnosticMetric {
       error: (value) {
         return DiagnosticMetric(
           type: DiagnosticMetricType.error,
-          payload: {
-            'code': value.code.name,
-            'context': value.context,
-          },
+          payload: {'code': value.code.name, 'context': value.context},
           timestamp: DateTime.now(),
         );
       },
@@ -82,8 +74,6 @@ class DiagnosticMetric {
 }
 
 /// Helper that maps FFI streams to strongly typed diagnostic metrics.
-Stream<DiagnosticMetric> mapDiagnosticMetrics(
-  Stream<ffi.MetricEvent> source,
-) {
+Stream<DiagnosticMetric> mapDiagnosticMetrics(Stream<ffi.MetricEvent> source) {
   return source.map(DiagnosticMetric.fromFfi);
 }

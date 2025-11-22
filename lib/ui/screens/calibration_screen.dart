@@ -1,15 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../bridge/api.dart/api.dart' as api;
+import '../../controllers/calibration/calibration_controller.dart';
 import '../../di/service_locator.dart';
 import '../../models/calibration_progress.dart';
-import '../../models/calibration_state.dart';
 import '../../services/audio/i_audio_service.dart';
-import '../../services/error_handler/exceptions.dart';
 import '../../services/storage/i_storage_service.dart';
-import '../widgets/loading_overlay.dart';
-import '../widgets/status_card.dart';
 
 /// CalibrationScreen guides users through 3-step calibration workflow
 ///
@@ -21,78 +16,29 @@ import '../widgets/status_card.dart';
 /// After collection completes, thresholds are computed and stored
 /// for use by the classifier during training.
 ///
-/// This screen uses dependency injection for services, enabling
-/// testability and separation of concerns.
-///
-/// Use [CalibrationScreen.create] for production code (resolves from GetIt).
-/// Use [CalibrationScreen.test] for widget tests (accepts mock services).
+/// This refactored version delegates business logic to CalibrationController.
 class CalibrationScreen extends StatefulWidget {
-  /// Audio service for calibration control
-  final IAudioService audioService;
-
-  /// Storage service for persisting calibration data
-  final IStorageService storageService;
+  final CalibrationController? controller;
 
   /// Private constructor for dependency injection.
-  ///
-  /// All service dependencies are required and non-nullable.
-  /// This enforces proper dependency injection and prevents
-  /// default instantiation which blocks testability.
-  const CalibrationScreen._({
-    super.key,
-    required this.audioService,
-    required this.storageService,
-  });
+  const CalibrationScreen._({super.key, this.controller});
 
-  /// Factory constructor for production use.
-  ///
-  /// Resolves all service dependencies from the GetIt service locator.
-  /// Ensures services are properly registered before use.
-  ///
-  /// Throws [StateError] if services are not registered in GetIt.
-  ///
-  /// Example:
-  /// ```dart
-  /// GoRoute(
-  ///   path: '/calibration',
-  ///   builder: (context, state) => CalibrationScreen.create(),
-  /// )
-  /// ```
+  /// Factory constructor for production use (resolves from GetIt).
   factory CalibrationScreen.create({Key? key}) {
-    return CalibrationScreen._(
-      key: key,
+    final controller = CalibrationController(
       audioService: getIt<IAudioService>(),
       storageService: getIt<IStorageService>(),
     );
+    return CalibrationScreen._(key: key, controller: controller);
   }
 
-  /// Test constructor for widget testing.
-  ///
-  /// Accepts mock service implementations for testing.
-  /// This enables isolated widget testing without real service dependencies.
-  ///
-  /// Example:
-  /// ```dart
-  /// await tester.pumpWidget(
-  ///   MaterialApp(
-  ///     home: CalibrationScreen.test(
-  ///       audioService: mockAudio,
-  ///       storageService: mockStorage,
-  ///     ),
-  ///   ),
-  /// );
-  /// ```
+  /// Test constructor for widget testing (accepts mock controller).
   @visibleForTesting
   factory CalibrationScreen.test({
     Key? key,
-    required IAudioService audioService,
-    required IStorageService storageService,
+    required CalibrationController controller,
   }) {
-    return CalibrationScreen._(
-      key: key,
-      audioService: audioService,
-      storageService: storageService,
-    );
+    return CalibrationScreen._(key: key, controller: controller);
   }
 
   @override
@@ -100,175 +46,42 @@ class CalibrationScreen extends StatefulWidget {
 }
 
 class _CalibrationScreenState extends State<CalibrationScreen> {
-  /// Stream of calibration progress updates from audio service
-  Stream<CalibrationProgress>? _calibrationStream;
-
-  /// Current calibration progress (null when not started)
-  CalibrationProgress? _currentProgress;
-
-  /// Whether calibration is currently active
-  bool _isCalibrating = false;
-
-  /// Error message to display (null if no error)
-  String? _errorMessage;
+  late CalibrationController _controller;
 
   @override
   void initState() {
     super.initState();
-    // Initialize storage service and start calibration
+    _controller =
+        widget.controller ??
+        CalibrationController(
+          audioService: getIt<IAudioService>(),
+          storageService: getIt<IStorageService>(),
+        );
     _initializeAndStart();
   }
 
-  /// Initialize storage service and start calibration
   Future<void> _initializeAndStart() async {
-    debugPrint('[CalibrationScreen] Initializing and starting...');
     try {
-      // Initialize storage service before any operations
-      debugPrint('[CalibrationScreen] Initializing storage service');
-      await widget.storageService.init();
-      debugPrint('[CalibrationScreen] Storage service initialized');
-
-      // Start calibration automatically when screen loads
-      debugPrint('[CalibrationScreen] About to start calibration');
-      await _startCalibration();
-      debugPrint('[CalibrationScreen] Calibration start completed');
-    } catch (e, stackTrace) {
-      debugPrint('[CalibrationScreen] Error in _initializeAndStart: $e');
-      debugPrint('[CalibrationScreen] Stack trace: $stackTrace');
-      setState(() {
-        _errorMessage = 'Failed to initialize: $e';
-        _isCalibrating = false;
-      });
+      await _controller.init();
+      await _controller.startCalibration();
+    } catch (e) {
+      // Error is handled by controller's errorNotifier
+      debugPrint('[CalibrationScreen] Initialization error: $e');
     }
   }
 
   @override
   void dispose() {
-    // If calibration is still in progress when screen is disposed, finish it
-    if (_isCalibrating && _currentProgress != null) {
-      // Note: We don't await here as dispose can't be async
-      // The service will clean up the procedure when the stream is dropped
-      widget.audioService.finishCalibration().catchError((e) {
-        // Ignore errors during cleanup
-      });
-    }
+    _controller.dispose();
     super.dispose();
   }
 
-  /// Start calibration workflow
-  Future<void> _startCalibration() async {
-    debugPrint('[CalibrationScreen] Starting calibration...');
-    try {
-      // Start calibration procedure
-      debugPrint('[CalibrationScreen] Calling audioService.startCalibration()');
-      await widget.audioService.startCalibration();
-      debugPrint(
-        '[CalibrationScreen] startCalibration() completed successfully',
-      );
+  Future<void> _handleSuccess() async {
+    if (!mounted) return;
 
-      // Subscribe to calibration progress stream
-      debugPrint('[CalibrationScreen] Getting calibration stream');
-      final stream = widget.audioService.getCalibrationStream();
-      debugPrint('[CalibrationScreen] Got calibration stream');
-
-      setState(() {
-        _isCalibrating = true;
-        _calibrationStream = stream;
-        _currentProgress = null;
-        _errorMessage = null;
-      });
-      debugPrint('[CalibrationScreen] State updated, calibration started');
-    } on CalibrationServiceException catch (e) {
-      debugPrint(
-        '[CalibrationScreen] CalibrationServiceException: ${e.message}',
-      );
-      debugPrint('[CalibrationScreen] Error code: ${e.errorCode}');
-      debugPrint('[CalibrationScreen] Original error: ${e.originalError}');
-      setState(() {
-        _errorMessage = e.message;
-        _isCalibrating = false;
-      });
-    } on AudioServiceException catch (e) {
-      debugPrint('[CalibrationScreen] AudioServiceException: ${e.message}');
-      debugPrint('[CalibrationScreen] Error code: ${e.errorCode}');
-      debugPrint('[CalibrationScreen] Original error: ${e.originalError}');
-      setState(() {
-        _errorMessage = e.message;
-        _isCalibrating = false;
-      });
-    } catch (e, stackTrace) {
-      debugPrint('[CalibrationScreen] Unexpected error: $e');
-      debugPrint('[CalibrationScreen] Stack trace: $stackTrace');
-      setState(() {
-        _errorMessage = 'Failed to start calibration: $e';
-        _isCalibrating = false;
-      });
-    }
-  }
-
-  /// Finish calibration and compute thresholds
-  Future<void> _finishCalibration() async {
-    try {
-      await widget.audioService.finishCalibration();
-      final calibrationData = await _retrieveCalibrationData();
-      await widget.storageService.saveCalibration(calibrationData);
-      await _handleSuccessfulCalibration();
-    } on CalibrationServiceException catch (e) {
-      _handleCalibrationError(e.message);
-    } on StorageException catch (e) {
-      _handleCalibrationError('Failed to save calibration: ${e.message}');
-    } catch (e) {
-      _handleCalibrationError('Calibration failed: $e');
-    }
-  }
-
-  /// Retrieve calibration data from Rust backend
-  Future<CalibrationData> _retrieveCalibrationData() async {
-    final calibrationStateJson = await api.getCalibrationState();
-    final calibrationJson =
-        jsonDecode(calibrationStateJson) as Map<String, dynamic>;
-    final calibrationState = CalibrationState.fromJson(calibrationJson);
-    return CalibrationData(
-      level: calibrationState.level,
-      timestamp: DateTime.now(),
-      thresholds: calibrationState.toThresholdMap(),
-    );
-  }
-
-  /// Handle successful calibration completion
-  Future<void> _handleSuccessfulCalibration() async {
-    if (mounted) {
-      await _showSuccessDialog();
-    }
-    if (mounted) {
-      context.go('/training');
-    }
-  }
-
-  /// Handle calibration error by updating state
-  void _handleCalibrationError(String message) {
-    setState(() {
-      _errorMessage = message;
-      _isCalibrating = false;
-    });
-  }
-
-  /// Restart calibration from beginning
-  Future<void> _restartCalibration() async {
-    setState(() {
-      _currentProgress = null;
-      _errorMessage = null;
-      _isCalibrating = false;
-    });
-
-    await _startCalibration();
-  }
-
-  /// Show success dialog after calibration completion
-  Future<void> _showSuccessDialog() async {
-    return showDialog<void>(
+    await showDialog<void>(
       context: context,
-      barrierDismissible: false, // User must tap button to dismiss
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
@@ -288,22 +101,9 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         );
       },
     );
-  }
 
-  /// Get instruction text for current calibration sound
-  String _getInstructionText(CalibrationSound sound) {
-    return 'Make ${sound.displayName} sound 10 times';
-  }
-
-  /// Get description text for current calibration sound
-  String _getDescriptionText(CalibrationSound sound) {
-    switch (sound) {
-      case CalibrationSound.kick:
-        return 'A low, bass-heavy sound like "boot" or "dum"';
-      case CalibrationSound.snare:
-        return 'A mid-range sharp sound like "psh" or "tish"';
-      case CalibrationSound.hiHat:
-        return 'A high-frequency crisp sound like "tss" or "ch"';
+    if (mounted) {
+      context.go('/training');
     }
   }
 
@@ -314,27 +114,65 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         title: const Text('Calibration'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // Restart button
-          IconButton(
-            icon: const Icon(Icons.restart_alt),
-            tooltip: 'Restart calibration',
-            onPressed: _isCalibrating ? _restartCalibration : null,
+          ValueListenableBuilder<bool>(
+            valueListenable: _controller.isCalibratingNotifier,
+            builder: (context, isCalibrating, _) {
+              return IconButton(
+                icon: const Icon(Icons.restart_alt),
+                tooltip: 'Restart calibration',
+                onPressed: isCalibrating
+                    ? () async {
+                        await _controller.cancelCalibration();
+                        await _controller.startCalibration();
+                      }
+                    : null,
+              );
+            },
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: _errorMessage != null
-            ? _buildErrorDisplay()
-            : _isCalibrating && _calibrationStream != null
-            ? _buildCalibrationDisplay()
-            : _buildInitialDisplay(),
+        child: ValueListenableBuilder<String?>(
+          valueListenable: _controller.errorNotifier,
+          builder: (context, error, _) {
+            if (error != null) {
+              return _buildErrorDisplay(error);
+            }
+
+            return ValueListenableBuilder<bool>(
+              valueListenable: _controller.isCalibratingNotifier,
+              builder: (context, isCalibrating, _) {
+                if (!isCalibrating) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return ValueListenableBuilder<CalibrationProgress?>(
+                  valueListenable: _controller.progressNotifier,
+                  builder: (context, progress, _) {
+                    if (progress == null) {
+                      return _buildWaitingDisplay();
+                    }
+
+                    // Auto-navigate to training on completion
+                    if (progress.isCalibrationComplete) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _handleSuccess();
+                      });
+                    }
+
+                    return _buildProgressContent(progress);
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  /// Build error display widget
-  Widget _buildErrorDisplay() {
+  Widget _buildErrorDisplay(String error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -342,107 +180,37 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
           const Icon(Icons.error_outline, color: Colors.red, size: 64),
           const SizedBox(height: 24),
           Text(
-            _errorMessage!,
+            error,
             style: const TextStyle(fontSize: 18, color: Colors.red),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _restartCalibration,
-            child: const Text('Retry'),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () => context.go('/'),
-            child: const Text('Cancel'),
+          ElevatedButton.icon(
+            onPressed: () async {
+              await _controller.cancelCalibration();
+              await _controller.startCalibration();
+            },
+            icon: const Icon(Icons.restart_alt),
+            label: const Text('Try Again'),
           ),
         ],
       ),
     );
   }
 
-  /// Build initial loading display
-  Widget _buildInitialDisplay() {
-    return const LoadingOverlay(message: 'Initializing calibration...');
-  }
-
-  /// Build calibration progress display
-  Widget _buildCalibrationDisplay() {
-    return StreamBuilder<CalibrationProgress>(
-      stream: _calibrationStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingOverlay(message: 'Starting calibration...');
-        }
-
-        if (snapshot.hasError) {
-          return _buildStreamErrorDisplay(snapshot.error);
-        }
-
-        _handleProgressUpdate(snapshot.data);
-
-        if (_currentProgress != null) {
-          return _buildProgressContent(_currentProgress!);
-        } else {
-          return _buildWaitingDisplay();
-        }
-      },
-    );
-  }
-
-  /// Build stream error display widget
-  Widget _buildStreamErrorDisplay(Object? error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 64),
-          const SizedBox(height: 24),
-          Text(
-            'Stream error: $error',
-            style: const TextStyle(fontSize: 18, color: Colors.red),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _restartCalibration,
-            child: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Handle progress update from stream
-  void _handleProgressUpdate(CalibrationProgress? progress) {
-    if (progress != null) {
-      _currentProgress = progress;
-      if (_currentProgress!.isCalibrationComplete) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _finishCalibration();
-        });
-      }
-    }
-  }
-
-  /// Build waiting for data display widget
   Widget _buildWaitingDisplay() {
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.mic, size: 64, color: Colors.grey),
+          CircularProgressIndicator(),
           SizedBox(height: 24),
-          Text(
-            'Waiting for calibration data...',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
+          Text('Starting calibration...', style: TextStyle(fontSize: 18)),
         ],
       ),
     );
   }
 
-  /// Build progress content widget
   Widget _buildProgressContent(CalibrationProgress progress) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -459,7 +227,6 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     );
   }
 
-  /// Build overall progress header with step indicator
   Widget _buildOverallProgressHeader(CalibrationProgress progress) {
     final sound = progress.currentSound;
     final overallProgress = progress.overallProgressFraction;
@@ -486,7 +253,6 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     );
   }
 
-  /// Build current sound instructions with icon and text
   Widget _buildCurrentSoundInstructions(CalibrationProgress progress) {
     final sound = progress.currentSound;
 
@@ -495,7 +261,7 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
         Icon(Icons.mic, size: 80, color: Theme.of(context).colorScheme.primary),
         const SizedBox(height: 24),
         Text(
-          _getInstructionText(sound),
+          'Make ${sound.displayName} sound 10 times',
           style: Theme.of(
             context,
           ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -513,7 +279,17 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     );
   }
 
-  /// Build progress indicator for current sound
+  String _getDescriptionText(CalibrationSound sound) {
+    switch (sound) {
+      case CalibrationSound.kick:
+        return 'A low, bass-heavy sound like "boot" or "dum"';
+      case CalibrationSound.snare:
+        return 'A mid-range sharp sound like "psh" or "tish"';
+      case CalibrationSound.hiHat:
+        return 'A high-frequency crisp sound like "tss" or "ch"';
+    }
+  }
+
   Widget _buildProgressIndicator(CalibrationProgress progress) {
     final collected = progress.samplesCollected;
     final needed = progress.samplesNeeded;
@@ -545,31 +321,27 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
     );
   }
 
-  /// Build status message for sound completion and calibration completion
   Widget _buildStatusMessage(CalibrationProgress progress) {
-    final sound = progress.currentSound;
+    final collected = progress.samplesCollected;
+    final needed = progress.samplesNeeded;
 
-    if (progress.isCalibrationComplete) {
-      return const StatusCard(
-        color: Colors.green,
-        icon: Icons.celebration,
-        title: 'Calibration Complete!',
-        subtitle: 'Computing thresholds...',
-        iconSize: 48.0,
+    if (collected >= needed) {
+      return Text(
+        'Sound complete! Moving to next...',
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          color: Colors.green,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
       );
     }
 
-    if (progress.isSoundComplete) {
-      return StatusCard(
-        color: Colors.green,
-        icon: Icons.check_circle,
-        title: '${sound.displayName} samples complete!',
-        subtitle: sound.next != null
-            ? 'Moving to ${sound.next!.displayName}...'
-            : null,
-      );
-    }
-
-    return const SizedBox.shrink();
+    return Text(
+      'Keep going!',
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      textAlign: TextAlign.center,
+    );
   }
 }
