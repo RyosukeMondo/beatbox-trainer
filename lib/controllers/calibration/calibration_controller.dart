@@ -65,6 +65,9 @@ class CalibrationController {
   /// Value notifier for audio level (RMS) for live level meter
   final ValueNotifier<double> audioLevelNotifier = ValueNotifier<double>(0.0);
 
+  /// Raw RMS (unscaled) for debug display of thresholds
+  final ValueNotifier<double?> audioRmsNotifier = ValueNotifier<double?>(null);
+
   /// Value notifier for "sample just collected" animation trigger
   final ValueNotifier<int> sampleCollectedNotifier = ValueNotifier<int>(0);
 
@@ -205,6 +208,7 @@ class CalibrationController {
     // Clamp and normalize for UI display
     final level = (metrics.rms * 2.0).clamp(0.0, 1.0);
     audioLevelNotifier.value = level;
+    audioRmsNotifier.value = metrics.rms;
   }
 
   /// Finish calibration and persist calibration state.
@@ -321,6 +325,7 @@ class CalibrationController {
     audioLevelNotifier.dispose();
     sampleCollectedNotifier.dispose();
     manualAcceptAvailableNotifier.dispose();
+    audioRmsNotifier.dispose();
   }
 
   /// Handle progress update from calibration stream.
@@ -330,6 +335,16 @@ class CalibrationController {
       '${progress.samplesCollected}/${progress.samplesNeeded} '
       '(waitingForConfirmation: ${progress.waitingForConfirmation})',
     );
+    if (progress.debug != null) {
+      final d = progress.debug!;
+      debugPrint(
+        '[CalibrationController] Debug seq=${d.seq} rmsGate=${d.rmsGate?.toStringAsFixed(4) ?? "-"} '
+        'lastRms=${d.lastRms?.toStringAsFixed(4) ?? "-"} '
+        'centroid=${d.lastCentroid?.toStringAsFixed(1) ?? "-"} '
+        'zcr=${d.lastZcr?.toStringAsFixed(3) ?? "-"} '
+        'misses=${d.misses}',
+      );
+    }
 
     // Trigger sample collected animation when samples increase
     final previousSamples = _currentProgress?.samplesCollected ?? 0;
@@ -420,7 +435,7 @@ class CalibrationController {
   }
 
   /// Manually count the last buffered calibration hit.
-  Future<CalibrationProgress> manualAcceptLastCandidate() async {
+  Future<CalibrationProgress?> manualAcceptLastCandidate() async {
     try {
       final progress = await _audioService.manualAcceptLastCandidate();
       _currentProgress = progress;
@@ -431,7 +446,9 @@ class CalibrationController {
       return progress;
     } catch (e) {
       debugPrint('[CalibrationController] Manual accept failed: $e');
-      rethrow;
+      manualAcceptAvailableNotifier.value = false;
+      // Keep guidance unchanged so the user can still see the hint; UI surfaces feedback.
+      return null;
     }
   }
 }

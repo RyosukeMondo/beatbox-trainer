@@ -296,6 +296,7 @@ class AudioServiceImpl implements IAudioService {
       waitingForConfirmation: ffiProgress.waitingForConfirmation,
       guidance: _mapFfiToModelGuidance(ffiProgress.guidance),
       manualAcceptAvailable: ffiProgress.manualAcceptAvailable,
+      debug: _mapFfiToModelDebug(ffiProgress.debug),
     );
   }
 
@@ -338,6 +339,25 @@ class AudioServiceImpl implements IAudioService {
       case ffi_calibration.CalibrationGuidanceReason.clipped:
         return CalibrationGuidanceReason.clipped;
     }
+  }
+
+  CalibrationProgressDebug? _mapFfiToModelDebug(
+    ffi_calibration.CalibrationProgressDebug? debug,
+  ) {
+    if (debug == null) return null;
+    return CalibrationProgressDebug(
+      seq: debug.seq.toInt(),
+      rmsGate: debug.rmsGate,
+      centroidMin: debug.centroidMin,
+      centroidMax: debug.centroidMax,
+      zcrMin: debug.zcrMin,
+      zcrMax: debug.zcrMax,
+      misses: debug.misses,
+      lastCentroid: debug.lastCentroid,
+      lastZcr: debug.lastZcr,
+      lastRms: debug.lastRms,
+      lastMaxAmp: debug.lastMaxAmp,
+    );
   }
 
   TelemetryEvent _mapFfiToTelemetryEvent(ffi_engine.TelemetryEvent ffiEvent) {

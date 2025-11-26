@@ -53,6 +53,9 @@ class CalibrationProgress {
   /// Whether a buffered candidate is available for manual acceptance
   final bool manualAcceptAvailable;
 
+  /// Debug info about the current gates (for user feedback/instrumentation)
+  final CalibrationProgressDebug? debug;
+
   const CalibrationProgress({
     required this.currentSound,
     required this.samplesCollected,
@@ -60,6 +63,7 @@ class CalibrationProgress {
     this.waitingForConfirmation = false,
     this.guidance,
     this.manualAcceptAvailable = false,
+    this.debug,
   });
 
   /// Check if current sound is complete
@@ -85,6 +89,52 @@ class CalibrationProgress {
   @override
   String toString() =>
       'CalibrationProgress(sound: $currentSound, collected: $samplesCollected/$samplesNeeded)';
+}
+
+/// Debug payload for current gates and reject counters
+class CalibrationProgressDebug {
+  /// Current RMS gate (null if not applicable)
+  final double? rmsGate;
+
+  /// Current centroid gate min/max
+  final double centroidMin;
+  final double centroidMax;
+
+  /// Current ZCR gate min/max
+  final double zcrMin;
+  final double zcrMax;
+
+  /// Consecutive misses for the active sound
+  final int misses;
+
+  /// Last evaluated centroid (if available)
+  final double? lastCentroid;
+
+  /// Last evaluated ZCR (if available)
+  final double? lastZcr;
+
+  /// Last evaluated RMS (if available)
+  final double? lastRms;
+
+  /// Last evaluated max amplitude (if available)
+  final double? lastMaxAmp;
+
+  const CalibrationProgressDebug({
+    required this.seq,
+    required this.rmsGate,
+    required this.centroidMin,
+    required this.centroidMax,
+    required this.zcrMin,
+    required this.zcrMax,
+    required this.misses,
+    this.lastCentroid,
+    this.lastZcr,
+    this.lastRms,
+    this.lastMaxAmp,
+  });
+
+  /// Sequence counter to force UI updates
+  final int seq;
 }
 
 /// Sound type being calibrated

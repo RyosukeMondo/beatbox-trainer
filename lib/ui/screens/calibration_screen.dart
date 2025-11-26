@@ -5,8 +5,8 @@ import '../../di/service_locator.dart';
 import '../../models/calibration_progress.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/storage/i_storage_service.dart';
-import '../widgets/audio_level_meter.dart';
 import '../widgets/calibration_confirmation_buttons.dart';
+import '../widgets/calibration_level_feedback.dart';
 import '../widgets/sample_progress_dots.dart';
 
 /// CalibrationScreen guides users through 4-step calibration workflow
@@ -146,26 +146,27 @@ class _CalibrationScreenState extends State<CalibrationScreen>
   }
 
   Future<void> _onManualAccept() async {
-    try {
-      final progress = await _controller.manualAcceptLastCandidate();
-      if (!mounted) return;
-      final soundName = progress.currentSound.displayName;
+    final progress = await _controller.manualAcceptLastCandidate();
+    if (!mounted) return;
+    if (progress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Counted last $soundName hit'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not count last hit: $e'),
+          content: const Text(
+            'Could not count last hit. Try another clear hit.',
+          ),
           backgroundColor: Colors.red[700],
           behavior: SnackBarBehavior.floating,
         ),
       );
+      return;
     }
+    final soundName = progress.currentSound.displayName;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Counted last $soundName hit'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -314,12 +315,26 @@ class _CalibrationScreenState extends State<CalibrationScreen>
             _buildSoundTypeIndicator(progress),
             const SizedBox(height: 24),
 
-            // Live audio level meter
-            ValueListenableBuilder<double>(
-              valueListenable: _controller.audioLevelNotifier,
-              builder: (context, level, _) => AudioLevelMeter(level: level),
+            // Enhanced visual feedback with level bar and thresholds
+            ValueListenableBuilder<double?>(
+              valueListenable: _controller.audioRmsNotifier,
+              builder: (context, currentRms, _) => CalibrationLevelFeedback(
+                currentRms: currentRms,
+                debug: progress.debug,
+                sound: progress.currentSound,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Quick pass/fail status summary for sound phases
+            if (progress.currentSound.isSoundPhase)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: CalibrationStatusSummary(
+                  debug: progress.debug,
+                  sound: progress.currentSound,
+                ),
+              ),
 
             // Live guidance banner when we hear sound but haven't accepted samples
             ValueListenableBuilder<String?>(
@@ -332,6 +347,8 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                 );
               },
             ),
+
+            // Manual accept button
             ValueListenableBuilder<bool>(
               valueListenable: _controller.manualAcceptAvailableNotifier,
               builder: (context, available, _) {
@@ -581,3 +598,4 @@ class _GuidanceBanner extends StatelessWidget {
     );
   }
 }
+
