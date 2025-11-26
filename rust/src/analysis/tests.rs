@@ -5,7 +5,7 @@ use crate::calibration::state::CalibrationState;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 
 #[test]
@@ -33,6 +33,7 @@ fn test_calibration_mode_thread_spawns_with_procedure() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     thread::sleep(Duration::from_millis(50));
@@ -63,6 +64,7 @@ fn test_classification_mode_thread_spawns_without_procedure() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     thread::sleep(Duration::from_millis(50));
@@ -94,6 +96,7 @@ fn test_thread_handles_calibration_procedure_gracefully() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     thread::sleep(Duration::from_millis(100));
@@ -125,6 +128,7 @@ fn test_thread_accepts_optional_progress_channel() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     let channels2 = BufferPool::new(8, 2048);
@@ -148,6 +152,7 @@ fn test_thread_accepts_optional_progress_channel() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     thread::sleep(Duration::from_millis(50));
@@ -182,6 +187,7 @@ fn test_thread_handles_lock_contention_without_deadlock() {
         OnsetDetectionConfig::default(),
         100,
         None,
+        None, // audio_metrics_tx
     );
 
     let _lock = procedure_clone.lock().unwrap();
@@ -191,4 +197,48 @@ fn test_thread_handles_lock_contention_without_deadlock() {
     drop(_lock);
     thread::sleep(Duration::from_millis(50));
     assert!(!analysis_thread.is_finished());
+}
+
+#[test]
+fn guidance_rate_limiter_respects_reason_and_time() {
+    let mut limiter = GuidanceRateLimiter::new(Duration::from_secs(5));
+    let now = Instant::now();
+
+    assert!(limiter.should_emit(CalibrationGuidanceReason::Stagnation, now));
+    assert!(!limiter.should_emit(
+        CalibrationGuidanceReason::Stagnation,
+        now + Duration::from_secs(1)
+    ));
+
+    // Changing reason should emit immediately even within the rate window
+    assert!(limiter.should_emit(
+        CalibrationGuidanceReason::TooQuiet,
+        now + Duration::from_secs(2)
+    ));
+    // Same reason before window expires should be suppressed
+    assert!(!limiter.should_emit(
+        CalibrationGuidanceReason::TooQuiet,
+        now + Duration::from_secs(3)
+    ));
+    // After rate window expires, emissions resume
+    assert!(limiter.should_emit(
+        CalibrationGuidanceReason::TooQuiet,
+        now + Duration::from_secs(7)
+    ));
+}
+
+#[test]
+fn guidance_rate_limiter_clear_allows_fresh_emission() {
+    let mut limiter = GuidanceRateLimiter::new(Duration::from_secs(5));
+    let now = Instant::now();
+
+    assert!(limiter.should_emit(CalibrationGuidanceReason::Clipped, now));
+    assert!(limiter.has_active());
+
+    limiter.clear();
+    assert!(!limiter.has_active());
+    assert!(limiter.should_emit(
+        CalibrationGuidanceReason::Clipped,
+        now + Duration::from_secs(1)
+    ));
 }

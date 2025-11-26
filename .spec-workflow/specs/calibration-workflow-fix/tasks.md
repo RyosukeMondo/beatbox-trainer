@@ -195,7 +195,7 @@
   - _Leverage: Design Section 12.1–12.2; existing guidance prototype in controller/screen_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter/Rust bridge engineer | Task: Add a guidance event stream from Rust (stagnation reasons, levels, misses) and surface it in Dart. Update CalibrationController to consume guidance, show banner (non-spammy, clears on progress), and enable a manual accept button when the Rust API reports availability. Update UI with snackbar for success/failure. | Restrictions: Rate-limit guidance to 1 per 5s; auto-clear on next progress/quiet; avoid breaking existing progress stream; add widget tests for banner visibility logic. | _Leverage: Current controller guidance heuristic; FRB streams pattern; UI banner component_ | Success: Guidance banner driven by Rust events, manual accept button state reflects availability, rate-limiting works, tests cover banner/clearing states. |
 
-- [ ] 7.4 Testing and QA updates
+- [x] 7.4 Testing and QA updates
   - Files: `rust/src/calibration/procedure.rs` (unit tests), `rust/src/analysis/mod.rs` (unit tests), `test/` (widget tests), `docs/guides/qa/TESTING.md`
   - Add tests for adaptive backoff, candidate buffer, manual accept, and guidance rate-limiting; update QA doc with new manual test cases.
   - _Leverage: Design Section 12.3; existing test modules and QA guide_

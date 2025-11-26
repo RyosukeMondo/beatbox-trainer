@@ -83,6 +83,12 @@ Highlights:
 Whenever you need endpoint details, CLI recipes, or log-attachment guidance,
 jump to the diagnostics guide instead of duplicating content here.
 
+## Calibration Manual QA (Adaptive Acceptance)
+
+- **Adaptive backoff**: During calibration, intentionally deliver 3+ quiet hits for a sound and confirm RMS/feature gates relax stepwise (logs show backoff step increments) while staying above noise-floor*1.2; a clean hit should immediately reset gates.
+- **Candidate buffer + manual accept**: Send a borderline hit that is rejected but stored as a candidate, then use the “Count last hit” control to promote it; progress should increment once, candidate should clear, and the button should disable when the phase completes or advances.
+- **Guidance rate-limit**: Trigger repeated rejects with the same failure mode inside 5 seconds (e.g., quiet hits) and verify the guidance banner only updates once; banner should clear after a quiet period or a successful acceptance, and a different failure reason should emit a new banner immediately.
+
 ## Test Organization
 
 ### Rust Tests

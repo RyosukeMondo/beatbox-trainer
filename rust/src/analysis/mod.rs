@@ -53,6 +53,48 @@ pub struct ClassificationResult {
 
 use crate::api::AudioMetrics;
 
+#[derive(Debug)]
+struct GuidanceRateLimiter {
+    last_reason: Option<CalibrationGuidanceReason>,
+    last_at: Option<Instant>,
+    rate_limit: Duration,
+}
+
+impl GuidanceRateLimiter {
+    fn new(rate_limit: Duration) -> Self {
+        Self {
+            last_reason: None,
+            last_at: None,
+            rate_limit,
+        }
+    }
+
+    fn has_active(&self) -> bool {
+        self.last_reason.is_some()
+    }
+
+    fn clear(&mut self) {
+        self.last_reason = None;
+        self.last_at = None;
+    }
+
+    fn should_emit(&mut self, reason: CalibrationGuidanceReason, now: Instant) -> bool {
+        let reason_changed = self.last_reason.map(|r| r != reason).unwrap_or(true);
+        let past_rate_limit = self
+            .last_at
+            .map(|ts| now.saturating_duration_since(ts) >= self.rate_limit)
+            .unwrap_or(true);
+
+        if reason_changed || past_rate_limit {
+            self.last_reason = Some(reason);
+            self.last_at = Some(now);
+            true
+        } else {
+            false
+        }
+    }
+}
+
 /// Spawn the analysis thread that processes audio buffers through DSP pipeline
 ///
 /// The analysis thread consumes filled audio buffers from the DATA_QUEUE,
@@ -120,10 +162,8 @@ pub fn spawn_analysis_thread(
             Some(log_every_n_buffers)
         };
         let mut last_noise_floor_samples: usize = 0;
-        let mut last_guidance_reason: Option<CalibrationGuidanceReason> = None;
-        let mut last_guidance_at: Option<Instant> = None;
         let mut last_manual_available = false;
-        let guidance_rate_limit = Duration::from_secs(5);
+        let mut guidance_limiter = GuidanceRateLimiter::new(Duration::from_secs(5));
 
         loop {
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
@@ -259,7 +299,7 @@ pub fn spawn_analysis_thread(
                 };
 
             if calibration_active_snapshot
-                && last_guidance_reason.is_some()
+                && guidance_limiter.has_active()
                 && rms < quiet_clear_gate
             {
                 if let Ok(procedure_guard) = calibration_procedure.try_lock() {
@@ -269,8 +309,7 @@ pub fn spawn_analysis_thread(
                         }
                     }
                 }
-                last_guidance_reason = None;
-                last_guidance_at = None;
+                guidance_limiter.clear();
             }
 
             // Process accumulated buffer through onset detection
@@ -338,8 +377,7 @@ pub fn spawn_analysis_thread(
                                             let _ = tx.send(progress);
                                         }
                                         last_manual_available = manual_available;
-                                        last_guidance_reason = None;
-                                        last_guidance_at = None;
+                                        guidance_limiter.clear();
                                     }
                                     Err(err) => {
                                         // Sample rejected (validation error)
@@ -359,25 +397,14 @@ pub fn spawn_analysis_thread(
 
                                         let mut guidance_payload = None;
                                         let now = Instant::now();
-                                        let reason_changed = last_guidance_reason
-                                            .map(|r| r != reason)
-                                            .unwrap_or(true);
-                                        let past_rate_limit = last_guidance_at
-                                            .map(|ts| {
-                                                now.saturating_duration_since(ts)
-                                                    >= guidance_rate_limit
-                                            })
-                                            .unwrap_or(true);
 
-                                        if reason_changed || past_rate_limit {
+                                        if guidance_limiter.should_emit(reason, now) {
                                             guidance_payload = Some(CalibrationGuidance {
                                                 sound: procedure.current_sound(),
                                                 reason,
                                                 level: onset_rms as f32,
                                                 misses: procedure.rejects_for_current_sound(),
                                             });
-                                            last_guidance_reason = Some(reason);
-                                            last_guidance_at = Some(now);
                                         }
 
                                         if manual_changed || guidance_payload.is_some() {
