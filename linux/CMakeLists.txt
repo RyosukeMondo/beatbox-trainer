@@ -126,3 +126,19 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+# === Rust Native Library ===
+# Copy the Rust beatbox_trainer library to the bundle
+set(RUST_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/target")
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(RUST_LIB "${RUST_LIB_DIR}/debug/libbeatbox_trainer.so")
+else()
+  set(RUST_LIB "${RUST_LIB_DIR}/release/libbeatbox_trainer.so")
+endif()
+
+if(EXISTS "${RUST_LIB}")
+  install(FILES "${RUST_LIB}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+else()
+  message(WARNING "Rust library not found at ${RUST_LIB}. Build Rust first with: cd rust && cargo build --release")
+endif()

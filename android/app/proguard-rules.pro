@@ -6,6 +6,9 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+# Permission handler plugin
+-keep class com.baseflow.permissionhandler.** { *; }
+
 # Keep native methods (JNI)
 -keepclasseswithmembernames class * {
     native <methods>;
