@@ -108,6 +108,43 @@ This specification ensures the calibration workflow supports these goals by:
 - ✓ Mock dependencies injectable for testing
 - ✓ Edge cases tested: insufficient samples, invalid features, duplicate onsets
 
+---
+
+### Story 5: Assisted Capture & User Feedback
+**As a** user
+**I want to** get immediate feedback when the system hears me but cannot count a sample
+**So that** I can adjust how I produce sounds without guessing.
+
+**EARS Criteria:**
+- **WHEN** calibration is active
+- **IF** the mic input stays above the guidance threshold for >2.5s **AND** no new samples are accepted
+- **THEN** the system shall surface a contextual hint describing how to adjust volume/spacing/mic distance
+- **AND** the hint shall clear automatically once a new sample is accepted or input quiets down.
+
+**Acceptance Criteria:**
+- ✓ Guidance banner appears only during stagnation (no sample progress, level above threshold)
+- ✓ Hint auto-dismisses within 500ms of the next accepted sample or quiet input
+- ✓ No more than one guidance message per 5s to avoid spam
+- ✓ Works for kick/snare/hi-hat with sound-specific phrasing
+
+---
+
+### Story 6: Adaptive Acceptance and Rescue Path
+**As a** user
+**I want to** continue calibration even if my sounds are atypical
+**So that** I can finish calibration without being blocked by strict thresholds.
+
+**EARS Criteria:**
+- **WHEN** N consecutive onsets are detected but rejected for the current sound type
+- **THEN** the system shall automatically relax acceptance (lower threshold, widen feature ranges) up to a safe floor
+- **AND** buffer the last accepted candidate so I can manually “count this hit” if auto-accept still fails.
+
+**Acceptance Criteria:**
+- ✓ Adaptive backoff engages after configurable consecutive misses (default N=3) and resets after a success
+- ✓ Threshold backoff is bounded to prevent runaway sensitivity and is logged
+- ✓ UI exposes a “Count last hit” action while in stagnation, disabled when no candidate exists
+- ✓ Manual accept produces a progress event indistinguishable from auto-accept
+
 ## 4. Functional Requirements
 
 ### FR-1: Onset Detection During Calibration
@@ -154,6 +191,19 @@ This specification ensures the calibration workflow supports these goals by:
 
 ---
 
+### FR-3B: Adaptive Acceptance
+**Requirement:** During calibration, the system shall adapt acceptance thresholds after repeated rejections.
+
+**Details:**
+- Maintain consecutive rejection counters per sound type
+- After `N` misses (default 3), reduce onset/feature gates by a step factor; reset on success
+- Floors: RMS gate not below noise floor ×1.2; ZCR/centroid ranges clamped to safe minima/maxima
+- Log every adaptation (sound type, step, bounds) to telemetry and QA logs
+
+**Rationale:** Reduces user friction for atypical timbre without compromising noise immunity.
+
+---
+
 ### FR-4: Sample Collection Workflow
 **Requirement:** The calibration procedure shall collect 10 samples per sound type in sequence: KICK → SNARE → HI-HAT.
 
@@ -164,6 +214,18 @@ This specification ensures the calibration workflow supports these goals by:
 4. **CollectingHiHat** → **Complete** (after 10 HI-HAT samples)
 
 **Rationale:** Sequential collection provides clear user guidance and simplifies UI logic.
+
+---
+
+### FR-4B: Candidate Buffer and Manual Accept
+**Requirement:** While in calibration, the analysis thread shall retain the most recent valid onset features per sound type for manual rescue.
+
+**Details:**
+- Keep a per-sound rolling buffer of the last 1–2 candidate feature sets that were rejected only by gating (not malformed data)
+- Expose an API to mark the latest candidate as accepted for the active sound type
+- Clear buffer on sound transition or successful auto-accept
+
+**Rationale:** Lets users progress when automation struggles with unique timbre.
 
 ---
 
@@ -198,6 +260,19 @@ pub struct CalibrationProgress {
 4. Serialize state to JSON for persistence
 
 **Rationale:** Thresholds enable accurate classification of future sounds.
+
+---
+
+### FR-7: UX Feedback
+**Requirement:** The UI shall surface actionable, non-spammy guidance when calibration stalls.
+
+**Details:**
+- Show guidance banner when loud input persists >2.5s without sample progress
+- One hint per 5s window; auto-clear after 0.5s of silence or on next sample
+- Sound-specific copy for kick/snare/hi-hat; include spacing/volume tips
+- Optional snackbar/toast for manual “Count last hit” action success/failure
+
+**Rationale:** Reduce user uncertainty and guide toward successful capture.
 
 ---
 

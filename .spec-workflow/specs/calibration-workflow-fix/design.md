@@ -945,6 +945,49 @@ pub struct CalibrationProgress {
 **Recommendation**: Keep auto-rejection (simpler UX)
 **Rationale**: Sample validation is lenient (wide ranges), invalid samples are rare
 
+## 11. Adaptive Acceptance & Candidate Rescue (NEW)
+
+### 11.1 Adaptive Backoff
+- Track consecutive rejects per sound type in the analysis thread (lock-free counters; reset on success).
+- After `N` rejects (default 3), relax gates in two dimensions:
+  - Onset/RMS gate: `max(noise_floor * 1.2, current_gate * 0.85)`, floor at ×1.2 noise floor.
+  - Feature ranges: widen centroid/ZCR bounds by 10% per step, capped at predefined safe min/max.
+- Persist the current backoff step in `CalibrationProcedure` (mutable state guarded by existing mutex).
+- Emit telemetry log per adjustment: sound type, step, gate values, reason (consecutive_misses).
+- Reset step to 0 on first accepted sample or sound transition.
+
+### 11.2 Candidate Buffer for Manual Accept
+- Maintain per-sound “last candidate” in `CalibrationProcedure`:
+  - Only store candidates that failed gating but passed structural validation (not malformed).
+  - Overwrite on each rejected onset.
+  - Clear on sound transition or successful accept.
+- Expose FFI API: `manual_accept_last_candidate()`:
+  - Checks active sound == candidate sound.
+  - Pushes candidate through `add_sample` bypassing adaptive gates (still validates shape).
+  - Emits `CalibrationProgress` like an auto-accept.
+- Telemetry: log manual accept usage and whether a candidate existed.
+
+### 11.3 Real-Time Safety
+- Adaptive counters and gate math run in analysis thread but use stack-local copies; only the gate values written back under the existing `calibration_procedure` lock.
+- No heap allocations in the hot path; candidate buffer uses fixed-capacity struct (Option<Features>).
+
+## 12. UX Feedback & Observability (NEW)
+
+### 12.1 Guidance Signals
+- Extend progress/event stream with optional guidance payload:
+  - `GuidanceState { sound: CalibrationSound, reason: Stagnation|TooQuiet|Clipped, level: f32, misses: u8 }`
+  - Emitted at most once per 5s while condition persists; cleared on progress or quiet input.
+- Dart controller maps guidance to banner copy and auto-clears on progress/quiet.
+
+### 12.2 UI Hooks
+- Show guidance banner beneath the level meter (already prototyped) using stream-driven messages instead of local heuristics.
+- When `manual_accept_last_candidate` is available, enable a “Count last hit” button; disable otherwise.
+- Snackbar/toast on manual accept success/failure.
+
+### 12.3 Observability
+- Add structured logs for: adaptive step changes, manual accepts, stagnation enter/exit.
+- Include in QA doc a short checklist for verifying adaptive flow (stagnation -> hint -> auto-accept/manual-accept).
+
 ## 13. Success Criteria
 
 The design will be considered successful if it meets the following criteria:

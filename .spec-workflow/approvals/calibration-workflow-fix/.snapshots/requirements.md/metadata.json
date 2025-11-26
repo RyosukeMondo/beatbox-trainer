@@ -1,6 +1,6 @@
 {
   "filePath": ".spec-workflow/specs/calibration-workflow-fix/requirements.md",
-  "currentVersion": 2,
+  "currentVersion": 3,
   "snapshots": [
     {
       "version": 1,
@@ -17,6 +17,14 @@
       "trigger": "approved",
       "approvalId": "approval_1763124126369_tq04a0yno",
       "approvalTitle": "Calibration Workflow Requirements Document"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2025-11-25T22:55:45.864Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764111216766_lv5rn5330",
+      "approvalTitle": "Update requirements with adaptive acceptance and UX guidance"
     }
   ]
 }

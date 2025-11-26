@@ -6,42 +6,208 @@
 beatbox-trainer/
 ├── lib/                        # Dart/Flutter UI source code
 │   ├── main.dart              # Application entry point
+│   ├── di/                    # Dependency injection
+│   │   └── service_locator.dart    # GetIt service locator setup
+│   ├── services/              # Service layer (interfaces + implementations)
+│   │   ├── audio/            # Audio service
+│   │   │   ├── i_audio_service.dart      # Audio service interface
+│   │   │   ├── audio_service_impl.dart   # Production implementation
+│   │   │   ├── audio_controller.dart     # Audio lifecycle controller
+│   │   │   ├── telemetry_stream.dart     # Telemetry event streaming
+│   │   │   └── test_harness/            # Test harness components
+│   │   │       ├── harness_audio_source.dart
+│   │   │       └── diagnostics_controller.dart
+│   │   ├── permission/       # Permission service
+│   │   │   ├── i_permission_service.dart
+│   │   │   └── permission_service_impl.dart
+│   │   ├── navigation/       # Navigation service
+│   │   │   ├── i_navigation_service.dart
+│   │   │   └── go_router_navigation_service.dart
+│   │   ├── storage/          # Local storage service
+│   │   │   ├── i_storage_service.dart
+│   │   │   └── storage_service_impl.dart
+│   │   ├── settings/         # App settings service
+│   │   │   ├── i_settings_service.dart
+│   │   │   └── settings_service_impl.dart
+│   │   ├── error_handler/    # Error handling utilities
+│   │   │   ├── error_handler.dart
+│   │   │   └── exceptions.dart
+│   │   └── debug/            # Debug and diagnostics services
+│   │       ├── i_debug_service.dart
+│   │       ├── debug_service_impl.dart
+│   │       ├── debug_sse_client.dart
+│   │       ├── i_log_exporter.dart
+│   │       ├── log_exporter_impl.dart
+│   │       ├── fixture_metadata_service.dart
+│   │       ├── i_debug_capabilities.dart
+│   │       ├── i_onset_event_provider.dart
+│   │       └── i_audio_metrics_provider.dart
+│   ├── controllers/          # Business logic controllers
+│   │   ├── training/
+│   │   │   └── training_controller.dart
+│   │   ├── calibration/
+│   │   │   └── calibration_controller.dart
+│   │   └── debug/
+│   │       ├── debug_lab_controller.dart
+│   │       └── fixture_validation_tracker.dart
 │   ├── ui/                    # UI components and screens
 │   │   ├── screens/          # Main app screens
+│   │   │   ├── splash_screen.dart
+│   │   │   ├── onboarding_screen.dart
+│   │   │   ├── training_screen.dart
+│   │   │   ├── calibration_screen.dart
+│   │   │   ├── settings_screen.dart
+│   │   │   └── debug_lab_screen.dart
 │   │   ├── widgets/          # Reusable UI widgets
-│   │   └── theme/            # App theming and styles
-│   ├── bridge/               # flutter_rust_bridge generated bindings
-│   │   └── api.dart          # Auto-generated Dart API for Rust calls
-│   └── models/               # Dart data models
-│       ├── classification.dart    # Sound classification results
-│       ├── timing.dart           # Timing feedback models
-│       └── calibration.dart      # Calibration state
+│   │   │   ├── classification_indicator.dart
+│   │   │   ├── timing_feedback_widget.dart
+│   │   │   ├── bpm_control.dart
+│   │   │   ├── status_card.dart
+│   │   │   ├── loading_overlay.dart
+│   │   │   ├── error_dialog.dart
+│   │   │   ├── permission_dialogs.dart
+│   │   │   ├── debug_overlay.dart
+│   │   │   ├── training_classification_section.dart
+│   │   │   └── debug/        # Debug-specific widgets
+│   │   │       ├── telemetry_chart.dart
+│   │   │       ├── debug_log_list.dart
+│   │   │       ├── param_slider_card.dart
+│   │   │       ├── anomaly_banner.dart
+│   │   │       └── debug_server_panel.dart
+│   │   └── utils/            # UI utilities
+│   │       └── display_formatters.dart
+│   ├── models/               # Dart data models
+│   │   ├── classification_result.dart
+│   │   ├── timing_feedback.dart
+│   │   ├── calibration_state.dart
+│   │   ├── calibration_progress.dart
+│   │   ├── telemetry_event.dart
+│   │   ├── debug_log_entry.dart
+│   │   └── debug/
+│   │       └── fixture_anomaly_notice.dart
+│   └── bridge/               # flutter_rust_bridge generated bindings
+│       ├── api.dart/         # Auto-generated Dart API
+│       │   ├── api.dart
+│       │   ├── frb_generated.dart
+│       │   ├── frb_generated.io.dart
+│       │   ├── frb_generated.web.dart
+│       │   ├── api/
+│       │   │   ├── types.dart
+│       │   │   ├── streams.dart
+│       │   │   └── diagnostics.dart
+│       │   ├── analysis/
+│       │   │   ├── classifier.dart
+│       │   │   └── quantizer.dart
+│       │   ├── engine/
+│       │   │   └── core.dart
+│       │   ├── calibration/
+│       │   │   └── progress.dart
+│       │   ├── telemetry/
+│       │   │   └── events.dart
+│       │   ├── testing/
+│       │   │   ├── fixtures.dart
+│       │   │   └── fixture_manifest.dart
+│       │   └── error/
+│       │       ├── audio.dart
+│       │       └── calibration.dart
+│       └── extensions/       # Dart extensions for bridge types
+│           ├── beatbox_hit_extensions.dart
+│           └── error_code_extensions.dart
 │
 ├── rust/                      # Rust audio engine (core DSP)
 │   ├── src/
-│   │   ├── lib.rs            # Library entry point, JNI_OnLoad definition
+│   │   ├── lib.rs            # Library entry point
 │   │   ├── api.rs            # Public API exposed to Dart via flutter_rust_bridge
-│   │   ├── audio/            # Audio I/O layer
-│   │   │   ├── engine.rs     # AudioEngine struct, Oboe callbacks
+│   │   ├── context.rs        # AppContext for dependency injection
+│   │   ├── config.rs         # Configuration constants
+│   │   ├── bridge_generated.rs # Auto-generated bridge code
+│   │   ├── api/              # API sub-modules
+│   │   │   ├── streams.rs    # Stream-returning functions
+│   │   │   ├── types.rs      # Shared API types
+│   │   │   ├── diagnostics.rs # Diagnostic API functions
+│   │   │   └── tests.rs      # API unit tests
+│   │   ├── managers/         # State managers (DI-friendly)
+│   │   │   ├── mod.rs
+│   │   │   ├── audio_engine_manager.rs
+│   │   │   ├── calibration_manager.rs
+│   │   │   └── broadcast_manager.rs
+│   │   ├── engine/           # Audio engine abstraction
+│   │   │   ├── mod.rs
+│   │   │   ├── core.rs       # Core engine logic
+│   │   │   ├── core/
+│   │   │   │   └── tests.rs
+│   │   │   └── backend/      # Platform-specific backends
+│   │   │       ├── mod.rs
+│   │   │       ├── oboe.rs         # Android Oboe backend
+│   │   │       └── desktop_stub.rs  # Desktop stub for development
+│   │   ├── audio/            # Low-level audio I/O
+│   │   │   ├── mod.rs
+│   │   │   ├── engine.rs     # AudioEngine struct, callbacks
+│   │   │   ├── engine/
+│   │   │   │   └── tests.rs
+│   │   │   ├── callback.rs   # Audio callback implementation
 │   │   │   ├── metronome.rs  # Sample-accurate metronome generation
-│   │   │   └── buffer_pool.rs # SPSC queue + object pool pattern
+│   │   │   ├── buffer_pool.rs # SPSC queue + object pool pattern
+│   │   │   └── stubs.rs      # Test stubs
 │   │   ├── analysis/         # DSP processing layer
+│   │   │   ├── mod.rs
 │   │   │   ├── onset.rs      # Onset detection (spectral flux)
-│   │   │   ├── features.rs   # Feature extraction (centroid, ZCR, etc.)
 │   │   │   ├── classifier.rs # Heuristic rule-based classifier
-│   │   │   └── quantizer.rs  # Timing quantization to metronome grid
-│   │   └── calibration/      # User calibration system
-│   │       ├── state.rs      # Calibration thresholds storage
-│   │       └── procedure.rs  # Calibration workflow logic
-│   └── Cargo.toml            # Rust dependencies
+│   │   │   ├── quantizer.rs  # Timing quantization to metronome grid
+│   │   │   ├── tests.rs      # Analysis unit tests
+│   │   │   └── features/     # Feature extraction
+│   │   │       ├── mod.rs
+│   │   │       ├── types.rs
+│   │   │       ├── spectral.rs   # Spectral features (centroid, flatness, rolloff)
+│   │   │       ├── temporal.rs   # Temporal features (ZCR, envelope)
+│   │   │       └── fft.rs        # FFT utilities
+│   │   ├── calibration/      # User calibration system
+│   │   │   ├── mod.rs
+│   │   │   ├── state.rs      # Calibration thresholds storage
+│   │   │   ├── procedure.rs  # Calibration workflow logic
+│   │   │   ├── progress.rs   # Progress tracking
+│   │   │   └── validation.rs # Input validation
+│   │   ├── telemetry/        # Telemetry and metrics
+│   │   │   ├── mod.rs
+│   │   │   └── events.rs     # Telemetry event types
+│   │   ├── debug/            # Debug HTTP server
+│   │   │   ├── mod.rs
+│   │   │   ├── http.rs       # HTTP server setup
+│   │   │   └── routes/       # REST API routes
+│   │   │       ├── mod.rs
+│   │   │       ├── handlers.rs
+│   │   │       ├── metrics.rs
+│   │   │       ├── state.rs
+│   │   │       └── tests.rs
+│   │   ├── testing/          # Test fixtures and harness
+│   │   │   ├── mod.rs
+│   │   │   ├── fixtures.rs   # Test fixture definitions
+│   │   │   ├── fixtures/
+│   │   │   │   └── tests.rs
+│   │   │   ├── fixture_manifest.rs # Manifest parsing
+│   │   │   ├── fixture_manifest/
+│   │   │   │   └── tests.rs
+│   │   │   ├── fixture_engine.rs   # Fixture playback engine
+│   │   │   └── fixture_validation.rs # Validation utilities
+│   │   ├── error/            # Custom error types
+│   │   │   ├── mod.rs
+│   │   │   ├── audio.rs      # Audio-related errors
+│   │   │   └── calibration.rs # Calibration errors
+│   │   └── fixtures/         # Static fixture data
+│   │       └── mod.rs
+│   ├── Cargo.toml            # Rust dependencies
+│   └── src/bin/              # CLI tools
+│       ├── beatbox_cli.rs    # Main CLI entry point
+│       └── bbt_diag/         # Diagnostics CLI tool
+│           ├── mod.rs
+│           ├── telemetry.rs
+│           └── validation.rs
 │
 ├── android/                   # Android-specific configuration
 │   ├── app/
 │   │   ├── src/main/
 │   │   │   ├── kotlin/com/ryosukemondo/beatbox_trainer/
 │   │   │   │   └── MainActivity.kt    # System.loadLibrary() init block
-│   │   │   ├── java/io/flutter/plugins/
-│   │   │   │   └── GeneratedPluginRegistrant.java
 │   │   │   ├── AndroidManifest.xml   # Microphone permissions
 │   │   │   └── res/                  # Android resources
 │   │   └── build.gradle.kts          # App-level build config
@@ -49,21 +215,68 @@ beatbox-trainer/
 │   ├── build.gradle.kts              # Project-level build config
 │   └── settings.gradle.kts           # Gradle settings
 │
-├── ios/                       # iOS-specific configuration (future)
-├── macos/                     # macOS-specific configuration (future)
-├── windows/                   # Windows-specific configuration (future)
-├── linux/                     # Linux-specific configuration (future)
-│
 ├── test/                      # Dart widget and integration tests
-│   ├── widget_test.dart      # Example widget tests
-│   ├── ui/                   # UI component tests
-│   └── bridge/               # Rust bridge integration tests
-│
-├── docs/                      # Technical documentation
-│   └── search.md             # Architecture blueprint (Japanese)
+│   ├── mocks.dart            # Shared mock definitions
+│   ├── services/             # Service layer tests
+│   │   ├── audio/
+│   │   │   ├── audio_service_impl_test.dart
+│   │   │   ├── telemetry_stream_test.dart
+│   │   │   └── test_harness/
+│   │   │       ├── diagnostics_controller_test.dart
+│   │   │       ├── harness_audio_source_test.dart
+│   │   │       ├── audio_controller_test.dart
+│   │   │       └── diagnostics_controller_widget_test.dart
+│   │   ├── permission_service_test.dart
+│   │   ├── storage_service_test.dart
+│   │   ├── settings_service_test.dart
+│   │   ├── error_handler_test.dart
+│   │   ├── calibration_data_test.dart
+│   │   ├── audio_service_test.dart
+│   │   └── debug/
+│   │       └── log_exporter_impl_test.dart
+│   ├── di/                   # Dependency injection tests
+│   │   └── service_locator_test.dart
+│   ├── controllers/          # Controller tests
+│   │   ├── training/
+│   │   │   └── training_controller_test.dart
+│   │   └── debug/
+│   │       └── debug_lab_controller_test.dart
+│   ├── integration/          # Integration tests
+│   │   ├── calibration_navigation_test.dart
+│   │   ├── calibration_flow_test.dart
+│   │   ├── audio_integration_test.dart
+│   │   ├── refactored_workflows_test.dart
+│   │   └── stream_workflows_test.dart
+│   └── ui/                   # UI tests
+│       ├── app_router_test.dart
+│       ├── debug/
+│       │   └── debug_lab_screen_test.dart
+│       ├── utils/
+│       │   └── display_formatters_test.dart
+│       ├── screens/
+│       │   ├── training_screen_test.dart
+│       │   ├── calibration_screen_basic_test.dart
+│       │   ├── calibration_screen_progress_test.dart
+│       │   ├── calibration_screen_completion_test.dart
+│       │   ├── calibration_screen_test_helper.dart
+│       │   ├── settings_screen_test.dart
+│       │   ├── onboarding_screen_test.dart
+│       │   ├── splash_screen_test.dart
+│       │   └── screen_factory_di_test.dart
+│       └── widgets/
+│           ├── classification_indicator_test.dart
+│           ├── timing_feedback_test.dart
+│           ├── bpm_control_test.dart
+│           ├── status_card_test.dart
+│           ├── loading_overlay_test.dart
+│           ├── error_dialog_test.dart
+│           └── permission_dialogs_test.dart
 │
 ├── .spec-workflow/            # Spec-workflow MCP server artifacts
-│   ├── steering/             # Steering documents (this file)
+│   ├── steering/             # Steering documents
+│   │   ├── product.md
+│   │   ├── tech.md
+│   │   └── structure.md
 │   ├── specs/                # Feature specifications
 │   └── templates/            # Document templates
 │
@@ -78,15 +291,17 @@ beatbox-trainer/
 ### Files
 
 **Dart/Flutter Layer**:
-- **Screens**: `snake_case.dart` (e.g., `training_screen.dart`, `calibration_screen.dart`)
-- **Widgets**: `snake_case.dart` (e.g., `sound_indicator.dart`, `metronome_controls.dart`)
+- **Screens**: `snake_case_screen.dart` (e.g., `training_screen.dart`, `calibration_screen.dart`)
+- **Widgets**: `snake_case.dart` (e.g., `classification_indicator.dart`, `bpm_control.dart`)
+- **Services**: `i_[service_name].dart` for interface, `[service_name]_impl.dart` for implementation
+- **Controllers**: `[name]_controller.dart` (e.g., `training_controller.dart`)
 - **Models**: `snake_case.dart` (e.g., `classification_result.dart`, `timing_feedback.dart`)
 - **Tests**: `[filename]_test.dart` (e.g., `classification_result_test.dart`)
 
 **Rust Layer**:
 - **Modules**: `snake_case.rs` (e.g., `audio_engine.rs`, `onset_detector.rs`)
 - **Tests**: Inline unit tests using `#[cfg(test)]` modules within each `.rs` file
-- **Integration tests**: `tests/` directory at crate root
+- **Integration tests**: `tests/` directory at crate root or `[module]/tests.rs`
 
 **Kotlin/Java Layer**:
 - **Activities**: `PascalCase.kt` (e.g., `MainActivity.kt`)
@@ -95,10 +310,11 @@ beatbox-trainer/
 ### Code
 
 **Dart**:
-- **Classes**: `PascalCase` (e.g., `TrainingScreen`, `SoundClassifier`)
+- **Classes**: `PascalCase` (e.g., `TrainingScreen`, `AudioServiceImpl`)
+- **Interfaces**: `I` prefix (e.g., `IAudioService`, `IPermissionService`)
 - **Functions/Methods**: `camelCase` (e.g., `startTraining()`, `updateBpm()`)
 - **Constants**: `lowerCamelCase` with `const` keyword (e.g., `defaultBpm = 120`)
-- **Private members**: Prefix with `_` (e.g., `_audioEngine`, `_initializeState()`)
+- **Private members**: Prefix with `_` (e.g., `_audioService`, `_initializeState()`)
 
 **Rust**:
 - **Structs/Enums**: `PascalCase` (e.g., `AudioEngine`, `BeatboxHit`)
@@ -126,10 +342,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
+import 'package:get_it/get_it.dart';
 
+import '../services/audio/i_audio_service.dart';
 import '../models/classification_result.dart';
-import '../bridge/api.dart';
 ```
 
 ### Rust Import Order
@@ -147,58 +363,104 @@ use rtrb::RingBuffer;
 
 use crate::analysis::OnsetDetector;
 use crate::audio::BufferPool;
+use crate::context::AppContext;
 ```
 
 ### Module Organization
 
 **Rust Crate Structure**:
 - **Public API** (`api.rs`): Only types and functions exposed to Dart (annotated with `#[flutter_rust_bridge::frb]`)
+- **Context** (`context.rs`): `AppContext` struct for dependency injection
+- **Managers** (`managers/`): State managers for audio engine, calibration, broadcasts
 - **Internal modules**: All implementation details are `pub(crate)` or private
 - **No circular dependencies**: Audio layer → Analysis layer → Calibration layer (one-way dependency flow)
 
 ## Code Structure Patterns
 
-### Dart File Organization
+### Dart Service Layer Pattern
 ```dart
-// 1. Imports (sorted by category)
-import 'dart:async';
-import 'package:flutter/material.dart';
-
-// 2. Class definition with documentation
-/// Widget for displaying real-time classification feedback.
-class ClassificationWidget extends StatefulWidget {
-  // 3. Public constants
-  static const double defaultSize = 200.0;
-
-  // 4. Constructor and fields
-  const ClassificationWidget({Key? key, required this.stream}) : super(key: key);
-
-  final Stream<ClassificationResult> stream;
-
-  // 5. State creation
-  @override
-  State<ClassificationWidget> createState() => _ClassificationWidgetState();
+// 1. Interface definition (i_audio_service.dart)
+abstract class IAudioService {
+  Future<void> startAudio({required int bpm});
+  Future<void> stopAudio();
+  Stream<ClassificationResult> get classificationStream;
 }
 
-// 6. State implementation
-class _ClassificationWidgetState extends State<ClassificationWidget> {
-  // Private fields
-  ClassificationResult? _latestResult;
-
-  // Lifecycle methods
+// 2. Implementation (audio_service_impl.dart)
+class AudioServiceImpl implements IAudioService {
   @override
-  void initState() { /* ... */ }
-
-  @override
-  void dispose() { /* ... */ }
-
-  // Build method
-  @override
-  Widget build(BuildContext context) { /* ... */ }
-
-  // Private helper methods
-  void _handleResult(ClassificationResult result) { /* ... */ }
+  Future<void> startAudio({required int bpm}) async {
+    // Input validation
+    if (bpm <= 0) throw ArgumentError('BPM must be positive');
+    // Delegate to Rust FFI
+    await startAudioRust(bpm: bpm);
+  }
 }
+
+// 3. Registration (service_locator.dart)
+final getIt = GetIt.instance;
+
+void setupServiceLocator() {
+  getIt.registerLazySingleton<IAudioService>(() => AudioServiceImpl());
+  getIt.registerLazySingleton<IPermissionService>(() => PermissionServiceImpl());
+}
+```
+
+### Dart Screen Pattern (with DI)
+```dart
+class TrainingScreen extends StatefulWidget {
+  final IAudioService? audioService;
+  final IPermissionService? permissionService;
+
+  const TrainingScreen({
+    super.key,
+    this.audioService,
+    this.permissionService,
+  });
+
+  @override
+  State<TrainingScreen> createState() => _TrainingScreenState();
+}
+
+class _TrainingScreenState extends State<TrainingScreen> {
+  late final IAudioService _audioService;
+  late final IPermissionService _permissionService;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioService = widget.audioService ?? getIt<IAudioService>();
+    _permissionService = widget.permissionService ?? getIt<IPermissionService>();
+  }
+  // ...
+}
+```
+
+### Rust AppContext Pattern
+```rust
+// context.rs - Centralized dependency injection
+pub struct AppContext {
+    audio_engine_manager: AudioEngineManager,
+    calibration_manager: CalibrationManager,
+    broadcast_manager: BroadcastManager,
+}
+
+impl AppContext {
+    pub fn new() -> Self {
+        Self {
+            audio_engine_manager: AudioEngineManager::new(),
+            calibration_manager: CalibrationManager::new(),
+            broadcast_manager: BroadcastManager::new(),
+        }
+    }
+
+    pub fn audio_engine(&self) -> &AudioEngineManager { &self.audio_engine_manager }
+    pub fn calibration(&self) -> &CalibrationManager { &self.calibration_manager }
+    pub fn broadcasts(&self) -> &BroadcastManager { &self.broadcast_manager }
+}
+
+// Single global instance (api.rs)
+static APP_CONTEXT: Lazy<AppContext> = Lazy::new(AppContext::new);
 ```
 
 ### Rust File Organization
@@ -233,7 +495,6 @@ impl OnsetDetector {
 // 6. Private helper methods
 impl OnsetDetector {
     fn compute_spectral_flux(&self, spectrum: &[f32]) -> f32 { /* ... */ }
-
     fn adaptive_threshold(&self) -> f32 { /* ... */ }
 }
 
@@ -247,50 +508,32 @@ mod tests {
 }
 ```
 
-### Function/Method Organization
-```rust
-// Input validation first
-pub fn classify_sound(features: &Features, thresholds: &Thresholds) -> Result<BeatboxHit, Error> {
-    // 1. Validate inputs
-    if features.centroid <= 0.0 {
-        return Err(Error::InvalidFeatures("Centroid must be positive"));
-    }
-
-    // 2. Core classification logic
-    let hit = if features.centroid < thresholds.kick_centroid {
-        if features.zcr < thresholds.kick_zcr {
-            BeatboxHit::Kick
-        } else {
-            BeatboxHit::Unknown
-        }
-    } else if features.centroid < thresholds.snare_centroid {
-        BeatboxHit::Snare
-    } else {
-        BeatboxHit::HiHat
-    };
-
-    // 3. Clear return point
-    Ok(hit)
-}
-```
-
 ## Code Organization Principles
 
 1. **Single Responsibility**:
    - Each Rust module handles one aspect (audio I/O, onset detection, feature extraction, classification)
+   - Each Dart service handles one domain (audio, permissions, storage, settings)
    - Each Dart screen manages one user workflow (training, calibration, settings)
 
-2. **Modularity**:
+2. **Dependency Injection**:
+   - Dart: Services injected via GetIt service locator
+   - Dart: Screens accept optional service parameters for testing
+   - Rust: Single `AppContext` struct contains all managers
+   - No direct FFI calls from screens - always through service layer
+
+3. **Modularity**:
    - Rust audio engine is completely independent of Flutter UI
    - flutter_rust_bridge provides clean abstraction boundary
    - DSP algorithms are pure functions (no side effects, fully testable)
+   - Service interfaces enable mocking for tests
 
-3. **Testability**:
+4. **Testability**:
    - Rust: Unit tests alongside implementation (`#[cfg(test)]`)
    - Dart: Widget tests in `test/` directory mirror `lib/` structure
+   - Integration tests for cross-layer workflows
    - Mock audio data for integration tests (pre-recorded beatbox samples)
 
-4. **Consistency**:
+5. **Consistency**:
    - Follow Dart style guide (enforced by `dart format`)
    - Follow Rust API guidelines (enforced by `clippy`)
    - Real-time safety rules apply universally to all audio callback code
@@ -299,10 +542,15 @@ pub fn classify_sound(features: &Features, thresholds: &Thresholds) -> Result<Be
 
 ### Layer Boundaries (Strict Separation)
 
-**UI Layer (Dart) ← Bridge → Engine Layer (Rust)**:
-- **Direction**: UI calls Engine via `flutter_rust_bridge`, Engine sends events to UI via `Stream`
-- **Contract**: UI never accesses audio hardware directly; all audio operations go through Rust API
-- **Rationale**: Maintains real-time guarantees, prevents GC pauses in audio thread
+**UI Layer (Dart) ← Services → Bridge → Engine Layer (Rust)**:
+- **Direction**: UI uses Services, Services call Bridge, Bridge calls Rust
+- **Contract**: UI never calls FFI directly; all Rust operations go through service layer
+- **Rationale**: Enables mocking, testing, error translation
+
+**Service Layer (Dart) ← Bridge → Managers (Rust)**:
+- **Direction**: Services call flutter_rust_bridge, which calls Rust managers via AppContext
+- **Contract**: Services handle validation and error translation
+- **Rationale**: Clean separation of concerns, testable services
 
 **Engine Layer (Rust) → Audio Hardware (C++ Oboe)**:
 - **Direction**: Rust wraps Oboe via `oboe-rs` bindings
@@ -329,9 +577,10 @@ pub fn classify_sound(features: &Features, thresholds: &Thresholds) -> Result<Be
 ### Platform Boundaries
 
 **Android-Specific vs Cross-Platform**:
-- **Android-Specific**: `MainActivity.kt` (JNI initialization), `AndroidManifest.xml` (permissions)
-- **Cross-Platform**: Entire Rust codebase, majority of Dart UI code
-- **Isolation**: Android-specific code limited to `android/` directory; no platform checks in `lib/` or `rust/src/`
+- **Android-Specific**: `MainActivity.kt` (JNI initialization), `AndroidManifest.xml` (permissions), `oboe.rs` backend
+- **Desktop Development**: `desktop_stub.rs` backend for development without Android device
+- **Cross-Platform**: Entire Rust codebase (except backend/), majority of Dart UI code
+- **Isolation**: Platform-specific code limited to `android/` directory and `rust/src/engine/backend/`
 
 ## Code Size Guidelines
 
@@ -365,57 +614,32 @@ pub fn classify_sound(features: &Features, thresholds: &Thresholds) -> Result<Be
 - **Examples**: Public functions should include `# Examples` section with code snippet
 - **Safety**: Functions with `unsafe` blocks must document invariants
 
-**Example**:
-```rust
-/// Computes spectral centroid (brightness) of the input spectrum.
-///
-/// # Formula
-/// centroid = Σ(f_i * mag_i) / Σ(mag_i)
-///
-/// # Examples
-/// ```
-/// let centroid = compute_centroid(&spectrum, 48000);
-/// assert!(centroid > 0.0 && centroid < 24000.0);
-/// ```
-pub fn compute_centroid(spectrum: &[f32], sample_rate: u32) -> f32 { /* ... */ }
-```
-
 ### Dart Documentation (dartdoc)
 - **Public widgets**: Document purpose and usage with `///` comments
+- **Service interfaces**: Document contract and expected behavior
 - **State management**: Explain lifecycle and state transitions
 - **Stream contracts**: Document what events the Stream emits and when
-
-**Example**:
-```dart
-/// Displays real-time sound classification and timing feedback.
-///
-/// Listens to [classificationStream] and updates UI whenever a new
-/// beatbox sound is detected. Shows sound type (KICK, SNARE, HI-HAT)
-/// and timing accuracy (ON-TIME, EARLY, LATE).
-class ClassificationWidget extends StatefulWidget { /* ... */ }
-```
 
 ### Inline Comments
 - **Complex DSP logic**: Explain "why" not "what" (code is self-documenting for "what")
 - **Real-time constraints**: Flag critical sections with comments like `// REAL-TIME SAFE: No allocations`
 - **Magic numbers**: Always explain hardcoded thresholds (e.g., `// 1500 Hz centroid threshold separates kick from snare`)
 
-### Module-Level Documentation
-- **Purpose**: Each Rust module (`mod.rs` or top of `.rs` file) should have `//!` module doc
-- **Architecture diagrams**: Complex modules (e.g., `audio/`) should reference external docs
-- **Thread safety**: Document which types are `Send`/`Sync` and why
-
 ## Project-Specific Patterns
 
 ### Error Handling
 
 **Rust**:
-- Use `Result<T, Error>` for fallible operations
-- Audio thread: Log errors but never panic (use `Result` with graceful degradation)
-- Analysis thread: Can panic on unrecoverable errors (will restart thread)
+- Use custom error types in `error/` module (`AudioError`, `CalibrationError`)
+- All FFI functions return `Result<T, Error>` with proper error types
+- Audio thread: Log errors but never panic (graceful degradation)
+- Analysis thread: Can return errors, handled by caller
+- **Zero unwrap() calls in production code** - all unwraps confined to `#[cfg(test)]` blocks
 
 **Dart**:
-- Use `try-catch` for async operations
+- Services catch FFI errors and translate to user-friendly messages
+- Use custom exceptions from `exceptions.dart`
+- Error handler service provides centralized error handling
 - Show user-friendly error messages in UI (never expose stack traces)
 
 ### Real-Time Safety Checklist
@@ -431,24 +655,26 @@ Every audio callback function must pass this checklist:
 
 **Async operations**:
 ```dart
-// Dart: All Rust calls are async
-final result = await rustApi.startAudio(bpm: 120);
+// Dart: All Rust calls are async, go through service layer
+final audioService = getIt<IAudioService>();
+await audioService.startAudio(bpm: 120);
 ```
 
 **Streaming events**:
 ```rust
 // Rust: Return Stream for continuous updates
-#[flutter_rust_bridge::frb]
-pub fn classification_stream() -> impl Stream<Item = ClassificationResult> {
+#[flutter_rust_bridge::frb(stream)]
+pub async fn classification_stream() -> impl Stream<Item = ClassificationResult> {
     // Implementation using async channels
 }
 ```
 
 **Ownership transfer**:
 ```rust
-// Rust: Use Arc for shared state across threads
-pub struct AudioEngine {
-    state: Arc<Mutex<State>>,  // Only non-audio thread locks this
+// Rust: Use managers within AppContext for shared state
+pub struct AppContext {
+    audio_engine_manager: AudioEngineManager,
+    // Managers handle their own synchronization
 }
 ```
 
