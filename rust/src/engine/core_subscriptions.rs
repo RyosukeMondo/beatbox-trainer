@@ -31,9 +31,23 @@ impl EngineHandle {
                     .build()
                     .expect("Failed to create Tokio runtime");
                 rt.block_on(async move {
-                    while let Ok(result) = broadcast_rx.recv().await {
-                        if tx.send(result).is_err() {
-                            break;
+                    loop {
+                        match broadcast_rx.recv().await {
+                            Ok(result) => {
+                                if tx.send(result).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                                log::warn!(
+                                    "[subscribe_classification] Receiver lagged, skipped {} messages",
+                                    skipped
+                                );
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                break;
+                            }
                         }
                     }
                 });
@@ -53,9 +67,23 @@ impl EngineHandle {
                     .build()
                     .expect("Failed to create Tokio runtime");
                 rt.block_on(async move {
-                    while let Ok(progress) = broadcast_rx.recv().await {
-                        if tx.send(progress).is_err() {
-                            break;
+                    loop {
+                        match broadcast_rx.recv().await {
+                            Ok(progress) => {
+                                if tx.send(progress).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                                log::warn!(
+                                    "[subscribe_calibration] Receiver lagged, skipped {} messages",
+                                    skipped
+                                );
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                break;
+                            }
                         }
                     }
                 });
@@ -75,9 +103,23 @@ impl EngineHandle {
                     .build()
                     .expect("Failed to create Tokio runtime");
                 rt.block_on(async move {
-                    while let Ok(metrics) = broadcast_rx.recv().await {
-                        if tx.send(metrics).is_err() {
-                            break;
+                    loop {
+                        match broadcast_rx.recv().await {
+                            Ok(metrics) => {
+                                if tx.send(metrics).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                                log::warn!(
+                                    "[subscribe_audio_metrics] Receiver lagged, skipped {} messages",
+                                    skipped
+                                );
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                break;
+                            }
                         }
                     }
                 });
@@ -97,9 +139,23 @@ impl EngineHandle {
                     .build()
                     .expect("Failed to create Tokio runtime");
                 rt.block_on(async move {
-                    while let Ok(event) = broadcast_rx.recv().await {
-                        if tx.send(event).is_err() {
-                            break;
+                    loop {
+                        match broadcast_rx.recv().await {
+                            Ok(event) => {
+                                if tx.send(event).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                                log::warn!(
+                                    "[subscribe_onset_events] Receiver lagged, skipped {} messages",
+                                    skipped
+                                );
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                break;
+                            }
                         }
                     }
                 });
@@ -119,9 +175,23 @@ impl EngineHandle {
                 .build()
                 .expect("Failed to create Tokio runtime");
             rt.block_on(async move {
-                while let Ok(event) = broadcast_rx.recv().await {
-                    if tx.send(event).is_err() {
-                        break;
+                loop {
+                    match broadcast_rx.recv().await {
+                        Ok(event) => {
+                            if tx.send(event).is_err() {
+                                break;
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                            log::warn!(
+                                "[subscribe_telemetry] Receiver lagged, skipped {} messages",
+                                skipped
+                            );
+                            continue;
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            break;
+                        }
                     }
                 }
             });
