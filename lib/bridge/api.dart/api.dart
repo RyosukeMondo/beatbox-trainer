@@ -8,7 +8,8 @@ import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
 import 'calibration/progress.dart';
 import 'engine/core.dart';
-import 'error.dart';
+import 'error/audio.dart';
+import 'error/calibration.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -146,6 +147,36 @@ Future<void> startCalibration() =>
 /// - Lock poisoning on calibration state
 Future<void> finishCalibration() =>
     RustLib.instance.api.crateApiFinishCalibration();
+
+/// User confirms current calibration step is OK and wants to advance
+///
+/// Called when user clicks "OK" after reviewing the collected samples for current sound.
+/// Advances to the next sound in the calibration sequence.
+///
+/// # Returns
+/// * `Ok(true)` - Advanced to next sound
+/// * `Ok(false)` - Calibration complete (no next sound)
+/// * `Err(CalibrationError)` - Error if not waiting for confirmation
+Future<bool> confirmCalibrationStep() =>
+    RustLib.instance.api.crateApiConfirmCalibrationStep();
+
+/// User wants to retry the current calibration step
+///
+/// Called when user clicks "Retry" to redo sample collection for current sound.
+/// Clears collected samples and allows re-collection.
+///
+/// # Returns
+/// * `Ok(())` - Samples cleared, ready to collect again
+/// * `Err(CalibrationError)` - Error if not waiting for confirmation
+Future<void> retryCalibrationStep() =>
+    RustLib.instance.api.crateApiRetryCalibrationStep();
+
+/// Manually accept the last rejected-but-valid calibration candidate
+///
+/// Allows the UI to promote a buffered sample when adaptive gates are too strict.
+/// Emits updated progress to the calibration stream.
+Future<CalibrationProgress> manualAcceptLastCandidate() =>
+    RustLib.instance.api.crateApiManualAcceptLastCandidate();
 
 /// Stream of calibration progress updates
 ///

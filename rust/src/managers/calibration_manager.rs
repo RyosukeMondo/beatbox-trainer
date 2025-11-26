@@ -160,6 +160,66 @@ impl CalibrationManager {
         Arc::clone(&self.procedure)
     }
 
+    /// User confirms current calibration step is OK and wants to advance
+    ///
+    /// Called when user clicks "OK" after reviewing current sound samples.
+    /// Advances to the next sound in the calibration sequence.
+    ///
+    /// # Returns
+    /// * `Ok(true)` - Advanced to next sound
+    /// * `Ok(false)` - Calibration complete (no next sound)
+    /// * `Err(CalibrationError)` - Error if not waiting for confirmation or lock fails
+    pub fn confirm_step(&self) -> Result<bool, CalibrationError> {
+        let mut procedure_guard = self.lock_procedure()?;
+
+        if let Some(procedure) = procedure_guard.as_mut() {
+            procedure.confirm_and_advance()
+        } else {
+            let err = CalibrationError::NotComplete;
+            log_calibration_error(&err, "confirm_step");
+            Err(err)
+        }
+    }
+
+    /// User wants to retry the current calibration step
+    ///
+    /// Called when user clicks "Retry" to redo current sound samples.
+    /// Clears collected samples for the current sound.
+    ///
+    /// # Returns
+    /// * `Ok(())` - Samples cleared, ready to collect again
+    /// * `Err(CalibrationError)` - Error if not waiting for confirmation or lock fails
+    pub fn retry_step(&self) -> Result<(), CalibrationError> {
+        let mut procedure_guard = self.lock_procedure()?;
+
+        if let Some(procedure) = procedure_guard.as_mut() {
+            procedure.retry_current_sound()
+        } else {
+            let err = CalibrationError::NotComplete;
+            log_calibration_error(&err, "retry_step");
+            Err(err)
+        }
+    }
+
+    /// Manually accept the last rejected-but-valid candidate for the current sound
+    ///
+    /// Allows UI to promote a buffered candidate when adaptive gates are too strict.
+    ///
+    /// # Returns
+    /// * `Ok(CalibrationProgress)` - Updated progress after manual acceptance
+    /// * `Err(CalibrationError)` - No candidate available or calibration inactive
+    pub fn manual_accept_last_candidate(&self) -> Result<CalibrationProgress, CalibrationError> {
+        let mut procedure_guard = self.lock_procedure()?;
+
+        if let Some(procedure) = procedure_guard.as_mut() {
+            procedure.manual_accept_last_candidate()
+        } else {
+            let err = CalibrationError::NotComplete;
+            log_calibration_error(&err, "manual_accept_last_candidate");
+            Err(err)
+        }
+    }
+
     /// Load calibration state from persistent storage
     ///
     /// Updates the calibration state with values loaded from storage.

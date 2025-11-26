@@ -12,11 +12,13 @@ import 'analysis/quantizer.dart';
 import 'api.dart';
 import 'api/diagnostics.dart';
 import 'api/streams.dart';
+import 'api/types.dart';
 import 'calibration/progress.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'engine/core.dart';
-import 'error.dart';
+import 'error/audio.dart';
+import 'error/calibration.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 import 'telemetry/events.dart';
@@ -57,6 +59,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<AudioMetrics> dco_decode_StreamSink_audio_metrics_Sse(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<CalibrationProgress>
   dco_decode_StreamSink_calibration_progress_Sse(dynamic raw);
 
@@ -68,6 +75,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<MetricEvent> dco_decode_StreamSink_metric_event_Sse(
     dynamic raw,
   );
+
+  @protected
+  RustStreamSink<OnsetEvent> dco_decode_StreamSink_onset_event_Sse(dynamic raw);
 
   @protected
   RustStreamSink<TelemetryEvent> dco_decode_StreamSink_telemetry_event_Sse(
@@ -84,7 +94,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioErrorCodes dco_decode_audio_error_codes(dynamic raw);
 
   @protected
+  AudioMetrics dco_decode_audio_metrics(dynamic raw);
+
+  @protected
   BeatboxHit dco_decode_beatbox_hit(dynamic raw);
+
+  @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
+  ClassificationResult dco_decode_box_autoadd_classification_result(
+    dynamic raw,
+  );
 
   @protected
   double dco_decode_box_autoadd_f_32(dynamic raw);
@@ -120,6 +141,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_f_32(dynamic raw);
+
+  @protected
+  double dco_decode_f_64(dynamic raw);
 
   @protected
   FixtureBpmRange dco_decode_fixture_bpm_range(dynamic raw);
@@ -166,7 +190,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MetricEvent dco_decode_metric_event(dynamic raw);
 
   @protected
+  OnsetEvent dco_decode_onset_event(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ClassificationResult? dco_decode_opt_box_autoadd_classification_result(
+    dynamic raw,
+  );
 
   @protected
   double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
@@ -244,6 +276,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<AudioMetrics> sse_decode_StreamSink_audio_metrics_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<CalibrationProgress>
   sse_decode_StreamSink_calibration_progress_Sse(SseDeserializer deserializer);
 
@@ -253,6 +290,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<MetricEvent> sse_decode_StreamSink_metric_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<OnsetEvent> sse_decode_StreamSink_onset_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -271,7 +313,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioErrorCodes sse_decode_audio_error_codes(SseDeserializer deserializer);
 
   @protected
+  AudioMetrics sse_decode_audio_metrics(SseDeserializer deserializer);
+
+  @protected
   BeatboxHit sse_decode_beatbox_hit(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  ClassificationResult sse_decode_box_autoadd_classification_result(
+    SseDeserializer deserializer,
+  );
 
   @protected
   double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
@@ -313,6 +366,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
   FixtureBpmRange sse_decode_fixture_bpm_range(SseDeserializer deserializer);
@@ -371,7 +427,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MetricEvent sse_decode_metric_event(SseDeserializer deserializer);
 
   @protected
+  OnsetEvent sse_decode_onset_event(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ClassificationResult? sse_decode_opt_box_autoadd_classification_result(
+    SseDeserializer deserializer,
+  );
 
   @protected
   double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
@@ -430,9 +494,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
     SseSerializer serializer,
@@ -465,6 +526,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_audio_metrics_Sse(
+    RustStreamSink<AudioMetrics> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_calibration_progress_Sse(
     RustStreamSink<CalibrationProgress> self,
     SseSerializer serializer,
@@ -479,6 +546,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_metric_event_Sse(
     RustStreamSink<MetricEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_onset_event_Sse(
+    RustStreamSink<OnsetEvent> self,
     SseSerializer serializer,
   );
 
@@ -501,7 +574,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_audio_metrics(AudioMetrics self, SseSerializer serializer);
+
+  @protected
   void sse_encode_beatbox_hit(BeatboxHit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_classification_result(
+    ClassificationResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
@@ -559,6 +644,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_fixture_bpm_range(
@@ -636,7 +724,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_metric_event(MetricEvent self, SseSerializer serializer);
 
   @protected
+  void sse_encode_onset_event(OnsetEvent self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_classification_result(
+    ClassificationResult? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
@@ -706,9 +803,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class

@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1203735652;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 122771348;
 
 // Section: executor
 
@@ -71,8 +71,46 @@ fn wire__crate__api__apply_params_impl(
             let api_patch = <crate::engine::core::ParamPatch>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::AudioError>((move || {
+                transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                     let output_ok = crate::api::apply_params(api_patch)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__streams__audio_metrics_stream_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "audio_metrics_stream",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = <StreamSink<
+                crate::api::types::AudioMetrics,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::streams::audio_metrics_stream(api_sink);
+                    })?;
                     Ok(output_ok)
                 })())
             }
@@ -155,6 +193,40 @@ fn wire__crate__api__classification_stream_impl(
         },
     )
 }
+fn wire__crate__api__confirm_calibration_step_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "confirm_calibration_step",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::confirm_calibration_step()?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__streams__diagnostic_metrics_stream_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -217,10 +289,12 @@ fn wire__crate__api__finish_calibration_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::CalibrationError>((move || {
-                    let output_ok = crate::api::finish_calibration()?;
-                    Ok(output_ok)
-                })())
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::finish_calibration()?;
+                        Ok(output_ok)
+                    })(),
+                )
             }
         },
     )
@@ -248,7 +322,7 @@ fn wire__crate__api__diagnostics__fixture_metadata_for_id_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <String>::sse_decode(&mut deserializer);
             deserializer.end();
-            transform_result_sse::<_, crate::error::AudioError>((move || {
+            transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                 let output_ok = crate::api::diagnostics::fixture_metadata_for_id(api_id)?;
                 Ok(output_ok)
             })())
@@ -337,10 +411,12 @@ fn wire__crate__api__get_calibration_state_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::CalibrationError>((move || {
-                    let output_ok = crate::api::get_calibration_state()?;
-                    Ok(output_ok)
-                })())
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::get_calibration_state()?;
+                        Ok(output_ok)
+                    })(),
+                )
             }
         },
     )
@@ -467,10 +543,12 @@ fn wire__crate__api__load_calibration_state_impl(
             let api_json = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::CalibrationError>((move || {
-                    let output_ok = crate::api::load_calibration_state(api_json)?;
-                    Ok(output_ok)
-                })())
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::load_calibration_state(api_json)?;
+                        Ok(output_ok)
+                    })(),
+                )
             }
         },
     )
@@ -497,10 +575,116 @@ fn wire__crate__api__diagnostics__load_fixture_catalog_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
-            transform_result_sse::<_, crate::error::AudioError>((move || {
+            transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                 let output_ok = crate::api::diagnostics::load_fixture_catalog()?;
                 Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__manual_accept_last_candidate_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "manual_accept_last_candidate",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::manual_accept_last_candidate()?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__streams__onset_events_stream_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "onset_events_stream",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = <StreamSink<
+                crate::api::types::OnsetEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::streams::onset_events_stream(api_sink);
+                    })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__retry_calibration_step_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "retry_calibration_step",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::retry_calibration_step()?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
         },
     )
 }
@@ -529,7 +713,7 @@ fn wire__crate__api__set_bpm_impl(
             let api_bpm = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::AudioError>((move || {
+                transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                     let output_ok = crate::api::set_bpm(api_bpm)?;
                     Ok(output_ok)
                 })())
@@ -562,7 +746,7 @@ fn wire__crate__api__start_audio_impl(
             let api_bpm = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::AudioError>((move || {
+                transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                     let output_ok = crate::api::start_audio(api_bpm)?;
                     Ok(output_ok)
                 })())
@@ -594,10 +778,12 @@ fn wire__crate__api__start_calibration_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::CalibrationError>((move || {
-                    let output_ok = crate::api::start_calibration()?;
-                    Ok(output_ok)
-                })())
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::start_calibration()?;
+                        Ok(output_ok)
+                    })(),
+                )
             }
         },
     )
@@ -627,7 +813,7 @@ fn wire__crate__api__diagnostics__start_fixture_session_impl(
             let api_spec = <FixtureSpec>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::AudioError>((move || {
+                transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                     let output_ok = crate::api::diagnostics::start_fixture_session(api_spec)?;
                     Ok(output_ok)
                 })())
@@ -659,7 +845,7 @@ fn wire__crate__api__stop_audio_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::error::AudioError>((move || {
+                transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                     let output_ok = crate::api::stop_audio()?;
                     Ok(output_ok)
                 })())
@@ -689,7 +875,7 @@ fn wire__crate__api__diagnostics__stop_fixture_session_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
-            transform_result_sse::<_, crate::error::AudioError>((move || {
+            transform_result_sse::<_, crate::error::audio::AudioError>((move || {
                 let output_ok = crate::api::diagnostics::stop_fixture_session()?;
                 Ok(output_ok)
             })())
@@ -788,6 +974,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::api::types::AudioMetrics, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<
         crate::calibration::progress::CalibrationProgress,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -827,6 +1023,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::api::types::OnsetEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<
         crate::engine::core::TelemetryEvent,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -847,50 +1053,50 @@ impl SseDecode for String {
     }
 }
 
-impl SseDecode for crate::error::AudioError {
+impl SseDecode for crate::error::audio::AudioError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut tag_ = <i32>::sse_decode(deserializer);
         match tag_ {
             0 => {
                 let mut var_bpm = <u32>::sse_decode(deserializer);
-                return crate::error::AudioError::BpmInvalid { bpm: var_bpm };
+                return crate::error::audio::AudioError::BpmInvalid { bpm: var_bpm };
             }
             1 => {
-                return crate::error::AudioError::AlreadyRunning;
+                return crate::error::audio::AudioError::AlreadyRunning;
             }
             2 => {
-                return crate::error::AudioError::NotRunning;
+                return crate::error::audio::AudioError::NotRunning;
             }
             3 => {
                 let mut var_details = <String>::sse_decode(deserializer);
-                return crate::error::AudioError::HardwareError {
+                return crate::error::audio::AudioError::HardwareError {
                     details: var_details,
                 };
             }
             4 => {
-                return crate::error::AudioError::PermissionDenied;
+                return crate::error::audio::AudioError::PermissionDenied;
             }
             5 => {
                 let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::error::AudioError::StreamOpenFailed { reason: var_reason };
+                return crate::error::audio::AudioError::StreamOpenFailed { reason: var_reason };
             }
             6 => {
                 let mut var_component = <String>::sse_decode(deserializer);
-                return crate::error::AudioError::LockPoisoned {
+                return crate::error::audio::AudioError::LockPoisoned {
                     component: var_component,
                 };
             }
             7 => {
                 let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::error::AudioError::JniInitFailed { reason: var_reason };
+                return crate::error::audio::AudioError::JniInitFailed { reason: var_reason };
             }
             8 => {
-                return crate::error::AudioError::ContextNotInitialized;
+                return crate::error::audio::AudioError::ContextNotInitialized;
             }
             9 => {
                 let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::error::AudioError::StreamFailure { reason: var_reason };
+                return crate::error::audio::AudioError::StreamFailure { reason: var_reason };
             }
             _ => {
                 unimplemented!("");
@@ -899,10 +1105,28 @@ impl SseDecode for crate::error::AudioError {
     }
 }
 
-impl SseDecode for crate::error::AudioErrorCodes {
+impl SseDecode for crate::error::audio::AudioErrorCodes {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        return crate::error::AudioErrorCodes {};
+        return crate::error::audio::AudioErrorCodes {};
+    }
+}
+
+impl SseDecode for crate::api::types::AudioMetrics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_rms = <f64>::sse_decode(deserializer);
+        let mut var_spectralCentroid = <f64>::sse_decode(deserializer);
+        let mut var_spectralFlux = <f64>::sse_decode(deserializer);
+        let mut var_frameNumber = <u64>::sse_decode(deserializer);
+        let mut var_timestamp = <u64>::sse_decode(deserializer);
+        return crate::api::types::AudioMetrics {
+            rms: var_rms,
+            spectral_centroid: var_spectralCentroid,
+            spectral_flux: var_spectralFlux,
+            frame_number: var_frameNumber,
+            timestamp: var_timestamp,
+        };
     }
 }
 
@@ -923,7 +1147,14 @@ impl SseDecode for crate::analysis::classifier::BeatboxHit {
     }
 }
 
-impl SseDecode for crate::error::CalibrationError {
+impl SseDecode for bool {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u8().unwrap() != 0
+    }
+}
+
+impl SseDecode for crate::error::calibration::CalibrationError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut tag_ = <i32>::sse_decode(deserializer);
@@ -931,27 +1162,29 @@ impl SseDecode for crate::error::CalibrationError {
             0 => {
                 let mut var_required_ = <usize>::sse_decode(deserializer);
                 let mut var_collected = <usize>::sse_decode(deserializer);
-                return crate::error::CalibrationError::InsufficientSamples {
+                return crate::error::calibration::CalibrationError::InsufficientSamples {
                     required: var_required_,
                     collected: var_collected,
                 };
             }
             1 => {
                 let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::error::CalibrationError::InvalidFeatures { reason: var_reason };
+                return crate::error::calibration::CalibrationError::InvalidFeatures {
+                    reason: var_reason,
+                };
             }
             2 => {
-                return crate::error::CalibrationError::NotComplete;
+                return crate::error::calibration::CalibrationError::NotComplete;
             }
             3 => {
-                return crate::error::CalibrationError::AlreadyInProgress;
+                return crate::error::calibration::CalibrationError::AlreadyInProgress;
             }
             4 => {
-                return crate::error::CalibrationError::StatePoisoned;
+                return crate::error::calibration::CalibrationError::StatePoisoned;
             }
             5 => {
                 let mut var_reason = <String>::sse_decode(deserializer);
-                return crate::error::CalibrationError::Timeout { reason: var_reason };
+                return crate::error::calibration::CalibrationError::Timeout { reason: var_reason };
             }
             _ => {
                 unimplemented!("");
@@ -960,10 +1193,10 @@ impl SseDecode for crate::error::CalibrationError {
     }
 }
 
-impl SseDecode for crate::error::CalibrationErrorCodes {
+impl SseDecode for crate::error::calibration::CalibrationErrorCodes {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        return crate::error::CalibrationErrorCodes {};
+        return crate::error::calibration::CalibrationErrorCodes {};
     }
 }
 
@@ -974,10 +1207,12 @@ impl SseDecode for crate::calibration::progress::CalibrationProgress {
             <crate::calibration::progress::CalibrationSound>::sse_decode(deserializer);
         let mut var_samplesCollected = <u8>::sse_decode(deserializer);
         let mut var_samplesNeeded = <u8>::sse_decode(deserializer);
+        let mut var_waitingForConfirmation = <bool>::sse_decode(deserializer);
         return crate::calibration::progress::CalibrationProgress {
             current_sound: var_currentSound,
             samples_collected: var_samplesCollected,
             samples_needed: var_samplesNeeded,
+            waiting_for_confirmation: var_waitingForConfirmation,
         };
     }
 }
@@ -987,9 +1222,10 @@ impl SseDecode for crate::calibration::progress::CalibrationSound {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <i32>::sse_decode(deserializer);
         return match inner {
-            0 => crate::calibration::progress::CalibrationSound::Kick,
-            1 => crate::calibration::progress::CalibrationSound::Snare,
-            2 => crate::calibration::progress::CalibrationSound::HiHat,
+            0 => crate::calibration::progress::CalibrationSound::NoiseFloor,
+            1 => crate::calibration::progress::CalibrationSound::Kick,
+            2 => crate::calibration::progress::CalibrationSound::Snare,
+            3 => crate::calibration::progress::CalibrationSound::HiHat,
             _ => unreachable!("Invalid variant for CalibrationSound: {}", inner),
         };
     }
@@ -1029,6 +1265,13 @@ impl SseDecode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_f32::<NativeEndian>().unwrap()
+    }
+}
+
+impl SseDecode for f64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_f64::<NativeEndian>().unwrap()
     }
 }
 
@@ -1300,11 +1543,49 @@ impl SseDecode for crate::telemetry::events::MetricEvent {
     }
 }
 
+impl SseDecode for crate::api::types::OnsetEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_timestamp = <u64>::sse_decode(deserializer);
+        let mut var_energy = <f64>::sse_decode(deserializer);
+        let mut var_centroid = <f64>::sse_decode(deserializer);
+        let mut var_zcr = <f64>::sse_decode(deserializer);
+        let mut var_flatness = <f64>::sse_decode(deserializer);
+        let mut var_rolloff = <f64>::sse_decode(deserializer);
+        let mut var_decayTimeMs = <f64>::sse_decode(deserializer);
+        let mut var_classification =
+            <Option<crate::analysis::ClassificationResult>>::sse_decode(deserializer);
+        return crate::api::types::OnsetEvent {
+            timestamp: var_timestamp,
+            energy: var_energy,
+            centroid: var_centroid,
+            zcr: var_zcr,
+            flatness: var_flatness,
+            rolloff: var_rolloff,
+            decay_time_ms: var_decayTimeMs,
+            classification: var_classification,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::analysis::ClassificationResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::analysis::ClassificationResult>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -1484,13 +1765,6 @@ impl SseDecode for usize {
     }
 }
 
-impl SseDecode for bool {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_u8().unwrap() != 0
-    }
-}
-
 fn pde_ffi_dispatcher_primary_impl(
     func_id: i32,
     port: flutter_rust_bridge::for_generated::MessagePort,
@@ -1501,29 +1775,40 @@ fn pde_ffi_dispatcher_primary_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__apply_params_impl(port, ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__calibration_stream_impl(port, ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__classification_stream_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__streams__diagnostic_metrics_stream_impl(
+        2 => {
+            wire__crate__api__streams__audio_metrics_stream_impl(port, ptr, rust_vec_len, data_len)
+        }
+        3 => wire__crate__api__calibration_stream_impl(port, ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__classification_stream_impl(port, ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__confirm_calibration_step_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__streams__diagnostic_metrics_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__diagnostics__start_fixture_session_impl(
+        7 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        17 => {
+            wire__crate__api__manual_accept_last_candidate_impl(port, ptr, rust_vec_len, data_len)
+        }
+        18 => {
+            wire__crate__api__streams__onset_events_stream_impl(port, ptr, rust_vec_len, data_len)
+        }
+        19 => wire__crate__api__retry_calibration_step_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__diagnostics__start_fixture_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1536,15 +1821,15 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        6 => {
+        8 => {
             wire__crate__api__diagnostics__fixture_metadata_for_id_impl(ptr, rust_vec_len, data_len)
         }
-        7 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1567,29 +1852,29 @@ impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<FixtureSpec>> for FixtureSpec 
 }
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::error::AudioError {
+impl flutter_rust_bridge::IntoDart for crate::error::audio::AudioError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            crate::error::AudioError::BpmInvalid { bpm } => {
+            crate::error::audio::AudioError::BpmInvalid { bpm } => {
                 [0.into_dart(), bpm.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::AudioError::AlreadyRunning => [1.into_dart()].into_dart(),
-            crate::error::AudioError::NotRunning => [2.into_dart()].into_dart(),
-            crate::error::AudioError::HardwareError { details } => {
+            crate::error::audio::AudioError::AlreadyRunning => [1.into_dart()].into_dart(),
+            crate::error::audio::AudioError::NotRunning => [2.into_dart()].into_dart(),
+            crate::error::audio::AudioError::HardwareError { details } => {
                 [3.into_dart(), details.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::AudioError::PermissionDenied => [4.into_dart()].into_dart(),
-            crate::error::AudioError::StreamOpenFailed { reason } => {
+            crate::error::audio::AudioError::PermissionDenied => [4.into_dart()].into_dart(),
+            crate::error::audio::AudioError::StreamOpenFailed { reason } => {
                 [5.into_dart(), reason.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::AudioError::LockPoisoned { component } => {
+            crate::error::audio::AudioError::LockPoisoned { component } => {
                 [6.into_dart(), component.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::AudioError::JniInitFailed { reason } => {
+            crate::error::audio::AudioError::JniInitFailed { reason } => {
                 [7.into_dart(), reason.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::AudioError::ContextNotInitialized => [8.into_dart()].into_dart(),
-            crate::error::AudioError::StreamFailure { reason } => {
+            crate::error::audio::AudioError::ContextNotInitialized => [8.into_dart()].into_dart(),
+            crate::error::audio::AudioError::StreamFailure { reason } => {
                 [9.into_dart(), reason.into_into_dart().into_dart()].into_dart()
             }
             _ => {
@@ -1598,23 +1883,55 @@ impl flutter_rust_bridge::IntoDart for crate::error::AudioError {
         }
     }
 }
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::error::AudioError {}
-impl flutter_rust_bridge::IntoIntoDart<crate::error::AudioError> for crate::error::AudioError {
-    fn into_into_dart(self) -> crate::error::AudioError {
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::error::audio::AudioError
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::error::audio::AudioError>
+    for crate::error::audio::AudioError
+{
+    fn into_into_dart(self) -> crate::error::audio::AudioError {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::error::AudioErrorCodes {
+impl flutter_rust_bridge::IntoDart for crate::error::audio::AudioErrorCodes {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         Vec::<u8>::new().into_dart()
     }
 }
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::error::AudioErrorCodes {}
-impl flutter_rust_bridge::IntoIntoDart<crate::error::AudioErrorCodes>
-    for crate::error::AudioErrorCodes
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::error::audio::AudioErrorCodes
 {
-    fn into_into_dart(self) -> crate::error::AudioErrorCodes {
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::error::audio::AudioErrorCodes>
+    for crate::error::audio::AudioErrorCodes
+{
+    fn into_into_dart(self) -> crate::error::audio::AudioErrorCodes {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::types::AudioMetrics {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.rms.into_into_dart().into_dart(),
+            self.spectral_centroid.into_into_dart().into_dart(),
+            self.spectral_flux.into_into_dart().into_dart(),
+            self.frame_number.into_into_dart().into_dart(),
+            self.timestamp.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::types::AudioMetrics
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::types::AudioMetrics>
+    for crate::api::types::AudioMetrics
+{
+    fn into_into_dart(self) -> crate::api::types::AudioMetrics {
         self
     }
 }
@@ -1645,10 +1962,10 @@ impl flutter_rust_bridge::IntoIntoDart<crate::analysis::classifier::BeatboxHit>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::error::CalibrationError {
+impl flutter_rust_bridge::IntoDart for crate::error::calibration::CalibrationError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            crate::error::CalibrationError::InsufficientSamples {
+            crate::error::calibration::CalibrationError::InsufficientSamples {
                 required,
                 collected,
             } => [
@@ -1657,13 +1974,17 @@ impl flutter_rust_bridge::IntoDart for crate::error::CalibrationError {
                 collected.into_into_dart().into_dart(),
             ]
             .into_dart(),
-            crate::error::CalibrationError::InvalidFeatures { reason } => {
+            crate::error::calibration::CalibrationError::InvalidFeatures { reason } => {
                 [1.into_dart(), reason.into_into_dart().into_dart()].into_dart()
             }
-            crate::error::CalibrationError::NotComplete => [2.into_dart()].into_dart(),
-            crate::error::CalibrationError::AlreadyInProgress => [3.into_dart()].into_dart(),
-            crate::error::CalibrationError::StatePoisoned => [4.into_dart()].into_dart(),
-            crate::error::CalibrationError::Timeout { reason } => {
+            crate::error::calibration::CalibrationError::NotComplete => [2.into_dart()].into_dart(),
+            crate::error::calibration::CalibrationError::AlreadyInProgress => {
+                [3.into_dart()].into_dart()
+            }
+            crate::error::calibration::CalibrationError::StatePoisoned => {
+                [4.into_dart()].into_dart()
+            }
+            crate::error::calibration::CalibrationError::Timeout { reason } => {
                 [5.into_dart(), reason.into_into_dart().into_dart()].into_dart()
             }
             _ => {
@@ -1673,30 +1994,30 @@ impl flutter_rust_bridge::IntoDart for crate::error::CalibrationError {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::error::CalibrationError
+    for crate::error::calibration::CalibrationError
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::error::CalibrationError>
-    for crate::error::CalibrationError
+impl flutter_rust_bridge::IntoIntoDart<crate::error::calibration::CalibrationError>
+    for crate::error::calibration::CalibrationError
 {
-    fn into_into_dart(self) -> crate::error::CalibrationError {
+    fn into_into_dart(self) -> crate::error::calibration::CalibrationError {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::error::CalibrationErrorCodes {
+impl flutter_rust_bridge::IntoDart for crate::error::calibration::CalibrationErrorCodes {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         Vec::<u8>::new().into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::error::CalibrationErrorCodes
+    for crate::error::calibration::CalibrationErrorCodes
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::error::CalibrationErrorCodes>
-    for crate::error::CalibrationErrorCodes
+impl flutter_rust_bridge::IntoIntoDart<crate::error::calibration::CalibrationErrorCodes>
+    for crate::error::calibration::CalibrationErrorCodes
 {
-    fn into_into_dart(self) -> crate::error::CalibrationErrorCodes {
+    fn into_into_dart(self) -> crate::error::calibration::CalibrationErrorCodes {
         self
     }
 }
@@ -1707,6 +2028,7 @@ impl flutter_rust_bridge::IntoDart for crate::calibration::progress::Calibration
             self.current_sound.into_into_dart().into_dart(),
             self.samples_collected.into_into_dart().into_dart(),
             self.samples_needed.into_into_dart().into_dart(),
+            self.waiting_for_confirmation.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1726,9 +2048,10 @@ impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::Calibration
 impl flutter_rust_bridge::IntoDart for crate::calibration::progress::CalibrationSound {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            Self::Kick => 0.into_dart(),
-            Self::Snare => 1.into_dart(),
-            Self::HiHat => 2.into_dart(),
+            Self::NoiseFloor => 0.into_dart(),
+            Self::Kick => 1.into_dart(),
+            Self::Snare => 2.into_dart(),
+            Self::HiHat => 3.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -2031,6 +2354,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::telemetry::events::MetricEvent>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::types::OnsetEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.timestamp.into_into_dart().into_dart(),
+            self.energy.into_into_dart().into_dart(),
+            self.centroid.into_into_dart().into_dart(),
+            self.zcr.into_into_dart().into_dart(),
+            self.flatness.into_into_dart().into_dart(),
+            self.rolloff.into_into_dart().into_dart(),
+            self.decay_time_ms.into_into_dart().into_dart(),
+            self.classification.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::types::OnsetEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::types::OnsetEvent>
+    for crate::api::types::OnsetEvent
+{
+    fn into_into_dart(self) -> crate::api::types::OnsetEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::engine::core::ParamPatch {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2187,6 +2534,15 @@ impl SseEncode
 }
 
 impl SseEncode
+    for StreamSink<crate::api::types::AudioMetrics, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
     for StreamSink<
         crate::calibration::progress::CalibrationProgress,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -2223,6 +2579,15 @@ impl SseEncode
 }
 
 impl SseEncode
+    for StreamSink<crate::api::types::OnsetEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
     for StreamSink<
         crate::engine::core::TelemetryEvent,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -2241,43 +2606,43 @@ impl SseEncode for String {
     }
 }
 
-impl SseEncode for crate::error::AudioError {
+impl SseEncode for crate::error::audio::AudioError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         match self {
-            crate::error::AudioError::BpmInvalid { bpm } => {
+            crate::error::audio::AudioError::BpmInvalid { bpm } => {
                 <i32>::sse_encode(0, serializer);
                 <u32>::sse_encode(bpm, serializer);
             }
-            crate::error::AudioError::AlreadyRunning => {
+            crate::error::audio::AudioError::AlreadyRunning => {
                 <i32>::sse_encode(1, serializer);
             }
-            crate::error::AudioError::NotRunning => {
+            crate::error::audio::AudioError::NotRunning => {
                 <i32>::sse_encode(2, serializer);
             }
-            crate::error::AudioError::HardwareError { details } => {
+            crate::error::audio::AudioError::HardwareError { details } => {
                 <i32>::sse_encode(3, serializer);
                 <String>::sse_encode(details, serializer);
             }
-            crate::error::AudioError::PermissionDenied => {
+            crate::error::audio::AudioError::PermissionDenied => {
                 <i32>::sse_encode(4, serializer);
             }
-            crate::error::AudioError::StreamOpenFailed { reason } => {
+            crate::error::audio::AudioError::StreamOpenFailed { reason } => {
                 <i32>::sse_encode(5, serializer);
                 <String>::sse_encode(reason, serializer);
             }
-            crate::error::AudioError::LockPoisoned { component } => {
+            crate::error::audio::AudioError::LockPoisoned { component } => {
                 <i32>::sse_encode(6, serializer);
                 <String>::sse_encode(component, serializer);
             }
-            crate::error::AudioError::JniInitFailed { reason } => {
+            crate::error::audio::AudioError::JniInitFailed { reason } => {
                 <i32>::sse_encode(7, serializer);
                 <String>::sse_encode(reason, serializer);
             }
-            crate::error::AudioError::ContextNotInitialized => {
+            crate::error::audio::AudioError::ContextNotInitialized => {
                 <i32>::sse_encode(8, serializer);
             }
-            crate::error::AudioError::StreamFailure { reason } => {
+            crate::error::audio::AudioError::StreamFailure { reason } => {
                 <i32>::sse_encode(9, serializer);
                 <String>::sse_encode(reason, serializer);
             }
@@ -2288,9 +2653,20 @@ impl SseEncode for crate::error::AudioError {
     }
 }
 
-impl SseEncode for crate::error::AudioErrorCodes {
+impl SseEncode for crate::error::audio::AudioErrorCodes {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for crate::api::types::AudioMetrics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.rms, serializer);
+        <f64>::sse_encode(self.spectral_centroid, serializer);
+        <f64>::sse_encode(self.spectral_flux, serializer);
+        <u64>::sse_encode(self.frame_number, serializer);
+        <u64>::sse_encode(self.timestamp, serializer);
+    }
 }
 
 impl SseEncode for crate::analysis::classifier::BeatboxHit {
@@ -2314,11 +2690,18 @@ impl SseEncode for crate::analysis::classifier::BeatboxHit {
     }
 }
 
-impl SseEncode for crate::error::CalibrationError {
+impl SseEncode for bool {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for crate::error::calibration::CalibrationError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         match self {
-            crate::error::CalibrationError::InsufficientSamples {
+            crate::error::calibration::CalibrationError::InsufficientSamples {
                 required,
                 collected,
             } => {
@@ -2326,20 +2709,20 @@ impl SseEncode for crate::error::CalibrationError {
                 <usize>::sse_encode(required, serializer);
                 <usize>::sse_encode(collected, serializer);
             }
-            crate::error::CalibrationError::InvalidFeatures { reason } => {
+            crate::error::calibration::CalibrationError::InvalidFeatures { reason } => {
                 <i32>::sse_encode(1, serializer);
                 <String>::sse_encode(reason, serializer);
             }
-            crate::error::CalibrationError::NotComplete => {
+            crate::error::calibration::CalibrationError::NotComplete => {
                 <i32>::sse_encode(2, serializer);
             }
-            crate::error::CalibrationError::AlreadyInProgress => {
+            crate::error::calibration::CalibrationError::AlreadyInProgress => {
                 <i32>::sse_encode(3, serializer);
             }
-            crate::error::CalibrationError::StatePoisoned => {
+            crate::error::calibration::CalibrationError::StatePoisoned => {
                 <i32>::sse_encode(4, serializer);
             }
-            crate::error::CalibrationError::Timeout { reason } => {
+            crate::error::calibration::CalibrationError::Timeout { reason } => {
                 <i32>::sse_encode(5, serializer);
                 <String>::sse_encode(reason, serializer);
             }
@@ -2350,7 +2733,7 @@ impl SseEncode for crate::error::CalibrationError {
     }
 }
 
-impl SseEncode for crate::error::CalibrationErrorCodes {
+impl SseEncode for crate::error::calibration::CalibrationErrorCodes {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
@@ -2364,6 +2747,7 @@ impl SseEncode for crate::calibration::progress::CalibrationProgress {
         );
         <u8>::sse_encode(self.samples_collected, serializer);
         <u8>::sse_encode(self.samples_needed, serializer);
+        <bool>::sse_encode(self.waiting_for_confirmation, serializer);
     }
 }
 
@@ -2372,9 +2756,10 @@ impl SseEncode for crate::calibration::progress::CalibrationSound {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(
             match self {
-                crate::calibration::progress::CalibrationSound::Kick => 0,
-                crate::calibration::progress::CalibrationSound::Snare => 1,
-                crate::calibration::progress::CalibrationSound::HiHat => 2,
+                crate::calibration::progress::CalibrationSound::NoiseFloor => 0,
+                crate::calibration::progress::CalibrationSound::Kick => 1,
+                crate::calibration::progress::CalibrationSound::Snare => 2,
+                crate::calibration::progress::CalibrationSound::HiHat => 3,
                 _ => {
                     unimplemented!("");
                 }
@@ -2416,6 +2801,13 @@ impl SseEncode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_f32::<NativeEndian>(self).unwrap();
+    }
+}
+
+impl SseEncode for f64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_f64::<NativeEndian>(self).unwrap();
     }
 }
 
@@ -2650,12 +3042,39 @@ impl SseEncode for crate::telemetry::events::MetricEvent {
     }
 }
 
+impl SseEncode for crate::api::types::OnsetEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.timestamp, serializer);
+        <f64>::sse_encode(self.energy, serializer);
+        <f64>::sse_encode(self.centroid, serializer);
+        <f64>::sse_encode(self.zcr, serializer);
+        <f64>::sse_encode(self.flatness, serializer);
+        <f64>::sse_encode(self.rolloff, serializer);
+        <f64>::sse_encode(self.decay_time_ms, serializer);
+        <Option<crate::analysis::ClassificationResult>>::sse_encode(
+            self.classification,
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::analysis::ClassificationResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::analysis::ClassificationResult>::sse_encode(value, serializer);
         }
     }
 }
@@ -2817,13 +3236,6 @@ impl SseEncode for usize {
             .cursor
             .write_u64::<NativeEndian>(self as _)
             .unwrap();
-    }
-}
-
-impl SseEncode for bool {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer.cursor.write_u8(self as _).unwrap();
     }
 }
 

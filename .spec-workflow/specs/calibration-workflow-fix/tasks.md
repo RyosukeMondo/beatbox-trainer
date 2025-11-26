@@ -182,7 +182,7 @@
   - _Leverage: FR-3B in requirements; Design Section 11.1_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust real-time audio engineer | Task: Add adaptive backoff to calibration acceptance in rust/src/analysis/mod.rs and rust/src/calibration/procedure.rs. Track consecutive misses per sound, lower onset/RMS gate and widen centroid/ZCR ranges stepwise with safe floors/ceilings, reset on success. Log each adjustment (sound, step, gates). Keep the audio loop allocation-free and use existing mutex boundaries. | Restrictions: No heap allocations in analysis loop; floors at noise_floor*1.2; backoff step bounded; reset counters on success; add unit tests for backoff progression/reset. | _Leverage: Existing rejection counters and noise floor threshold in procedure.rs; current analysis loop gating_ | Success: Backoff engages after N misses, adapts within bounds, resets on success, tests cover step changes and floors, real-time safety preserved. |
 
-- [ ] 7.2 Add candidate buffer + manual accept API
+- [x] 7.2 Add candidate buffer + manual accept API
   - Files: `rust/src/calibration/procedure.rs`, `rust/src/api.rs`, FRB bindings
   - Store last rejected-but-valid candidate per sound; expose FFI `manual_accept_last_candidate` that converts it to an accepted sample and emits progress.
   - Clear buffer on sound transition or success; log manual accept usage.

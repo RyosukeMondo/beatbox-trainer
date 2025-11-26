@@ -404,3 +404,75 @@ fn test_backoff_respects_rms_floor() {
     assert!(state.rms_gate >= floor - 1e-6);
     assert_eq!(state.step, MAX_BACKOFF_STEPS);
 }
+
+#[test]
+fn test_manual_accept_uses_last_candidate() {
+    let mut procedure = CalibrationProcedure::new_for_test(2);
+    let features = create_test_features(1000.0, 0.05);
+
+    // Store candidate via RMS gate rejection
+    let result = procedure.add_sample(features, 0.001);
+    assert!(result.is_err());
+
+    let progress = procedure.manual_accept_last_candidate().unwrap();
+    assert_eq!(progress.samples_collected, 1);
+    assert_eq!(progress.current_sound, CalibrationSound::Kick);
+    assert!(!progress.waiting_for_confirmation);
+
+    // Candidate should be cleared after manual accept
+    assert!(procedure.manual_accept_last_candidate().is_err());
+
+    // Accept final sample to reach confirmation state
+    procedure.add_sample(features, 1.0).unwrap();
+    assert!(procedure.is_waiting_for_confirmation());
+}
+
+#[test]
+fn test_manual_accept_errors_without_candidate_or_when_complete() {
+    let mut procedure = CalibrationProcedure::new_for_test(1);
+    let features = create_test_features(1000.0, 0.05);
+
+    // No candidate yet
+    let err = procedure.manual_accept_last_candidate().unwrap_err();
+    match err {
+        CalibrationError::InvalidFeatures { reason } => {
+            assert!(reason.contains("No candidate"));
+        }
+        _ => panic!("Expected InvalidFeatures error"),
+    }
+
+    // Move to waiting state then manual accept should fail
+    procedure.add_sample(features, 1.0).unwrap();
+    assert!(procedure.is_waiting_for_confirmation());
+    let err = procedure.manual_accept_last_candidate().unwrap_err();
+    match err {
+        CalibrationError::InvalidFeatures { reason } => {
+            assert!(reason.contains("Current sound already complete"));
+        }
+        _ => panic!("Expected InvalidFeatures error"),
+    }
+}
+
+#[test]
+fn test_candidates_cleared_on_confirm_and_retry() {
+    let mut procedure = CalibrationProcedure::new_for_test(1);
+    let features = create_test_features(1000.0, 0.05);
+
+    // Simulate stored candidate then confirm
+    procedure
+        .last_candidates
+        .store(CalibrationSound::Kick, features);
+    procedure.waiting_for_confirmation = true;
+    procedure.confirm_and_advance().unwrap();
+    assert!(procedure.last_candidates.kick.is_none());
+    assert!(procedure.last_candidates.snare.is_none());
+
+    // Store candidate for snare and ensure retry clears it
+    procedure.waiting_for_confirmation = true;
+    procedure.current_sound = CalibrationSound::Snare;
+    procedure
+        .last_candidates
+        .store(CalibrationSound::Snare, features);
+    procedure.retry_current_sound().unwrap();
+    assert!(procedure.last_candidates.snare.is_none());
+}

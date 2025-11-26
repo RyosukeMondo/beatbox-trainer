@@ -19,10 +19,13 @@ use crate::error::CalibrationError;
 
 #[path = "procedure_backoff.rs"]
 mod procedure_backoff;
+#[path = "procedure_manual_accept.rs"]
+mod procedure_manual_accept;
 
 use procedure_backoff::AdaptiveBackoff;
 #[cfg(test)]
 use procedure_backoff::{BACKOFF_TRIGGER, MAX_BACKOFF_STEPS};
+use procedure_manual_accept::CandidateBuffer;
 
 /// Default minimum time between accepting samples (milliseconds)
 /// This prevents rapid-fire detection from noise
@@ -61,6 +64,8 @@ pub struct CalibrationProcedure {
     waiting_for_confirmation: bool,
     /// Adaptive gate state per sound (kick, snare, hi-hat)
     backoff: AdaptiveBackoff,
+    /// Last rejected-but-valid candidate per sound
+    last_candidates: CandidateBuffer,
 }
 
 impl CalibrationProcedure {
@@ -90,6 +95,7 @@ impl CalibrationProcedure {
             noise_floor_threshold: None,
             waiting_for_confirmation: false,
             backoff: AdaptiveBackoff::new(None),
+            last_candidates: CandidateBuffer::default(),
         }
     }
 
@@ -190,6 +196,8 @@ impl CalibrationProcedure {
     /// User must call confirm_and_advance() to proceed to next sound.
     /// Must complete noise floor calibration first!
     pub fn add_sample(&mut self, features: Features, rms: f64) -> Result<(), CalibrationError> {
+        let current_sound = self.current_sound;
+
         // Reject if waiting for user confirmation
         if self.waiting_for_confirmation {
             return Err(CalibrationError::InvalidFeatures {
@@ -219,6 +227,7 @@ impl CalibrationProcedure {
         {
             self.backoff
                 .record_reject(self.current_sound, "feature_gate");
+            self.store_candidate(current_sound, features);
             return Err(CalibrationError::InvalidFeatures {
                 reason: format!(
                     "Features out of adaptive gate for {:?} (centroid {:.2}, zcr {:.3})",
@@ -230,6 +239,7 @@ impl CalibrationProcedure {
         if let Some(gate_rms) = self.backoff.rms_gate(self.current_sound) {
             if rms < gate_rms {
                 self.backoff.record_reject(self.current_sound, "rms_gate");
+                self.store_candidate(current_sound, features);
                 return Err(CalibrationError::InvalidFeatures {
                     reason: format!(
                         "Sample RMS {:.4} below gate {:.4} for {:?}",
@@ -246,6 +256,7 @@ impl CalibrationProcedure {
                 let elapsed_ms = now.duration_since(last_time).as_millis();
                 if elapsed_ms < self.min_sample_interval_ms {
                     self.backoff.record_reject(self.current_sound, "debounce");
+                    self.store_candidate(current_sound, features);
                     return Err(CalibrationError::InvalidFeatures {
                         reason: format!(
                             "Sample rejected: {}ms since last sample (minimum {}ms)",
@@ -277,6 +288,7 @@ impl CalibrationProcedure {
                 Self::add_to_collection(&mut self.hihat_samples, features, self.samples_needed)?;
             }
         }
+        self.clear_candidate_for_sound(current_sound);
 
         // Set waiting_for_confirmation when current sound is complete (DON'T auto-advance)
         if self.is_current_sound_complete() {
@@ -387,6 +399,7 @@ impl CalibrationProcedure {
         self.last_sample_time = None;
         self.waiting_for_confirmation = false;
         self.backoff.update_noise_floor(self.noise_floor_threshold);
+        self.clear_all_candidates();
     }
 
     /// Check if waiting for user confirmation
@@ -417,6 +430,7 @@ impl CalibrationProcedure {
             );
             self.current_sound = next_sound;
             self.backoff.reset_for_sound(self.current_sound);
+            self.clear_all_candidates();
             Ok(true)
         } else {
             log::info!(
@@ -424,6 +438,7 @@ impl CalibrationProcedure {
                 self.current_sound
             );
             self.backoff.reset_for_sound(self.current_sound);
+            self.clear_all_candidates();
             Ok(false) // Calibration complete
         }
     }
@@ -465,6 +480,7 @@ impl CalibrationProcedure {
         self.waiting_for_confirmation = false;
         self.last_sample_time = None; // Reset debounce timer
         self.backoff.reset_for_sound(self.current_sound);
+        self.clear_candidate_for_sound(self.current_sound);
         Ok(())
     }
 

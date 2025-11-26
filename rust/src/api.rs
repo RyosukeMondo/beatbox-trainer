@@ -13,7 +13,7 @@ use crate::engine::core::{EngineHandle, ParamPatch};
 use crate::error::{AudioError, CalibrationError};
 pub mod diagnostics;
 pub mod streams;
-mod types;
+pub mod types;
 
 pub use diagnostics::{
     fixture_metadata_for_id, load_fixture_catalog, start_fixture_session, stop_fixture_session,
@@ -254,6 +254,42 @@ pub fn start_calibration() -> Result<(), CalibrationError> {
 #[flutter_rust_bridge::frb]
 pub fn finish_calibration() -> Result<(), CalibrationError> {
     ENGINE_HANDLE.finish_calibration()
+}
+
+/// User confirms current calibration step is OK and wants to advance
+///
+/// Called when user clicks "OK" after reviewing the collected samples for current sound.
+/// Advances to the next sound in the calibration sequence.
+///
+/// # Returns
+/// * `Ok(true)` - Advanced to next sound
+/// * `Ok(false)` - Calibration complete (no next sound)
+/// * `Err(CalibrationError)` - Error if not waiting for confirmation
+#[flutter_rust_bridge::frb]
+pub fn confirm_calibration_step() -> Result<bool, CalibrationError> {
+    ENGINE_HANDLE.confirm_calibration_step()
+}
+
+/// User wants to retry the current calibration step
+///
+/// Called when user clicks "Retry" to redo sample collection for current sound.
+/// Clears collected samples and allows re-collection.
+///
+/// # Returns
+/// * `Ok(())` - Samples cleared, ready to collect again
+/// * `Err(CalibrationError)` - Error if not waiting for confirmation
+#[flutter_rust_bridge::frb]
+pub fn retry_calibration_step() -> Result<(), CalibrationError> {
+    ENGINE_HANDLE.retry_calibration_step()
+}
+
+/// Manually accept the last rejected-but-valid calibration candidate
+///
+/// Allows the UI to promote a buffered sample when adaptive gates are too strict.
+/// Emits updated progress to the calibration stream.
+#[flutter_rust_bridge::frb]
+pub fn manual_accept_last_candidate() -> Result<CalibrationProgress, CalibrationError> {
+    ENGINE_HANDLE.manual_accept_last_candidate()
 }
 
 /// Stream of calibration progress updates

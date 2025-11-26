@@ -3,13 +3,21 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import '../analysis.dart';
 import '../analysis/classifier.dart';
+import '../analysis/quantizer.dart';
 import '../engine/core.dart';
 import '../frb_generated.dart';
 import '../telemetry/events.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'types.dart';
 
-// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `audio_metrics_stream`, `onset_events_stream`
+/// Stream of audio metrics for debug visualization
+///
+/// Emits AudioMetrics with real-time DSP metrics from the audio processing pipeline.
+/// Useful for debugging and development.
+Stream<AudioMetrics> audioMetricsStream() =>
+    RustLib.instance.api.crateApiStreamsAudioMetricsStream();
 
 /// Stream of telemetry events for debug instrumentation
 ///
@@ -20,3 +28,9 @@ Stream<TelemetryEvent> telemetryStream() =>
 /// Stream of diagnostic metrics aggregated from telemetry hub.
 Stream<MetricEvent> diagnosticMetricsStream() =>
     RustLib.instance.api.crateApiStreamsDiagnosticMetricsStream();
+
+/// Stream of onset events for debug visualization
+///
+/// Emits OnsetEvent whenever an onset is detected.
+Stream<OnsetEvent> onsetEventsStream() =>
+    RustLib.instance.api.crateApiStreamsOnsetEventsStream();

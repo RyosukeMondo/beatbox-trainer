@@ -20,17 +20,22 @@ class CalibrationProgress {
   /// Total samples needed per sound
   final int samplesNeeded;
 
+  /// Whether waiting for user confirmation to proceed to next phase
+  final bool waitingForConfirmation;
+
   const CalibrationProgress({
     required this.currentSound,
     required this.samplesCollected,
     required this.samplesNeeded,
+    required this.waitingForConfirmation,
   });
 
   @override
   int get hashCode =>
       currentSound.hashCode ^
       samplesCollected.hashCode ^
-      samplesNeeded.hashCode;
+      samplesNeeded.hashCode ^
+      waitingForConfirmation.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -39,8 +44,21 @@ class CalibrationProgress {
           runtimeType == other.runtimeType &&
           currentSound == other.currentSound &&
           samplesCollected == other.samplesCollected &&
-          samplesNeeded == other.samplesNeeded;
+          samplesNeeded == other.samplesNeeded &&
+          waitingForConfirmation == other.waitingForConfirmation;
 }
 
-/// Sound type being calibrated
-enum CalibrationSound { kick, snare, hiHat }
+/// Calibration phase - includes noise floor measurement before sound collection
+enum CalibrationSound {
+  /// Step 1: Measuring ambient noise level (user should stay quiet)
+  noiseFloor,
+
+  /// Step 2: Collecting kick drum samples
+  kick,
+
+  /// Step 3: Collecting snare drum samples
+  snare,
+
+  /// Step 4: Collecting hi-hat samples
+  hiHat,
+}

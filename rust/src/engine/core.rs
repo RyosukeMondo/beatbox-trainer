@@ -11,7 +11,7 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use crate::calibration::CalibrationState;
+use crate::calibration::{CalibrationProgress, CalibrationState};
 use crate::config::AppConfig;
 use crate::engine::backend::{AudioBackend, EngineStartContext, TimeSource};
 #[cfg(not(target_os = "android"))]
@@ -379,6 +379,19 @@ impl EngineHandle {
         }
 
         Ok(())
+    }
+
+    /// Manually accept the last rejected candidate for the active calibration sound.
+    ///
+    /// Useful when adaptive gates are too strict; emits updated progress on success.
+    pub fn manual_accept_last_candidate(&self) -> Result<CalibrationProgress, CalibrationError> {
+        let progress = self.calibration.manual_accept_last_candidate()?;
+
+        if let Some(tx) = self.broadcasts.get_calibration_sender() {
+            let _ = tx.send(progress.clone());
+        }
+
+        Ok(progress)
     }
 }
 
