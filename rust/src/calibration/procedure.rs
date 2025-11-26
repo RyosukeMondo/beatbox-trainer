@@ -12,9 +12,10 @@
 use std::time::Instant;
 
 use crate::analysis::features::Features;
-use crate::calibration::progress::{CalibrationGuidance, CalibrationProgress, CalibrationSound};
+use crate::calibration::progress::{
+    CalibrationGuidance, CalibrationProgress, CalibrationProgressDebug, CalibrationSound,
+};
 use crate::calibration::state::CalibrationState;
-use crate::calibration::validation::SampleValidator;
 use crate::error::CalibrationError;
 
 #[path = "procedure_backoff.rs"]
@@ -25,8 +26,6 @@ mod procedure_factory;
 mod procedure_manual_accept;
 
 use procedure_backoff::AdaptiveBackoff;
-#[cfg(test)]
-use procedure_backoff::{BACKOFF_TRIGGER, MAX_BACKOFF_STEPS};
 use procedure_manual_accept::CandidateBuffer;
 
 /// Default minimum time between accepting samples (milliseconds)
@@ -36,11 +35,11 @@ const DEFAULT_MIN_SAMPLE_INTERVAL_MS: u128 = 250;
 /// Number of RMS samples needed for noise floor calibration
 const NOISE_FLOOR_SAMPLES_NEEDED: u8 = 30;
 
-/// Multiplier applied to noise floor RMS to set onset threshold
-const NOISE_FLOOR_THRESHOLD_MULTIPLIER: f64 = 2.0;
+/// Multiplier applied to noise floor RMS to set onset threshold (keep conservative)
+const NOISE_FLOOR_THRESHOLD_MULTIPLIER: f64 = 1.2;
 
 /// Minimum RMS threshold to prevent complete silence from being too sensitive
-const MIN_RMS_THRESHOLD: f64 = 0.01;
+const MIN_RMS_THRESHOLD: f64 = 0.0025;
 
 /// CalibrationProcedure manages the sample collection workflow
 pub struct CalibrationProcedure {
@@ -68,6 +67,16 @@ pub struct CalibrationProcedure {
     backoff: AdaptiveBackoff,
     /// Last rejected-but-valid candidate per sound
     last_candidates: CandidateBuffer,
+    /// Last observed centroid for instrumentation
+    last_centroid: Option<f32>,
+    /// Last observed ZCR for instrumentation
+    last_zcr: Option<f32>,
+    /// Last observed RMS for instrumentation
+    last_rms: Option<f64>,
+    /// Last observed max amplitude for instrumentation
+    last_max_amp: Option<f32>,
+    /// Debug sequence counter
+    debug_seq: u64,
 }
 
 impl CalibrationProcedure {
@@ -104,7 +113,7 @@ impl CalibrationProcedure {
 
             // Use whichever is higher: mean * multiplier or max * 1.5
             let threshold = (mean_rms * NOISE_FLOOR_THRESHOLD_MULTIPLIER)
-                .max(max_rms * 1.5)
+                .max(max_rms * 1.3)
                 .max(MIN_RMS_THRESHOLD);
 
             self.noise_floor_threshold = Some(threshold);
@@ -151,7 +160,12 @@ impl CalibrationProcedure {
     /// Sets waiting_for_confirmation when current sound is complete.
     /// User must call confirm_and_advance() to proceed to next sound.
     /// Must complete noise floor calibration first!
-    pub fn add_sample(&mut self, features: Features, rms: f64) -> Result<(), CalibrationError> {
+    pub fn add_sample(
+        &mut self,
+        features: Features,
+        rms: f64,
+        max_amp: f32,
+    ) -> Result<(), CalibrationError> {
         let current_sound = self.current_sound;
 
         // Reject if waiting for user confirmation
@@ -170,39 +184,44 @@ impl CalibrationProcedure {
             });
         }
 
-        // Baseline feature validation (keeps detailed error reasons)
-        if let Err(err) = SampleValidator::validate(&features) {
-            self.backoff.record_reject(self.current_sound, "validator");
-            return Err(err);
-        }
+        // Snapshot last observed values for instrumentation
+        self.last_centroid = Some(features.centroid);
+        self.last_zcr = Some(features.zcr);
+        self.last_rms = Some(rms);
+        self.last_max_amp = Some(max_amp);
 
-        // Adaptive RMS gating (rejects tracked for backoff)
-        if !self
-            .backoff
-            .passes_feature_gates(self.current_sound, &features)
-        {
-            self.backoff
-                .record_reject(self.current_sound, "feature_gate");
-            self.store_candidate(current_sound, features);
-            return Err(CalibrationError::InvalidFeatures {
-                reason: format!(
-                    "Features out of adaptive gate for {:?} (centroid {:.2}, zcr {:.3})",
-                    self.current_sound, features.centroid, features.zcr
-                ),
-            });
-        }
+        log::debug!(
+            "[CalibrationProcedure] Evaluating {:?}: rms {:.4}, centroid {:.1}, zcr {:.3}, max_amp {:.3}",
+            self.current_sound,
+            rms,
+            features.centroid,
+            features.zcr,
+            max_amp
+        );
 
-        if let Some(gate_rms) = self.backoff.rms_gate(self.current_sound) {
-            if rms < gate_rms {
-                self.backoff.record_reject(self.current_sound, "rms_gate");
+        // USER-CENTRIC CALIBRATION: Accept all sounds above noise floor
+        // We learn what the user's sounds look like, not force them to match our expectations
+
+        // Only reject if below 2x noise floor (clear separation from background noise)
+        // Using 2x multiplier prevents flickering UI from borderline sounds
+        if let Some(noise_threshold) = self.noise_floor_threshold {
+            let detection_threshold = noise_threshold * 2.0;
+            if rms < detection_threshold {
                 self.store_candidate(current_sound, features);
                 return Err(CalibrationError::InvalidFeatures {
                     reason: format!(
-                        "Sample RMS {:.4} below gate {:.4} for {:?}",
-                        rms, gate_rms, self.current_sound
+                        "Sound too quiet (RMS {:.4} < threshold {:.4}). Make it louder!",
+                        rms, detection_threshold
                     ),
                 });
             }
+        }
+
+        // Basic sanity check - reject obviously invalid features (hardware glitches)
+        if features.centroid <= 0.0 || features.centroid > 20000.0 {
+            return Err(CalibrationError::InvalidFeatures {
+                reason: "Invalid frequency detected - please try again".to_string(),
+            });
         }
 
         // Debounce: reject samples that come too fast (if debouncing is enabled)
@@ -246,16 +265,24 @@ impl CalibrationProcedure {
         }
         self.clear_candidate_for_sound(current_sound);
 
+        // Log successful sample collection
+        log::info!(
+            "[CalibrationProcedure] {:?} sample {} accepted: centroid {:.1} Hz, zcr {:.3}",
+            self.current_sound,
+            self.get_current_sound_count(),
+            features.centroid,
+            features.zcr
+        );
+
         // Set waiting_for_confirmation when current sound is complete (DON'T auto-advance)
         if self.is_current_sound_complete() {
             self.waiting_for_confirmation = true;
             log::info!(
-                "[CalibrationProcedure] {:?} samples complete. Waiting for user confirmation.",
-                self.current_sound
+                "[CalibrationProcedure] {:?} samples complete! Collected {} samples.",
+                self.current_sound,
+                self.get_current_sound_count()
             );
         }
-
-        self.backoff.record_success(self.current_sound);
 
         Ok(())
     }
@@ -277,7 +304,7 @@ impl CalibrationProcedure {
     }
 
     /// Get current calibration progress
-    pub fn get_progress(&self) -> CalibrationProgress {
+    pub fn get_progress(&mut self) -> CalibrationProgress {
         let (samples_collected, samples_needed) = match self.current_sound {
             CalibrationSound::NoiseFloor => (
                 self.noise_floor_samples.len() as u8,
@@ -293,14 +320,28 @@ impl CalibrationProcedure {
             self.waiting_for_confirmation,
         )
         .with_manual_accept(self.manual_accept_available())
+        .with_debug(self.debug_payload(None, None, None))
     }
 
     /// Get progress with an attached guidance payload
     pub fn get_progress_with_guidance(
-        &self,
+        &mut self,
         guidance: Option<CalibrationGuidance>,
     ) -> CalibrationProgress {
-        self.get_progress().with_guidance(guidance)
+        self.get_progress_with_guidance_and_features(guidance, None, None, None)
+    }
+
+    /// Get progress with guidance and optional feature snapshot for debug
+    pub fn get_progress_with_guidance_and_features(
+        &mut self,
+        guidance: Option<CalibrationGuidance>,
+        features: Option<&Features>,
+        rms: Option<f64>,
+        max_amp: Option<f32>,
+    ) -> CalibrationProgress {
+        self.get_progress()
+            .with_guidance(guidance)
+            .with_debug(self.debug_payload(features, rms, max_amp))
     }
 
     /// Get the count of samples for the current sound
@@ -466,6 +507,54 @@ impl CalibrationProcedure {
     /// Get the current sound being calibrated
     pub fn current_sound(&self) -> CalibrationSound {
         self.current_sound
+    }
+
+    /// Update last-seen feature snapshot for instrumentation without affecting gates.
+    ///
+    /// Used by the analysis thread to push live readings even when no onsets
+    /// are accepted so the UI can guide the user in real time.
+    pub fn update_last_features_for_debug(&mut self, features: &Features, rms: f64, max_amp: f32) {
+        if !self.current_sound.is_sound_phase() {
+            return;
+        }
+
+        self.last_centroid = Some(features.centroid);
+        self.last_zcr = Some(features.zcr);
+        self.last_rms = Some(rms);
+        self.last_max_amp = Some(max_amp);
+    }
+
+    /// Current RMS gate for the active sound
+    pub fn rms_gate_for_current(&self) -> Option<f64> {
+        self.backoff.rms_gate(self.current_sound)
+    }
+
+    /// Debug payload for UI instrumentation
+    fn debug_payload(
+        &mut self,
+        features: Option<&Features>,
+        rms: Option<f64>,
+        max_amp: Option<f32>,
+    ) -> Option<CalibrationProgressDebug> {
+        // Only emit for sound phases to avoid noise-floor gate confusion
+        if !self.current_sound.is_sound_phase() {
+            return None;
+        }
+        let gates = self.backoff.gate_state(self.current_sound)?;
+        self.debug_seq = self.debug_seq.wrapping_add(1);
+        Some(CalibrationProgressDebug {
+            seq: self.debug_seq,
+            rms_gate: self.backoff.rms_gate(self.current_sound),
+            centroid_min: gates.centroid_min,
+            centroid_max: gates.centroid_max,
+            zcr_min: gates.zcr_min,
+            zcr_max: gates.zcr_max,
+            misses: gates.rejects,
+            last_centroid: features.map(|f| f.centroid).or(self.last_centroid),
+            last_zcr: features.map(|f| f.zcr).or(self.last_zcr),
+            last_rms: rms.or(self.last_rms),
+            last_max_amp: max_amp.or(self.last_max_amp),
+        })
     }
 }
 

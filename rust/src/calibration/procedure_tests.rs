@@ -27,72 +27,75 @@ fn test_add_sample_valid() {
     let mut procedure = CalibrationProcedure::new_for_test(10);
     let features = create_test_features(1000.0, 0.05);
 
-    let result = procedure.add_sample(features, 0.05);
+    let result = procedure.add_sample(features, 0.05, 0.0);
     assert!(result.is_ok());
     assert_eq!(procedure.kick_samples.len(), 1);
 }
 
-#[test]
-fn test_add_sample_invalid_centroid_low() {
-    // Use new_for_test which skips noise floor
-    let mut procedure = CalibrationProcedure::new_for_test(10);
-    let features = create_test_features(30.0, 0.05); // Too low
+// USER-CENTRIC CALIBRATION: We now accept most sounds and learn from them
+// Only reject truly invalid signals (hardware glitches, below noise floor)
 
-    let result = procedure.add_sample(features, 0.05);
+#[test]
+fn test_add_sample_low_centroid_accepted() {
+    // Low centroid is now accepted - user might have a unique kick style
+    let mut procedure = CalibrationProcedure::new_for_test(10);
+    let features = create_test_features(30.0, 0.05);
+
+    let result = procedure.add_sample(features, 0.05, 0.0);
+    assert!(
+        result.is_ok(),
+        "Low centroid should be accepted in user-centric calibration"
+    );
+    assert_eq!(procedure.kick_samples.len(), 1);
+}
+
+#[test]
+fn test_add_sample_invalid_centroid_hardware_glitch() {
+    // Only reject truly invalid frequencies (hardware glitches > 20kHz)
+    let mut procedure = CalibrationProcedure::new_for_test(10);
+    let features = create_test_features(25000.0, 0.05); // > 20kHz = hardware glitch
+
+    let result = procedure.add_sample(features, 0.05, 0.0);
     assert!(result.is_err());
     match result.unwrap_err() {
         CalibrationError::InvalidFeatures { reason } => {
-            assert!(reason.contains("Centroid") && reason.contains("30"));
+            assert!(reason.contains("Invalid frequency"));
         }
         _ => panic!("Expected InvalidFeatures error"),
     }
 }
 
 #[test]
-fn test_add_sample_invalid_centroid_high() {
-    // Use new_for_test which skips noise floor
+fn test_add_sample_zcr_variants_accepted() {
+    // ZCR variants are now accepted - we learn from user's sounds
     let mut procedure = CalibrationProcedure::new_for_test(10);
-    let features = create_test_features(25000.0, 0.05); // Too high
 
-    let result = procedure.add_sample(features, 0.05);
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        CalibrationError::InvalidFeatures { reason } => {
-            assert!(reason.contains("Centroid") && reason.contains("25000"));
-        }
-        _ => panic!("Expected InvalidFeatures error"),
-    }
+    // Low ZCR accepted
+    let low_zcr = create_test_features(1000.0, 0.01);
+    assert!(procedure.add_sample(low_zcr, 0.05, 0.0).is_ok());
+
+    // High ZCR accepted
+    let high_zcr = create_test_features(1000.0, 0.9);
+    assert!(procedure.add_sample(high_zcr, 0.05, 0.0).is_ok());
+
+    assert_eq!(procedure.kick_samples.len(), 2);
 }
 
 #[test]
-fn test_add_sample_invalid_zcr_low() {
-    // Use new_for_test which skips noise floor
+fn test_add_sample_below_noise_floor_rejected() {
+    // Sounds below noise floor should be rejected
     let mut procedure = CalibrationProcedure::new_for_test(10);
-    let features = create_test_features(1000.0, -0.1); // Too low
+    // new_for_test sets noise_floor_threshold to MIN_RMS_THRESHOLD (0.0025)
+    let features = create_test_features(1000.0, 0.05);
 
-    let result = procedure.add_sample(features, 0.05);
+    // RMS 0.001 is below noise floor 0.0025
+    let result = procedure.add_sample(features, 0.001, 0.0);
     assert!(result.is_err());
     match result.unwrap_err() {
         CalibrationError::InvalidFeatures { reason } => {
-            assert!(reason.contains("ZCR") && reason.contains("-0.1"));
+            assert!(reason.contains("too quiet") || reason.contains("noise floor"));
         }
-        _ => panic!("Expected InvalidFeatures error"),
-    }
-}
-
-#[test]
-fn test_add_sample_invalid_zcr_high() {
-    // Use new_for_test which skips noise floor
-    let mut procedure = CalibrationProcedure::new_for_test(10);
-    let features = create_test_features(1000.0, 1.5); // Too high
-
-    let result = procedure.add_sample(features, 0.05);
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        CalibrationError::InvalidFeatures { reason } => {
-            assert!(reason.contains("ZCR") && reason.contains("1.5"));
-        }
-        _ => panic!("Expected InvalidFeatures error"),
+        _ => panic!("Expected InvalidFeatures error for below noise floor"),
     }
 }
 
@@ -103,7 +106,7 @@ fn test_add_sample_confirmation_flow() {
 
     // Add 10 kick samples
     for _ in 0..10 {
-        procedure.add_sample(kick_features, 0.05).unwrap();
+        procedure.add_sample(kick_features, 0.05, 0.2).unwrap();
     }
 
     // Should be waiting for confirmation now
@@ -127,7 +130,7 @@ fn test_add_sample_full_workflow() {
     // Add 10 kick samples
     assert_eq!(procedure.current_sound, CalibrationSound::Kick);
     for _ in 0..10 {
-        procedure.add_sample(kick_features, 0.05).unwrap();
+        procedure.add_sample(kick_features, 0.05, 0.2).unwrap();
     }
 
     // Should be waiting for confirmation
@@ -137,7 +140,7 @@ fn test_add_sample_full_workflow() {
 
     // Add 10 snare samples
     for _ in 0..10 {
-        procedure.add_sample(snare_features, 0.05).unwrap();
+        procedure.add_sample(snare_features, 0.05, 0.2).unwrap();
     }
 
     // Should be waiting for confirmation
@@ -147,7 +150,7 @@ fn test_add_sample_full_workflow() {
 
     // Add 10 hi-hat samples
     for _ in 0..10 {
-        procedure.add_sample(hihat_features, 0.05).unwrap();
+        procedure.add_sample(hihat_features, 0.05, 0.2).unwrap();
     }
 
     // Should be waiting for final confirmation
@@ -165,12 +168,12 @@ fn test_add_sample_reject_when_waiting() {
 
     // Fill up kick samples
     for _ in 0..10 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     // Now waiting for confirmation - try to add another sample
     assert!(procedure.is_waiting_for_confirmation());
-    let result = procedure.add_sample(features, 0.05);
+    let result = procedure.add_sample(features, 0.05, 0.0);
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -191,7 +194,7 @@ fn test_get_progress() {
 
     // Add 5 samples
     for _ in 0..5 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     let progress = procedure.get_progress();
@@ -210,21 +213,21 @@ fn test_is_complete() {
 
     // Add kick samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(kick_features, 0.05).unwrap();
+        procedure.add_sample(kick_features, 0.05, 0.2).unwrap();
     }
     assert!(!procedure.is_complete());
     procedure.confirm_and_advance().unwrap();
 
     // Add snare samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(snare_features, 0.05).unwrap();
+        procedure.add_sample(snare_features, 0.05, 0.2).unwrap();
     }
     assert!(!procedure.is_complete());
     procedure.confirm_and_advance().unwrap();
 
     // Add hihat samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(hihat_features, 0.05).unwrap();
+        procedure.add_sample(hihat_features, 0.05, 0.2).unwrap();
     }
     procedure.confirm_and_advance().unwrap();
     assert!(procedure.is_complete());
@@ -239,19 +242,19 @@ fn test_finalize_success() {
 
     // Add 10 kick samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(kick_features, 0.05).unwrap();
+        procedure.add_sample(kick_features, 0.05, 0.2).unwrap();
     }
     procedure.confirm_and_advance().unwrap();
 
     // Add 10 snare samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(snare_features, 0.05).unwrap();
+        procedure.add_sample(snare_features, 0.05, 0.2).unwrap();
     }
     procedure.confirm_and_advance().unwrap();
 
     // Add 10 hi-hat samples and confirm
     for _ in 0..10 {
-        procedure.add_sample(hihat_features, 0.05).unwrap();
+        procedure.add_sample(hihat_features, 0.05, 0.2).unwrap();
     }
     procedure.confirm_and_advance().unwrap();
 
@@ -274,7 +277,7 @@ fn test_finalize_incomplete() {
 
     // Add only 5 kick samples
     for _ in 0..5 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     let result = procedure.finalize();
@@ -292,7 +295,7 @@ fn test_reset() {
 
     // Add some samples
     for _ in 0..5 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     // Reset
@@ -314,7 +317,7 @@ fn test_custom_sample_count() {
 
     // Add 5 kick samples
     for _ in 0..5 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     // Should be waiting for confirmation
@@ -336,7 +339,7 @@ fn test_retry_current_sound() {
 
     // Add 5 kick samples
     for _ in 0..5 {
-        procedure.add_sample(features, 0.05).unwrap();
+        procedure.add_sample(features, 0.05, 0.0).unwrap();
     }
 
     // Should be waiting for confirmation
@@ -352,57 +355,28 @@ fn test_retry_current_sound() {
     assert_eq!(procedure.current_sound, CalibrationSound::Kick);
 
     // Can add samples again
-    procedure.add_sample(features, 0.05).unwrap();
+    procedure.add_sample(features, 0.05, 0.0).unwrap();
     assert_eq!(procedure.kick_samples.len(), 1);
 }
 
-#[test]
-fn test_backoff_relaxes_and_resets_on_success() {
-    let mut procedure = CalibrationProcedure::new_for_test(3);
-    let features = create_test_features(1000.0, 0.05);
-    let base_gate = procedure
-        .backoff
-        .gate_state(CalibrationSound::Kick)
-        .unwrap()
-        .rms_gate;
-
-    for _ in 0..BACKOFF_TRIGGER {
-        assert!(procedure.add_sample(features, base_gate * 0.5).is_err());
-    }
-
-    let state = procedure
-        .backoff
-        .gate_state(CalibrationSound::Kick)
-        .unwrap();
-    assert!(state.step >= 1);
-    assert!(state.rms_gate < base_gate);
-
-    procedure.add_sample(features, base_gate * 2.0).unwrap();
-    let state = procedure
-        .backoff
-        .gate_state(CalibrationSound::Kick)
-        .unwrap();
-    assert_eq!(state.step, 0);
-    assert_eq!(state.rejects, 0);
-    assert!((state.rms_gate - base_gate).abs() < 1e-6);
-}
+// NOTE: Adaptive backoff tests removed - user-centric calibration accepts all sounds
+// above noise floor. The backoff module is kept for potential future use but not
+// actively used in sample validation.
 
 #[test]
-fn test_backoff_respects_rms_floor() {
+fn test_noise_floor_rejection_threshold() {
+    // Test that we properly reject sounds below noise floor
     let mut procedure = CalibrationProcedure::new_for_test(3);
     let features = create_test_features(1000.0, 0.05);
-    let floor = procedure.backoff.gate_floor();
 
-    for _ in 0..(BACKOFF_TRIGGER as usize * (MAX_BACKOFF_STEPS as usize + 2)) {
-        let _ = procedure.add_sample(features, 0.0001);
-    }
+    // new_for_test sets noise_floor_threshold to MIN_RMS_THRESHOLD (0.0025)
+    // Sounds above threshold should be accepted
+    assert!(procedure.add_sample(features, 0.01, 0.2).is_ok());
+    assert_eq!(procedure.kick_samples.len(), 1);
 
-    let state = procedure
-        .backoff
-        .gate_state(CalibrationSound::Kick)
-        .unwrap();
-    assert!(state.rms_gate >= floor - 1e-6);
-    assert_eq!(state.step, MAX_BACKOFF_STEPS);
+    // Sounds below threshold should be rejected (0.001 < 0.0025)
+    assert!(procedure.add_sample(features, 0.001, 0.1).is_err());
+    assert_eq!(procedure.kick_samples.len(), 1); // Still 1, rejected sample not added
 }
 
 #[test]
@@ -410,8 +384,9 @@ fn test_manual_accept_uses_last_candidate() {
     let mut procedure = CalibrationProcedure::new_for_test(2);
     let features = create_test_features(1000.0, 0.05);
 
-    // Store candidate via RMS gate rejection
-    let result = procedure.add_sample(features, 0.001);
+    // Store candidate via noise floor rejection (RMS below threshold)
+    // new_for_test sets noise_floor_threshold to MIN_RMS_THRESHOLD (0.0025)
+    let result = procedure.add_sample(features, 0.001, 0.0);
     assert!(result.is_err());
 
     let progress = procedure.manual_accept_last_candidate().unwrap();
@@ -423,7 +398,7 @@ fn test_manual_accept_uses_last_candidate() {
     assert!(procedure.manual_accept_last_candidate().is_err());
 
     // Accept final sample to reach confirmation state
-    procedure.add_sample(features, 1.0).unwrap();
+    procedure.add_sample(features, 1.0, 1.0).unwrap();
     assert!(procedure.is_waiting_for_confirmation());
 }
 
@@ -442,7 +417,7 @@ fn test_manual_accept_errors_without_candidate_or_when_complete() {
     }
 
     // Move to waiting state then manual accept should fail
-    procedure.add_sample(features, 1.0).unwrap();
+    procedure.add_sample(features, 1.0, 1.0).unwrap();
     assert!(procedure.is_waiting_for_confirmation());
     let err = procedure.manual_accept_last_candidate().unwrap_err();
     match err {

@@ -1,11 +1,10 @@
 use crate::analysis::features::Features;
 use crate::calibration::progress::CalibrationSound;
 
-const RMS_GATE_START_MULTIPLIER: f64 = 1.6;
-const RMS_GATE_FLOOR_MULTIPLIER: f64 = 1.2;
-pub(super) const BACKOFF_TRIGGER: u8 = 3;
-pub(super) const MAX_BACKOFF_STEPS: u8 = 3;
-const FEATURE_BACKOFF_PCT: f32 = 0.12;
+const RMS_GATE_START_MULTIPLIER: f64 = 1.1;
+const RMS_GATE_FLOOR_MULTIPLIER: f64 = 0.6;
+const MAX_BACKOFF_STEPS: u8 = 8;
+const FEATURE_BACKOFF_PCT: f32 = 0.2;
 
 /// Sound-indexed centroid gates (min, max) before backoff
 const BASE_CENTROID_GATES: [(f32, f32); 3] = [
@@ -68,6 +67,9 @@ impl AdaptiveBackoff {
         self.reset_for_sound(sound);
     }
 
+    /// NOTE: User-centric calibration no longer uses feature gates.
+    /// Kept for potential future use in advanced mode.
+    #[allow(dead_code)]
     pub(super) fn passes_feature_gates(
         &self,
         sound: CalibrationSound,
@@ -87,16 +89,10 @@ impl AdaptiveBackoff {
         Self::gate_index(sound).map(|idx| self.gates[idx].rms_gate)
     }
 
-    #[cfg(test)]
-    pub(super) fn gate_floor(&self) -> f64 {
-        Self::gate_floor_value(self.noise_floor_threshold)
-    }
-
     pub(super) fn rejects_for(&self, sound: CalibrationSound) -> Option<u8> {
         Self::gate_index(sound).map(|idx| self.gates[idx].rejects)
     }
 
-    #[cfg(test)]
     pub(super) fn gate_state(&self, sound: CalibrationSound) -> Option<&AdaptiveGateState> {
         Self::gate_index(sound).map(|idx| &self.gates[idx])
     }
@@ -111,7 +107,8 @@ impl AdaptiveBackoff {
     }
 
     fn gate_floor_value(noise_floor_threshold: Option<f64>) -> f64 {
-        noise_floor_threshold.unwrap_or(super::MIN_RMS_THRESHOLD) * RMS_GATE_FLOOR_MULTIPLIER
+        let noise_floor = noise_floor_threshold.unwrap_or(super::MIN_RMS_THRESHOLD);
+        (noise_floor * RMS_GATE_FLOOR_MULTIPLIER).max(super::MIN_RMS_THRESHOLD * 0.8)
     }
 
     fn starting_rms_gate(noise_floor_threshold: Option<f64>) -> f64 {
@@ -138,14 +135,14 @@ impl AdaptiveBackoff {
         ]
     }
 
-    #[allow(clippy::manual_is_multiple_of)]
     fn apply_backoff(&mut self, sound: CalibrationSound, reason: &str) {
         if let Some(idx) = Self::gate_index(sound) {
             let floor = Self::gate_floor_value(self.noise_floor_threshold);
             let state = &mut self.gates[idx];
-            if state.rejects % BACKOFF_TRIGGER == 0 && state.step < MAX_BACKOFF_STEPS {
+            // Apply backoff on every reject (BACKOFF_TRIGGER=1), up to MAX_BACKOFF_STEPS
+            if state.step < MAX_BACKOFF_STEPS {
                 state.step += 1;
-                state.rms_gate = (state.rms_gate * 0.85).max(floor);
+                state.rms_gate = (state.rms_gate * 0.75).max(floor);
                 state.centroid_min = (state.centroid_min * (1.0 - FEATURE_BACKOFF_PCT)).max(50.0);
                 state.centroid_max =
                     (state.centroid_max * (1.0 + FEATURE_BACKOFF_PCT)).min(20_000.0);

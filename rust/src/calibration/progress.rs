@@ -89,6 +89,34 @@ pub struct CalibrationProgress {
     pub guidance: Option<CalibrationGuidance>,
     /// Whether a manual accept candidate is available for promotion
     pub manual_accept_available: bool,
+    /// Debug info (feature gates and levels) for instrumentation builds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug: Option<CalibrationProgressDebug>,
+}
+
+/// Debug payload to help users see what the engine expects
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CalibrationProgressDebug {
+    /// Incrementing sequence to distinguish updates
+    pub seq: u64,
+    /// Current RMS gate for the active sound (if any)
+    pub rms_gate: Option<f64>,
+    /// Current centroid gate min/max
+    pub centroid_min: f32,
+    pub centroid_max: f32,
+    /// Current ZCR gate min/max
+    pub zcr_min: f32,
+    pub zcr_max: f32,
+    /// Consecutive misses for the active sound
+    pub misses: u8,
+    /// Last evaluated centroid (if available)
+    pub last_centroid: Option<f32>,
+    /// Last evaluated ZCR (if available)
+    pub last_zcr: Option<f32>,
+    /// Last evaluated RMS (if available)
+    pub last_rms: Option<f64>,
+    /// Last evaluated max amplitude (if available)
+    pub last_max_amp: Option<f32>,
 }
 
 impl CalibrationProgress {
@@ -112,6 +140,7 @@ impl CalibrationProgress {
             waiting_for_confirmation,
             guidance: None,
             manual_accept_available: false,
+            debug: None,
         }
     }
 
@@ -124,6 +153,12 @@ impl CalibrationProgress {
     /// Update manual accept availability flag
     pub fn with_manual_accept(mut self, available: bool) -> Self {
         self.manual_accept_available = available;
+        self
+    }
+
+    /// Attach debug payload (instrumentation only)
+    pub fn with_debug(mut self, debug: Option<CalibrationProgressDebug>) -> Self {
+        self.debug = debug;
         self
     }
 

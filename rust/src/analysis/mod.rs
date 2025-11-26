@@ -162,8 +162,15 @@ pub fn spawn_analysis_thread(
             Some(log_every_n_buffers)
         };
         let mut last_noise_floor_samples: usize = 0;
-        let mut last_manual_available = false;
         let mut guidance_limiter = GuidanceRateLimiter::new(Duration::from_secs(5));
+        let mut last_progress_heartbeat = Instant::now();
+        let mut debug_emit_counter: u64 = 0;
+        let mut last_debug_probe = Instant::now();
+        // Level-crossing detector state for calibration mode
+        // This captures samples when RMS crosses from below to above the detection threshold
+        let mut prev_rms_for_crossing: f64 = 0.0;
+        let mut last_level_crossing_capture = Instant::now();
+        const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150; // Minimum time between captures
 
         loop {
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
@@ -292,7 +299,7 @@ pub fn spawn_analysis_thread(
                             .as_ref()
                             .and_then(|p| p.noise_floor_threshold())
                             .unwrap_or(0.02)
-                            * 1.1,
+                            * 1.05,
                     )
                 } else {
                     (false, 0.02)
@@ -302,15 +309,138 @@ pub fn spawn_analysis_thread(
                 && guidance_limiter.has_active()
                 && rms < quiet_clear_gate
             {
-                if let Ok(procedure_guard) = calibration_procedure.try_lock() {
-                    if let Some(ref procedure) = *procedure_guard {
+                if let Ok(mut procedure_guard) = calibration_procedure.try_lock() {
+                    if let Some(ref mut procedure) = *procedure_guard {
                         if let Some(ref tx) = calibration_progress_tx {
-                            let _ = tx.send(procedure.get_progress_with_guidance(None));
+                            let _ =
+                                tx.send(procedure.get_progress_with_guidance_and_features(
+                                    None, None, None, None,
+                                ));
                         }
                     }
                 }
                 guidance_limiter.clear();
             }
+
+            // Push a light-weight debug probe so UI can see live feature readings even when
+            // onsets are not firing (e.g., user making sounds that don't cross the gate).
+            // Update at ~30fps for smooth visual feedback
+            if calibration_active_snapshot
+                && last_debug_probe.elapsed() >= Duration::from_millis(33)
+            {
+                let debug_window = if accumulator.len() >= 1024 {
+                    &accumulator[accumulator.len() - 1024..]
+                } else {
+                    &accumulator[..]
+                };
+                let debug_features = feature_extractor.extract(debug_window);
+                let debug_max_amp = debug_window
+                    .iter()
+                    .map(|sample| sample.abs())
+                    .fold(0.0f32, f32::max);
+                if let Ok(mut procedure_guard) = calibration_procedure.try_lock() {
+                    if let Some(ref mut procedure) = *procedure_guard {
+                        procedure.update_last_features_for_debug(
+                            &debug_features,
+                            rms,
+                            debug_max_amp,
+                        );
+                    }
+                }
+                last_debug_probe = Instant::now();
+            }
+
+            // Periodic heartbeat to keep UI updated with last-known debug values even if no onsets
+            // Update at ~10fps for responsive UI feedback
+            if calibration_active_snapshot
+                && last_progress_heartbeat.elapsed() >= Duration::from_millis(100)
+            {
+                if let Ok(mut procedure_guard) = calibration_procedure.try_lock() {
+                    if let Some(ref mut procedure) = *procedure_guard {
+                        let progress = procedure
+                            .get_progress_with_guidance_and_features(None, None, None, None);
+                        debug_emit_counter = debug_emit_counter.wrapping_add(1);
+                        log::debug!(
+                            "[AnalysisThread] Progress heartbeat [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, misses {}",
+                            debug_emit_counter,
+                            progress.debug.as_ref().and_then(|d| d.rms_gate),
+                            progress.debug.as_ref().and_then(|d| d.last_rms),
+                            progress.debug.as_ref().and_then(|d| d.last_centroid),
+                            progress.debug.as_ref().and_then(|d| d.last_zcr),
+                            progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
+                        );
+                        if let Some(ref tx) = calibration_progress_tx {
+                            let _ = tx.send(progress);
+                        }
+                    }
+                }
+                last_progress_heartbeat = Instant::now();
+            }
+
+            // ====== LEVEL-CROSSING DETECTOR FOR CALIBRATION ======
+            // Simpler detection: capture sample when RMS crosses from below to above threshold
+            // This runs IN ADDITION to onset detection, catching sounds that spectral flux misses
+            if calibration_active_snapshot
+                && accumulator.len() >= 1024
+                && last_level_crossing_capture.elapsed()
+                    >= Duration::from_millis(LEVEL_CROSSING_DEBOUNCE_MS)
+            {
+                let detection_threshold = quiet_clear_gate * 2.0; // 2x noise floor
+                let crossed_threshold =
+                    prev_rms_for_crossing < detection_threshold && rms >= detection_threshold;
+
+                if crossed_threshold {
+                    log::info!(
+                        "[AnalysisThread] Level crossing detected: prev_rms {:.4} -> rms {:.4} (threshold {:.4})",
+                        prev_rms_for_crossing,
+                        rms,
+                        detection_threshold
+                    );
+
+                    // Extract features from the most recent 1024 samples
+                    let crossing_window = &accumulator[accumulator.len() - 1024..];
+                    let crossing_rms = rms;
+                    let crossing_max_amp = crossing_window
+                        .iter()
+                        .map(|sample| sample.abs())
+                        .fold(0.0f32, f32::max);
+                    let crossing_features = feature_extractor.extract(crossing_window);
+
+                    // Try to add sample via calibration procedure
+                    if let Ok(mut procedure_guard) = calibration_procedure.lock() {
+                        if let Some(ref mut procedure) = *procedure_guard {
+                            match procedure.add_sample(
+                                crossing_features,
+                                crossing_rms,
+                                crossing_max_amp,
+                            ) {
+                                Ok(()) => {
+                                    log::info!("[AnalysisThread] Level-crossing sample accepted!");
+                                    let progress = procedure
+                                        .get_progress_with_guidance_and_features(
+                                            None,
+                                            Some(&crossing_features),
+                                            Some(crossing_rms),
+                                            Some(crossing_max_amp),
+                                        );
+                                    if let Some(ref tx) = calibration_progress_tx {
+                                        let _ = tx.send(progress);
+                                    }
+                                    guidance_limiter.clear();
+                                }
+                                Err(err) => {
+                                    log::debug!(
+                                        "[AnalysisThread] Level-crossing sample rejected: {:?}",
+                                        err
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    last_level_crossing_capture = Instant::now();
+                }
+            }
+            prev_rms_for_crossing = rms;
 
             // Process accumulated buffer through onset detection
             let onsets = onset_detector.process(&accumulator);
@@ -327,19 +457,7 @@ pub fn spawn_analysis_thread(
                 // We need to find it within the current accumulator
                 let onset_idx = (onset_timestamp % accumulator.len() as u64) as usize;
 
-                log::info!(
-                    "[AnalysisThread] Onset at timestamp={}, accumulator_len={}, onset_idx={}",
-                    onset_timestamp,
-                    accumulator.len(),
-                    onset_idx
-                );
-
                 if onset_idx + 1024 <= accumulator.len() {
-                    log::info!(
-                        "[AnalysisThread] Extracting onset window from idx {} to {}",
-                        onset_idx,
-                        onset_idx + 1024
-                    );
                     let onset_window = &accumulator[onset_idx..onset_idx + 1024];
                     let onset_rms = {
                         let sum_squares: f64 = onset_window
@@ -349,44 +467,60 @@ pub fn spawn_analysis_thread(
                         (sum_squares / onset_window.len() as f64).sqrt()
                     };
 
-                    // Extract DSP features (always needed for both modes)
-                    let features = feature_extractor.extract(onset_window);
                     let max_amplitude = onset_window
                         .iter()
                         .map(|sample| sample.abs())
                         .fold(0.0f32, f32::max);
+                    // Extract DSP features (always needed for both modes)
+                    let features = feature_extractor.extract(onset_window);
+                    log::debug!(
+                        "[AnalysisThread] Onset features: centroid {:.1} Hz, zcr {:.3}, rms {:.4}, max_amp {:.3}",
+                        features.centroid,
+                        features.zcr,
+                        onset_rms,
+                        max_amplitude
+                    );
 
                     if calibration_active_snapshot {
                         // ====== CALIBRATION MODE ======
-                        log::info!("[AnalysisThread] CALIBRATION MODE: Processing onset");
                         // Forward features to calibration procedure
                         if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                             if let Some(ref mut procedure) = *procedure_guard {
                                 let quiet_gate = quiet_clear_gate;
-                                match procedure.add_sample(features, onset_rms) {
+                                match procedure.add_sample(features, onset_rms, max_amplitude) {
                                     Ok(()) => {
-                                        // Sample accepted - broadcast progress
-                                        let progress = procedure.get_progress();
-                                        let manual_available = progress.manual_accept_available;
-                                        log::info!(
-                                            "[AnalysisThread] Sample accepted: {:?}",
-                                            progress
+                                        // Sample accepted - broadcast progress with debug snapshot
+                                        let progress = procedure
+                                            .get_progress_with_guidance_and_features(
+                                                None,
+                                                Some(&features),
+                                                Some(onset_rms),
+                                                Some(max_amplitude),
+                                            );
+                                        debug_emit_counter = debug_emit_counter.wrapping_add(1);
+                                        log::debug!(
+                                            "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
+                                            debug_emit_counter,
+                                            progress.debug.as_ref().and_then(|d| d.rms_gate),
+                                            progress.debug.as_ref().and_then(|d| d.last_rms),
+                                            progress.debug.as_ref().and_then(|d| d.last_centroid),
+                                            progress.debug.as_ref().and_then(|d| d.last_zcr),
+                                            progress.debug.as_ref().and_then(|d| d.last_max_amp),
+                                            progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
                                         );
-
                                         if let Some(ref tx) = calibration_progress_tx {
                                             let _ = tx.send(progress);
                                         }
-                                        last_manual_available = manual_available;
                                         guidance_limiter.clear();
                                     }
                                     Err(err) => {
-                                        // Sample rejected (validation error)
-                                        log::warn!("[AnalysisThread] Sample rejected: {:?}", err);
-                                        let manual_available = procedure.manual_accept_available();
-                                        let manual_changed =
-                                            manual_available != last_manual_available;
-                                        last_manual_available = manual_available;
-
+                                        // Sample rejected (validation error) - keep warning to a minimum
+                                        log::debug!(
+                                            "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?})",
+                                            err,
+                                            procedure.rejects_for_current_sound(),
+                                            procedure.rms_gate_for_current()
+                                        );
                                         let reason = if onset_rms < quiet_gate {
                                             CalibrationGuidanceReason::TooQuiet
                                         } else if max_amplitude >= 0.98 {
@@ -407,12 +541,26 @@ pub fn spawn_analysis_thread(
                                             });
                                         }
 
-                                        if manual_changed || guidance_payload.is_some() {
-                                            let progress = procedure
-                                                .get_progress_with_guidance(guidance_payload);
-                                            if let Some(ref tx) = calibration_progress_tx {
-                                                let _ = tx.send(progress);
-                                            }
+                                        let progress = procedure
+                                            .get_progress_with_guidance_and_features(
+                                                guidance_payload,
+                                                Some(&features),
+                                                Some(onset_rms),
+                                                Some(max_amplitude),
+                                            );
+                                        debug_emit_counter = debug_emit_counter.wrapping_add(1);
+                                        log::debug!(
+                                            "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
+                                            debug_emit_counter,
+                                            progress.debug.as_ref().and_then(|d| d.rms_gate),
+                                            progress.debug.as_ref().and_then(|d| d.last_rms),
+                                            progress.debug.as_ref().and_then(|d| d.last_centroid),
+                                            progress.debug.as_ref().and_then(|d| d.last_zcr),
+                                            progress.debug.as_ref().and_then(|d| d.last_max_amp),
+                                            progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
+                                        );
+                                        if let Some(ref tx) = calibration_progress_tx {
+                                            let _ = tx.send(progress);
                                         }
                                     }
                                 }

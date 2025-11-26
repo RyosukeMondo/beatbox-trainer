@@ -33,6 +33,11 @@ impl CalibrationProcedure {
             waiting_for_confirmation: false,
             backoff: AdaptiveBackoff::new(None),
             last_candidates: CandidateBuffer::default(),
+            last_centroid: None,
+            last_zcr: None,
+            last_rms: None,
+            last_max_amp: None,
+            debug_seq: 0,
         }
     }
 
