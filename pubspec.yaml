@@ -75,7 +75,7 @@ dev_dependencies:
   # Mocking library for unit tests
   mocktail: ^1.0.0
   freezed: ^3.2.3
-  build_runner: ^2.10.2
+  build_runner: ^2.7.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

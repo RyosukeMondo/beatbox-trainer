@@ -1072,6 +1072,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationProgressDebug dco_decode_box_autoadd_calibration_progress_debug(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_calibration_progress_debug(raw);
+  }
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   ) {
@@ -1081,6 +1089,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   double dco_decode_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
   }
@@ -1166,8 +1180,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CalibrationProgress dco_decode_calibration_progress(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return CalibrationProgress(
       currentSound: dco_decode_calibration_sound(arr[0]),
       samplesCollected: dco_decode_u_8(arr[1]),
@@ -1175,6 +1189,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       waitingForConfirmation: dco_decode_bool(arr[3]),
       guidance: dco_decode_opt_box_autoadd_calibration_guidance(arr[4]),
       manualAcceptAvailable: dco_decode_bool(arr[5]),
+      debug: dco_decode_opt_box_autoadd_calibration_progress_debug(arr[6]),
+    );
+  }
+
+  @protected
+  CalibrationProgressDebug dco_decode_calibration_progress_debug(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return CalibrationProgressDebug(
+      seq: dco_decode_u_64(arr[0]),
+      rmsGate: dco_decode_opt_box_autoadd_f_64(arr[1]),
+      centroidMin: dco_decode_f_32(arr[2]),
+      centroidMax: dco_decode_f_32(arr[3]),
+      zcrMin: dco_decode_f_32(arr[4]),
+      zcrMax: dco_decode_f_32(arr[5]),
+      misses: dco_decode_u_8(arr[6]),
+      lastCentroid: dco_decode_opt_box_autoadd_f_32(arr[7]),
+      lastZcr: dco_decode_opt_box_autoadd_f_32(arr[8]),
+      lastRms: dco_decode_opt_box_autoadd_f_64(arr[9]),
+      lastMaxAmp: dco_decode_opt_box_autoadd_f_32(arr[10]),
     );
   }
 
@@ -1416,6 +1452,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationProgressDebug?
+  dco_decode_opt_box_autoadd_calibration_progress_debug(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_calibration_progress_debug(raw);
+  }
+
+  @protected
   ClassificationResult? dco_decode_opt_box_autoadd_classification_result(
     dynamic raw,
   ) {
@@ -1429,6 +1474,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double? dco_decode_opt_box_autoadd_f_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_f_32(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
   }
 
   @protected
@@ -1750,6 +1801,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationProgressDebug sse_decode_box_autoadd_calibration_progress_debug(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_calibration_progress_debug(deserializer));
+  }
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   ) {
@@ -1761,6 +1820,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_box_autoadd_f_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_32(deserializer));
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
   }
 
   @protected
@@ -1860,6 +1925,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       deserializer,
     );
     var var_manualAcceptAvailable = sse_decode_bool(deserializer);
+    var var_debug = sse_decode_opt_box_autoadd_calibration_progress_debug(
+      deserializer,
+    );
     return CalibrationProgress(
       currentSound: var_currentSound,
       samplesCollected: var_samplesCollected,
@@ -1867,6 +1935,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       waitingForConfirmation: var_waitingForConfirmation,
       guidance: var_guidance,
       manualAcceptAvailable: var_manualAcceptAvailable,
+      debug: var_debug,
+    );
+  }
+
+  @protected
+  CalibrationProgressDebug sse_decode_calibration_progress_debug(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_seq = sse_decode_u_64(deserializer);
+    var var_rmsGate = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_centroidMin = sse_decode_f_32(deserializer);
+    var var_centroidMax = sse_decode_f_32(deserializer);
+    var var_zcrMin = sse_decode_f_32(deserializer);
+    var var_zcrMax = sse_decode_f_32(deserializer);
+    var var_misses = sse_decode_u_8(deserializer);
+    var var_lastCentroid = sse_decode_opt_box_autoadd_f_32(deserializer);
+    var var_lastZcr = sse_decode_opt_box_autoadd_f_32(deserializer);
+    var var_lastRms = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_lastMaxAmp = sse_decode_opt_box_autoadd_f_32(deserializer);
+    return CalibrationProgressDebug(
+      seq: var_seq,
+      rmsGate: var_rmsGate,
+      centroidMin: var_centroidMin,
+      centroidMax: var_centroidMax,
+      zcrMin: var_zcrMin,
+      zcrMax: var_zcrMax,
+      misses: var_misses,
+      lastCentroid: var_lastCentroid,
+      lastZcr: var_lastZcr,
+      lastRms: var_lastRms,
+      lastMaxAmp: var_lastMaxAmp,
     );
   }
 
@@ -2184,6 +2284,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationProgressDebug?
+  sse_decode_opt_box_autoadd_calibration_progress_debug(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_calibration_progress_debug(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ClassificationResult? sse_decode_opt_box_autoadd_classification_result(
     SseDeserializer deserializer,
   ) {
@@ -2202,6 +2316,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_f_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
     } else {
       return null;
     }
@@ -2593,6 +2718,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_calibration_progress_debug(
+    CalibrationProgressDebug self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_calibration_progress_debug(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -2605,6 +2739,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
   }
 
   @protected
@@ -2701,6 +2841,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.waitingForConfirmation, serializer);
     sse_encode_opt_box_autoadd_calibration_guidance(self.guidance, serializer);
     sse_encode_bool(self.manualAcceptAvailable, serializer);
+    sse_encode_opt_box_autoadd_calibration_progress_debug(
+      self.debug,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_calibration_progress_debug(
+    CalibrationProgressDebug self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.seq, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.rmsGate, serializer);
+    sse_encode_f_32(self.centroidMin, serializer);
+    sse_encode_f_32(self.centroidMax, serializer);
+    sse_encode_f_32(self.zcrMin, serializer);
+    sse_encode_f_32(self.zcrMax, serializer);
+    sse_encode_u_8(self.misses, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.lastCentroid, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.lastZcr, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.lastRms, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.lastMaxAmp, serializer);
   }
 
   @protected
@@ -2982,6 +3145,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_calibration_progress_debug(
+    CalibrationProgressDebug? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_calibration_progress_debug(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_classification_result(
     ClassificationResult? self,
     SseSerializer serializer,
@@ -3001,6 +3177,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_f_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
     }
   }
 

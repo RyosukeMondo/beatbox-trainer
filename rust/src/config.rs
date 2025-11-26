@@ -35,7 +35,9 @@ pub struct OnsetDetectionConfig {
 impl Default for OnsetDetectionConfig {
     fn default() -> Self {
         Self {
-            threshold_offset: 0.01,
+            // Increased from 0.01 to 0.15 to avoid triggering on background noise
+            // This is added to the median spectral flux for adaptive thresholding
+            threshold_offset: 0.15,
             window_size: 256,
             hop_size: 64,
             median_window_halfsize: 50,
@@ -160,7 +162,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = AppConfig::default();
-        assert_eq!(config.onset_detection.threshold_offset, 0.01);
+        assert_eq!(config.onset_detection.threshold_offset, 0.15);
         assert_eq!(config.onset_detection.window_size, 256);
         assert_eq!(config.calibration.samples_per_sound, 10);
         assert_eq!(config.audio.buffer_pool_size, 64);

@@ -91,6 +91,7 @@ cfg_if::cfg_if! {
                     config.onset_detection.clone(),
                     config.calibration.log_every_n_buffers,
                     Some(Arc::clone(&running)),
+                    None, // audio_metrics_tx - not needed for fixture tests
                 );
 
                 let feeder_handle = spawn_feeder_thread(

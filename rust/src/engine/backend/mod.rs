@@ -6,6 +6,7 @@ use std::time::Instant;
 use tokio::sync::broadcast;
 
 use crate::analysis::ClassificationResult;
+use crate::api::AudioMetrics;
 use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationState};
 use crate::error::AudioError;
 
@@ -19,6 +20,7 @@ pub struct EngineStartContext {
     pub calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
     pub calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>,
     pub classification_tx: broadcast::Sender<ClassificationResult>,
+    pub audio_metrics_tx: Option<broadcast::Sender<AudioMetrics>>,
 }
 
 /// Trait implemented by platform-specific audio backends.
@@ -52,6 +54,11 @@ impl TimeSource for SystemTimeSource {
 mod oboe;
 #[cfg(target_os = "android")]
 pub use oboe::OboeBackend;
+
+#[cfg(not(target_os = "android"))]
+mod cpal;
+#[cfg(not(target_os = "android"))]
+pub use cpal::CpalBackend;
 
 mod desktop_stub;
 pub use desktop_stub::{DesktopStubBackend, StubTimeSource};

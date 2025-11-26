@@ -1242,6 +1242,10 @@ impl SseDecode for crate::calibration::progress::CalibrationProgress {
         let mut var_guidance =
             <Option<crate::calibration::progress::CalibrationGuidance>>::sse_decode(deserializer);
         let mut var_manualAcceptAvailable = <bool>::sse_decode(deserializer);
+        let mut var_debug =
+            <Option<crate::calibration::progress::CalibrationProgressDebug>>::sse_decode(
+                deserializer,
+            );
         return crate::calibration::progress::CalibrationProgress {
             current_sound: var_currentSound,
             samples_collected: var_samplesCollected,
@@ -1249,6 +1253,37 @@ impl SseDecode for crate::calibration::progress::CalibrationProgress {
             waiting_for_confirmation: var_waitingForConfirmation,
             guidance: var_guidance,
             manual_accept_available: var_manualAcceptAvailable,
+            debug: var_debug,
+        };
+    }
+}
+
+impl SseDecode for crate::calibration::progress::CalibrationProgressDebug {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_seq = <u64>::sse_decode(deserializer);
+        let mut var_rmsGate = <Option<f64>>::sse_decode(deserializer);
+        let mut var_centroidMin = <f32>::sse_decode(deserializer);
+        let mut var_centroidMax = <f32>::sse_decode(deserializer);
+        let mut var_zcrMin = <f32>::sse_decode(deserializer);
+        let mut var_zcrMax = <f32>::sse_decode(deserializer);
+        let mut var_misses = <u8>::sse_decode(deserializer);
+        let mut var_lastCentroid = <Option<f32>>::sse_decode(deserializer);
+        let mut var_lastZcr = <Option<f32>>::sse_decode(deserializer);
+        let mut var_lastRms = <Option<f64>>::sse_decode(deserializer);
+        let mut var_lastMaxAmp = <Option<f32>>::sse_decode(deserializer);
+        return crate::calibration::progress::CalibrationProgressDebug {
+            seq: var_seq,
+            rms_gate: var_rmsGate,
+            centroid_min: var_centroidMin,
+            centroid_max: var_centroidMax,
+            zcr_min: var_zcrMin,
+            zcr_max: var_zcrMax,
+            misses: var_misses,
+            last_centroid: var_lastCentroid,
+            last_zcr: var_lastZcr,
+            last_rms: var_lastRms,
+            last_max_amp: var_lastMaxAmp,
         };
     }
 }
@@ -1628,6 +1663,19 @@ impl SseDecode for Option<crate::calibration::progress::CalibrationGuidance> {
     }
 }
 
+impl SseDecode for Option<crate::calibration::progress::CalibrationProgressDebug> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <crate::calibration::progress::CalibrationProgressDebug>::sse_decode(deserializer),
+            );
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::analysis::ClassificationResult> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1646,6 +1694,17 @@ impl SseDecode for Option<f32> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<f32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<f64>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -2125,6 +2184,7 @@ impl flutter_rust_bridge::IntoDart for crate::calibration::progress::Calibration
             self.waiting_for_confirmation.into_into_dart().into_dart(),
             self.guidance.into_into_dart().into_dart(),
             self.manual_accept_available.into_into_dart().into_dart(),
+            self.debug.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2137,6 +2197,36 @@ impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::Calibration
     for crate::calibration::progress::CalibrationProgress
 {
     fn into_into_dart(self) -> crate::calibration::progress::CalibrationProgress {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::calibration::progress::CalibrationProgressDebug {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.seq.into_into_dart().into_dart(),
+            self.rms_gate.into_into_dart().into_dart(),
+            self.centroid_min.into_into_dart().into_dart(),
+            self.centroid_max.into_into_dart().into_dart(),
+            self.zcr_min.into_into_dart().into_dart(),
+            self.zcr_max.into_into_dart().into_dart(),
+            self.misses.into_into_dart().into_dart(),
+            self.last_centroid.into_into_dart().into_dart(),
+            self.last_zcr.into_into_dart().into_dart(),
+            self.last_rms.into_into_dart().into_dart(),
+            self.last_max_amp.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::calibration::progress::CalibrationProgressDebug
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::CalibrationProgressDebug>
+    for crate::calibration::progress::CalibrationProgressDebug
+{
+    fn into_into_dart(self) -> crate::calibration::progress::CalibrationProgressDebug {
         self
     }
 }
@@ -2879,6 +2969,26 @@ impl SseEncode for crate::calibration::progress::CalibrationProgress {
             serializer,
         );
         <bool>::sse_encode(self.manual_accept_available, serializer);
+        <Option<crate::calibration::progress::CalibrationProgressDebug>>::sse_encode(
+            self.debug, serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::calibration::progress::CalibrationProgressDebug {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.seq, serializer);
+        <Option<f64>>::sse_encode(self.rms_gate, serializer);
+        <f32>::sse_encode(self.centroid_min, serializer);
+        <f32>::sse_encode(self.centroid_max, serializer);
+        <f32>::sse_encode(self.zcr_min, serializer);
+        <f32>::sse_encode(self.zcr_max, serializer);
+        <u8>::sse_encode(self.misses, serializer);
+        <Option<f32>>::sse_encode(self.last_centroid, serializer);
+        <Option<f32>>::sse_encode(self.last_zcr, serializer);
+        <Option<f64>>::sse_encode(self.last_rms, serializer);
+        <Option<f32>>::sse_encode(self.last_max_amp, serializer);
     }
 }
 
@@ -3210,6 +3320,16 @@ impl SseEncode for Option<crate::calibration::progress::CalibrationGuidance> {
     }
 }
 
+impl SseEncode for Option<crate::calibration::progress::CalibrationProgressDebug> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::calibration::progress::CalibrationProgressDebug>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::analysis::ClassificationResult> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3226,6 +3346,16 @@ impl SseEncode for Option<f32> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <f32>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <f64>::sse_encode(value, serializer);
         }
     }
 }

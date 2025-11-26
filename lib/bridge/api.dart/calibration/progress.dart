@@ -77,6 +77,9 @@ class CalibrationProgress {
   /// Whether a manual accept candidate is available for promotion
   final bool manualAcceptAvailable;
 
+  /// Debug info (feature gates and levels) for instrumentation builds
+  final CalibrationProgressDebug? debug;
+
   const CalibrationProgress({
     required this.currentSound,
     required this.samplesCollected,
@@ -84,6 +87,7 @@ class CalibrationProgress {
     required this.waitingForConfirmation,
     this.guidance,
     required this.manualAcceptAvailable,
+    this.debug,
   });
 
   @override
@@ -93,7 +97,8 @@ class CalibrationProgress {
       samplesNeeded.hashCode ^
       waitingForConfirmation.hashCode ^
       guidance.hashCode ^
-      manualAcceptAvailable.hashCode;
+      manualAcceptAvailable.hashCode ^
+      debug.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -105,7 +110,85 @@ class CalibrationProgress {
           samplesNeeded == other.samplesNeeded &&
           waitingForConfirmation == other.waitingForConfirmation &&
           guidance == other.guidance &&
-          manualAcceptAvailable == other.manualAcceptAvailable;
+          manualAcceptAvailable == other.manualAcceptAvailable &&
+          debug == other.debug;
+}
+
+/// Debug payload to help users see what the engine expects
+class CalibrationProgressDebug {
+  /// Incrementing sequence to distinguish updates
+  final BigInt seq;
+
+  /// Current RMS gate for the active sound (if any)
+  final double? rmsGate;
+
+  /// Current centroid gate min/max
+  final double centroidMin;
+  final double centroidMax;
+
+  /// Current ZCR gate min/max
+  final double zcrMin;
+  final double zcrMax;
+
+  /// Consecutive misses for the active sound
+  final int misses;
+
+  /// Last evaluated centroid (if available)
+  final double? lastCentroid;
+
+  /// Last evaluated ZCR (if available)
+  final double? lastZcr;
+
+  /// Last evaluated RMS (if available)
+  final double? lastRms;
+
+  /// Last evaluated max amplitude (if available)
+  final double? lastMaxAmp;
+
+  const CalibrationProgressDebug({
+    required this.seq,
+    this.rmsGate,
+    required this.centroidMin,
+    required this.centroidMax,
+    required this.zcrMin,
+    required this.zcrMax,
+    required this.misses,
+    this.lastCentroid,
+    this.lastZcr,
+    this.lastRms,
+    this.lastMaxAmp,
+  });
+
+  @override
+  int get hashCode =>
+      seq.hashCode ^
+      rmsGate.hashCode ^
+      centroidMin.hashCode ^
+      centroidMax.hashCode ^
+      zcrMin.hashCode ^
+      zcrMax.hashCode ^
+      misses.hashCode ^
+      lastCentroid.hashCode ^
+      lastZcr.hashCode ^
+      lastRms.hashCode ^
+      lastMaxAmp.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalibrationProgressDebug &&
+          runtimeType == other.runtimeType &&
+          seq == other.seq &&
+          rmsGate == other.rmsGate &&
+          centroidMin == other.centroidMin &&
+          centroidMax == other.centroidMax &&
+          zcrMin == other.zcrMin &&
+          zcrMax == other.zcrMax &&
+          misses == other.misses &&
+          lastCentroid == other.lastCentroid &&
+          lastZcr == other.lastZcr &&
+          lastRms == other.lastRms &&
+          lastMaxAmp == other.lastMaxAmp;
 }
 
 /// Calibration phase - includes noise floor measurement before sound collection

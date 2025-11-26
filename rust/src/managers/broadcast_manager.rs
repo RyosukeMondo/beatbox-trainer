@@ -314,6 +314,7 @@ mod tests {
             waiting_for_confirmation: false,
             guidance: None,
             manual_accept_available: false,
+            debug: None,
         };
 
         // Should succeed with subscriber present

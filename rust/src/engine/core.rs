@@ -310,8 +310,8 @@ impl EngineHandle {
 
         // Emit initial calibration progress so UI can show the calibration interface
         if let Some(tx) = self.broadcasts.get_calibration_sender() {
-            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
-                if let Some(ref procedure) = *procedure_guard {
+            if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref mut procedure) = *procedure_guard {
                     let initial_progress = procedure.get_progress();
                     log::info!(
                         "[EngineHandle] Emitting initial calibration progress: {:?}",
@@ -342,8 +342,8 @@ impl EngineHandle {
 
         // Emit progress update after confirmation
         if let Some(tx) = self.broadcasts.get_calibration_sender() {
-            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
-                if let Some(ref procedure) = *procedure_guard {
+            if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref mut procedure) = *procedure_guard {
                     let progress = procedure.get_progress();
                     log::info!(
                         "[EngineHandle] Emitting calibration progress after confirm: {:?}",
@@ -366,8 +366,8 @@ impl EngineHandle {
 
         // Emit progress update after retry
         if let Some(tx) = self.broadcasts.get_calibration_sender() {
-            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
-                if let Some(ref procedure) = *procedure_guard {
+            if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref mut procedure) = *procedure_guard {
                     let progress = procedure.get_progress();
                     log::info!(
                         "[EngineHandle] Emitting calibration progress after retry: {:?}",

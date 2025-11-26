@@ -3,8 +3,8 @@
 // This module defines custom error types for audio and calibration operations,
 // providing structured error handling with error codes suitable for FFI communication.
 
-mod audio;
-mod calibration;
+pub mod audio;
+pub mod calibration;
 
 pub use audio::{log_audio_error, AudioError, AudioErrorCodes};
 pub use calibration::{log_calibration_error, CalibrationError, CalibrationErrorCodes};

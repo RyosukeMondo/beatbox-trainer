@@ -104,12 +104,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CalibrationGuidance dco_decode_box_autoadd_calibration_guidance(dynamic raw);
 
   @protected
+  CalibrationProgressDebug dco_decode_box_autoadd_calibration_progress_debug(
+    dynamic raw,
+  );
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   );
 
   @protected
   double dco_decode_box_autoadd_f_32(dynamic raw);
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
   FixtureManifestEntry dco_decode_box_autoadd_fixture_manifest_entry(
@@ -136,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationProgress dco_decode_calibration_progress(dynamic raw);
+
+  @protected
+  CalibrationProgressDebug dco_decode_calibration_progress_debug(dynamic raw);
 
   @protected
   CalibrationSound dco_decode_calibration_sound(dynamic raw);
@@ -208,12 +219,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CalibrationProgressDebug?
+  dco_decode_opt_box_autoadd_calibration_progress_debug(dynamic raw);
+
+  @protected
   ClassificationResult? dco_decode_opt_box_autoadd_classification_result(
     dynamic raw,
   );
 
   @protected
   double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
   FixtureManifestEntry? dco_decode_opt_box_autoadd_fixture_manifest_entry(
@@ -339,12 +357,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CalibrationProgressDebug sse_decode_box_autoadd_calibration_progress_debug(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   );
 
   @protected
   double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
   FixtureManifestEntry sse_decode_box_autoadd_fixture_manifest_entry(
@@ -377,6 +403,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationProgress sse_decode_calibration_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CalibrationProgressDebug sse_decode_calibration_progress_debug(
     SseDeserializer deserializer,
   );
 
@@ -465,12 +496,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CalibrationProgressDebug?
+  sse_decode_opt_box_autoadd_calibration_progress_debug(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClassificationResult? sse_decode_opt_box_autoadd_classification_result(
     SseDeserializer deserializer,
   );
 
   @protected
   double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
   FixtureManifestEntry? sse_decode_opt_box_autoadd_fixture_manifest_entry(
@@ -621,6 +661,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_calibration_progress_debug(
+    CalibrationProgressDebug self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -628,6 +674,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_fixture_manifest_entry(
@@ -671,6 +720,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_calibration_progress(
     CalibrationProgress self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_progress_debug(
+    CalibrationProgressDebug self,
     SseSerializer serializer,
   );
 
@@ -786,6 +841,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_calibration_progress_debug(
+    CalibrationProgressDebug? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_classification_result(
     ClassificationResult? self,
     SseSerializer serializer,
@@ -793,6 +854,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_fixture_manifest_entry(
