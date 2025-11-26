@@ -451,3 +451,98 @@ fn test_candidates_cleared_on_confirm_and_retry() {
     procedure.retry_current_sound().unwrap();
     assert!(procedure.last_candidates.snare.is_none());
 }
+
+/// Test that noise_floor_rms is correctly preserved through finalize
+#[test]
+fn test_finalize_preserves_noise_floor_rms() {
+    // Use new_default to start from NoiseFloor phase (NOT new_for_test which skips it)
+    let mut procedure = CalibrationProcedure::with_debounce(10, 0); // 10 samples, no debounce
+
+    // Collect 30 noise floor samples with known RMS values
+    let noise_rms = 0.005; // Simulated ambient noise level
+    for _ in 0..30 {
+        let result = procedure.add_noise_floor_sample(noise_rms);
+        assert!(result.is_ok());
+    }
+
+    // Noise floor should now be complete and threshold set
+    assert!(procedure.noise_floor_threshold.is_some());
+    let expected_threshold = noise_rms * 1.3; // max(mean*1.2, max*1.3, MIN) = max(0.006, 0.0065, 0.0025)
+    let actual_threshold = procedure.noise_floor_threshold.unwrap();
+    eprintln!(
+        "Expected threshold: {}, Actual threshold: {}",
+        expected_threshold, actual_threshold
+    );
+    // The threshold should be >= MIN_RMS_THRESHOLD and based on the noise samples
+    assert!(
+        actual_threshold >= 0.0025,
+        "Threshold should be >= MIN_RMS_THRESHOLD"
+    );
+    assert!(
+        actual_threshold < 0.02,
+        "Threshold should be reasonable for low noise"
+    );
+
+    // Confirm noise floor to advance to Kick
+    assert!(procedure.is_waiting_for_confirmation());
+    procedure.confirm_and_advance().unwrap();
+    assert_eq!(procedure.current_sound, CalibrationSound::Kick);
+
+    // The noise_floor_threshold should still be set!
+    assert!(
+        procedure.noise_floor_threshold.is_some(),
+        "noise_floor_threshold should persist after advancing to Kick"
+    );
+
+    // Complete the rest of calibration
+    let kick_features = create_test_features(1000.0, 0.05);
+    let snare_features = create_test_features(3000.0, 0.15);
+    let hihat_features = create_test_features(8000.0, 0.5);
+
+    // Add kick samples
+    for _ in 0..10 {
+        procedure.add_sample(kick_features, 0.05, 0.2).unwrap();
+    }
+    procedure.confirm_and_advance().unwrap();
+
+    // Add snare samples
+    for _ in 0..10 {
+        procedure.add_sample(snare_features, 0.05, 0.2).unwrap();
+    }
+    procedure.confirm_and_advance().unwrap();
+
+    // Add hi-hat samples
+    for _ in 0..10 {
+        procedure.add_sample(hihat_features, 0.05, 0.2).unwrap();
+    }
+    procedure.confirm_and_advance().unwrap();
+
+    // Verify noise_floor_threshold is STILL set before finalize
+    assert!(
+        procedure.noise_floor_threshold.is_some(),
+        "noise_floor_threshold should persist through all calibration phases"
+    );
+    let threshold_before_finalize = procedure.noise_floor_threshold.unwrap();
+    eprintln!("Threshold before finalize: {}", threshold_before_finalize);
+
+    // Finalize and check the result
+    let result = procedure.finalize();
+    assert!(result.is_ok(), "finalize should succeed");
+
+    let state = result.unwrap();
+    eprintln!("Final state.noise_floor_rms: {}", state.noise_floor_rms);
+
+    // THIS IS THE KEY ASSERTION - noise_floor_rms should match the calibrated threshold
+    assert!(
+        (state.noise_floor_rms - threshold_before_finalize).abs() < 0.0001,
+        "noise_floor_rms ({}) should match calibrated threshold ({})",
+        state.noise_floor_rms,
+        threshold_before_finalize
+    );
+
+    // Should NOT be the default value
+    assert!(
+        state.noise_floor_rms != 0.01,
+        "noise_floor_rms should NOT be the default 0.01"
+    );
+}

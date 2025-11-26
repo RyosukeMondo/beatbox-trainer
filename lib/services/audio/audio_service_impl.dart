@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../models/calibration_progress.dart';
 import '../../models/classification_result.dart';
 import '../../models/telemetry_event.dart';
@@ -53,13 +54,16 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Future<void> startAudio({required int bpm}) async {
+    debugPrint('[AudioServiceImpl] startAudio called with bpm=$bpm');
     // Validate BPM before making FFI call
     _validateBpm(bpm);
 
     try {
       // Delegate to FFI bridge
       await api.startAudio(bpm: bpm);
+      debugPrint('[AudioServiceImpl] startAudio completed successfully');
     } catch (e) {
+      debugPrint('[AudioServiceImpl] startAudio error: $e');
       // Translate Rust error to user-friendly exception
       throw _errorHandler.createAudioException(e.toString());
     }
@@ -92,17 +96,27 @@ class AudioServiceImpl implements IAudioService {
 
   @override
   Stream<ClassificationResult> getClassificationStream() {
+    debugPrint('[AudioServiceImpl] getClassificationStream called');
     try {
       // Get stream from FFI bridge and map FFI types to model types
       // The FFI stream uses StreamSink pattern for real-time classification results
       return api
           .classificationStream()
-          .map(_mapFfiToModelClassificationResult)
+          .map((result) {
+            debugPrint(
+              '[AudioServiceImpl] Classification: ${result.sound} conf=${result.confidence.toStringAsFixed(2)}',
+            );
+            return _mapFfiToModelClassificationResult(result);
+          })
           .handleError((error) {
+            debugPrint(
+              '[AudioServiceImpl] Classification stream error: $error',
+            );
             // Translate Rust errors to user-friendly exceptions
             throw _errorHandler.createAudioException(error.toString());
           });
     } catch (e) {
+      debugPrint('[AudioServiceImpl] getClassificationStream setup error: $e');
       // Handle synchronous errors during stream creation
       throw _errorHandler.createAudioException(e.toString());
     }
@@ -394,5 +408,20 @@ class AudioServiceImpl implements IAudioService {
       type: TelemetryEventType.warning,
       detail: detail,
     );
+  }
+
+  @override
+  Future<void> loadCalibrationState(String json) async {
+    debugPrint('[AudioServiceImpl] loadCalibrationState called');
+    debugPrint('[AudioServiceImpl] JSON: $json');
+    try {
+      await api.loadCalibrationState(json: json);
+      debugPrint(
+        '[AudioServiceImpl] loadCalibrationState completed successfully',
+      );
+    } catch (e) {
+      debugPrint('[AudioServiceImpl] loadCalibrationState error: $e');
+      throw _errorHandler.createCalibrationException(e.toString());
+    }
   }
 }

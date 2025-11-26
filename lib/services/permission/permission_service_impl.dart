@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'i_permission_service.dart';
 
@@ -7,7 +9,10 @@ import 'i_permission_service.dart';
 /// the permission_handler package. It translates between permission_handler's
 /// status types and our custom [PermissionStatus] enum.
 ///
-/// Supports Android platform with microphone permission handling.
+/// Platform support:
+/// - Android/iOS: Uses permission_handler for runtime permissions
+/// - Linux/Windows/macOS: Returns granted (desktop platforms use system audio
+///   permissions managed by the OS, not runtime permission dialogs)
 ///
 /// Example usage:
 /// ```dart
@@ -26,20 +31,44 @@ class PermissionServiceImpl implements IPermissionService {
   /// No configuration required - uses permission_handler package directly.
   PermissionServiceImpl();
 
+  /// Check if running on a desktop platform (Linux, Windows, macOS).
+  ///
+  /// Desktop platforms don't require runtime permission dialogs for microphone
+  /// access - permissions are handled by the OS audio subsystem.
+  bool get _isDesktopPlatform {
+    if (kIsWeb) return false;
+    return Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  }
+
   @override
   Future<PermissionStatus> checkMicrophonePermission() async {
+    // Desktop platforms don't use permission_handler - always granted
+    if (_isDesktopPlatform) {
+      return PermissionStatus.granted;
+    }
+
     final status = await ph.Permission.microphone.status;
     return _convertStatus(status);
   }
 
   @override
   Future<PermissionStatus> requestMicrophonePermission() async {
+    // Desktop platforms don't use permission_handler - always granted
+    if (_isDesktopPlatform) {
+      return PermissionStatus.granted;
+    }
+
     final status = await ph.Permission.microphone.request();
     return _convertStatus(status);
   }
 
   @override
   Future<bool> openAppSettings() async {
+    // Desktop platforms don't have app settings like mobile
+    if (_isDesktopPlatform) {
+      return false;
+    }
+
     try {
       return await ph.openAppSettings();
     } catch (e) {

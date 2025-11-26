@@ -62,6 +62,7 @@ class TrainingScreen extends StatefulWidget {
         audioService: getIt(),
         permissionService: getIt(),
         settingsService: getIt(),
+        storageService: getIt(),
       ),
       debugService: getIt(),
     );

@@ -153,6 +153,15 @@ pub fn spawn_analysis_thread(
         // Main analysis loop - runs until sender is dropped (audio engine stops)
         log::info!("[AnalysisThread] Starting analysis loop");
 
+        // Log initial noise floor gate for debugging
+        if let Ok(state) = calibration_state.read() {
+            log::info!(
+                "[AnalysisThread] Noise floor RMS from calibration: {:.4}, gate threshold: {:.4}",
+                state.noise_floor_rms,
+                state.noise_floor_rms * 2.0
+            );
+        }
+
         // Accumulation buffer for combining small buffers into larger chunks
         let min_buffer_size = onset_config.min_buffer_size.max(64);
         let mut accumulator: Vec<f32> = Vec::with_capacity(min_buffer_size.max(2048));
@@ -567,7 +576,32 @@ pub fn spawn_analysis_thread(
                             }
                         }
                     } else {
-                        // ====== CLASSIFICATION MODE (existing logic) ======
+                        // ====== CLASSIFICATION MODE ======
+                        // Gate onset by noise floor to prevent false positives from ambient noise
+                        // Use 2x noise floor as detection threshold (same as calibration)
+                        let noise_floor_gate = match calibration_state.read() {
+                            Ok(state) => state.noise_floor_rms * 2.0,
+                            Err(_) => 0.02, // Conservative fallback
+                        };
+
+                        // Log every onset attempt for debugging
+                        eprintln!(
+                            "[AnalysisThread] Onset: rms={:.4}, gate={:.4}, pass={}",
+                            onset_rms,
+                            noise_floor_gate,
+                            onset_rms >= noise_floor_gate
+                        );
+
+                        if onset_rms < noise_floor_gate {
+                            // Below noise floor - skip classification to avoid false positives
+                            eprintln!(
+                                "[AnalysisThread] SKIPPED onset below noise floor: rms {:.4} < gate {:.4}",
+                                onset_rms,
+                                noise_floor_gate
+                            );
+                            continue;
+                        }
+
                         // Classify sound (returns tuple of (BeatboxHit, confidence))
                         let (sound, confidence) = classifier.classify_level1(&features);
 

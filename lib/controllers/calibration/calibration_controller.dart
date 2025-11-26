@@ -226,12 +226,26 @@ class CalibrationController {
 
       // Get calibration state from bridge
       final stateJson = await api.getCalibrationState();
-      final state = CalibrationState.fromJson(
-        jsonDecode(stateJson) as Map<String, dynamic>,
+      debugPrint('[CalibrationController] Raw JSON from Rust: $stateJson');
+      final jsonMap = jsonDecode(stateJson) as Map<String, dynamic>;
+      debugPrint('[CalibrationController] Parsed JSON: $jsonMap');
+      debugPrint(
+        '[CalibrationController] noise_floor_rms in JSON: ${jsonMap['noise_floor_rms']}',
       );
+      final state = CalibrationState.fromJson(jsonMap);
 
       // Persist calibration state
       await _persistCalibrationState(state);
+
+      // Stop audio engine so training can start fresh
+      debugPrint('[CalibrationController] Stopping audio engine...');
+      try {
+        await _audioService.stopAudio();
+        debugPrint('[CalibrationController] Audio engine stopped');
+      } catch (e) {
+        // Ignore errors - engine may already be stopped
+        debugPrint('[CalibrationController] Stop audio warning: $e');
+      }
 
       _setCalibrating(false);
       _clearProgress();
@@ -378,11 +392,16 @@ class CalibrationController {
   Future<void> _persistCalibrationState(CalibrationState state) async {
     try {
       debugPrint('[CalibrationController] Persisting calibration state');
+      debugPrint(
+        '[CalibrationController]   state.noiseFloorRms=${state.noiseFloorRms}',
+      );
       // Convert CalibrationState to CalibrationData for storage
+      final thresholds = state.toThresholdMap();
+      debugPrint('[CalibrationController]   thresholds=$thresholds');
       final calibrationData = CalibrationData(
         level: state.level,
         timestamp: DateTime.now(),
-        thresholds: state.toThresholdMap(),
+        thresholds: thresholds,
       );
       await _storageService.saveCalibration(calibrationData);
       debugPrint(

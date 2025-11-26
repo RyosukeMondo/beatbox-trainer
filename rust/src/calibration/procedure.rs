@@ -120,6 +120,10 @@ impl CalibrationProcedure {
             self.backoff.update_noise_floor(self.noise_floor_threshold);
             self.waiting_for_confirmation = true; // Wait for user confirmation, DON'T auto-advance
 
+            eprintln!(
+                "[CalibrationProcedure] NOISE FLOOR SET: mean_rms={:.6}, max_rms={:.6}, threshold={:.6}",
+                mean_rms, max_rms, threshold
+            );
             log::info!(
                 "[CalibrationProcedure] Noise floor calibration complete. Mean RMS: {:.4}, Max RMS: {:.4}, Threshold: {:.4}. Waiting for user confirmation.",
                 mean_rms, max_rms, threshold
@@ -386,11 +390,19 @@ impl CalibrationProcedure {
             });
         }
 
+        // Get noise floor threshold, use conservative default if somehow missing
+        let noise_floor = self.noise_floor_threshold.unwrap_or(0.01);
+        eprintln!(
+            "[CalibrationProcedure] finalize(): noise_floor_threshold={:?}, noise_floor={}",
+            self.noise_floor_threshold, noise_floor
+        );
+
         CalibrationState::from_samples(
             &self.kick_samples,
             &self.snare_samples,
             &self.hihat_samples,
             self.samples_needed as usize,
+            noise_floor,
         )
     }
 

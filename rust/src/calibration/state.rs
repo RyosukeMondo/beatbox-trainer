@@ -27,11 +27,20 @@ pub struct CalibrationState {
     pub t_hihat_zcr: f32,
     /// Whether the system has been calibrated
     pub is_calibrated: bool,
+    /// Noise floor RMS threshold for onset gating in training mode
+    /// Defaults to 0.01 for backward compatibility with existing calibrations
+    #[serde(default = "default_noise_floor")]
+    pub noise_floor_rms: f64,
 }
 
 /// Default level value for serde deserialization
 fn default_level() -> u8 {
     1
+}
+
+/// Default noise floor value for backward compatibility
+fn default_noise_floor() -> f64 {
+    0.01 // Conservative default: reasonably quiet environment
 }
 
 impl CalibrationState {
@@ -43,6 +52,7 @@ impl CalibrationState {
     /// - t_kick_zcr = 0.1
     /// - t_snare_centroid = 4000 Hz
     /// - t_hihat_zcr = 0.3
+    /// - noise_floor_rms = 0.01 (conservative default)
     pub fn new_default() -> Self {
         Self {
             level: 1,
@@ -51,6 +61,7 @@ impl CalibrationState {
             t_snare_centroid: 4000.0,
             t_hihat_zcr: 0.3,
             is_calibrated: false,
+            noise_floor_rms: default_noise_floor(),
         }
     }
 
@@ -64,6 +75,7 @@ impl CalibrationState {
     /// * `snare_samples` - Features extracted from snare drum sounds
     /// * `hihat_samples` - Features extracted from hi-hat sounds
     /// * `samples_per_sound` - Number of samples required per sound type
+    /// * `noise_floor_rms` - Calibrated noise floor RMS threshold
     ///
     /// # Returns
     /// * `Ok(CalibrationState)` - Successfully calibrated state
@@ -78,6 +90,7 @@ impl CalibrationState {
         snare_samples: &[Features],
         hihat_samples: &[Features],
         samples_per_sound: usize,
+        noise_floor_rms: f64,
     ) -> Result<Self, CalibrationError> {
         // Validate sample counts
         if kick_samples.len() != samples_per_sound {
@@ -121,6 +134,7 @@ impl CalibrationState {
             t_snare_centroid: snare_centroid_mean * 1.2,
             t_hihat_zcr: hihat_zcr_mean * 1.2,
             is_calibrated: true,
+            noise_floor_rms,
         })
     }
 
@@ -200,6 +214,7 @@ mod tests {
         assert_eq!(state.t_snare_centroid, 4000.0);
         assert_eq!(state.t_hihat_zcr, 0.3);
         assert!(!state.is_calibrated);
+        assert!((state.noise_floor_rms - 0.01).abs() < 0.0001);
     }
 
     #[test]
@@ -210,7 +225,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_ok());
         let state = result.unwrap();
@@ -230,7 +245,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -249,7 +264,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -271,7 +286,7 @@ mod tests {
         hihat_samples.push(create_test_features(8000.0, 0.5));
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -290,7 +305,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -308,7 +323,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -326,7 +341,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -344,7 +359,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 1.5); // ZCR too high (> 1.0)
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -367,7 +382,7 @@ mod tests {
         let hihat_samples = create_test_samples(8000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_ok());
         let state = result.unwrap();
@@ -384,7 +399,7 @@ mod tests {
         let hihat_samples = create_test_samples(5000.0, 0.4);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_ok());
         let state = result.unwrap();
@@ -404,7 +419,7 @@ mod tests {
         let hihat_samples = create_test_samples(10000.0, 0.5);
 
         let result =
-            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10);
+            CalibrationState::from_samples(&kick_samples, &snare_samples, &hihat_samples, 10, 0.01);
 
         assert!(result.is_ok());
     }

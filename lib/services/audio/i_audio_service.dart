@@ -161,4 +161,26 @@ abstract class IAudioService {
     double? centroidThreshold,
     double? zcrThreshold,
   });
+
+  /// Load calibration state from JSON into the Rust engine.
+  ///
+  /// Restores previously saved calibration thresholds so the classifier
+  /// can detect sounds correctly. Must be called before startAudio when
+  /// restoring from saved calibration.
+  ///
+  /// Parameters:
+  /// - [json]: JSON string containing serialized CalibrationState
+  ///
+  /// Throws:
+  /// - [CalibrationServiceException] if JSON is invalid or parsing fails
+  ///
+  /// Example:
+  /// ```dart
+  /// final calibData = await storageService.loadCalibration();
+  /// if (calibData != null) {
+  ///   await audioService.loadCalibrationState(jsonEncode(calibData.toRustJson()));
+  /// }
+  /// await audioService.startAudio(bpm: 120);
+  /// ```
+  Future<void> loadCalibrationState(String json);
 }

@@ -95,7 +95,22 @@ pub fn get_version() -> Result<String> {
 /// - Lock poisoning on shared state
 #[flutter_rust_bridge::frb]
 pub fn start_audio(bpm: u32) -> Result<(), AudioError> {
-    ENGINE_HANDLE.start_audio(bpm)
+    eprintln!("[Rust API] start_audio called with bpm={}", bpm);
+
+    // Log current calibration state
+    if let Ok(state) = ENGINE_HANDLE.get_calibration_state() {
+        eprintln!("[Rust API] Current calibration: is_calibrated={}, level={}, t_kick_centroid={:.1}, t_snare_centroid={:.1}",
+                  state.is_calibrated, state.level, state.t_kick_centroid, state.t_snare_centroid);
+    } else {
+        eprintln!("[Rust API] No calibration state available");
+    }
+
+    let result = ENGINE_HANDLE.start_audio(bpm);
+    match &result {
+        Ok(_) => eprintln!("[Rust API] start_audio succeeded"),
+        Err(e) => eprintln!("[Rust API] start_audio failed: {:?}", e),
+    }
+    result
 }
 
 /// Stop the audio engine
@@ -382,14 +397,23 @@ pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
 pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
     use crate::calibration::CalibrationState;
 
+    eprintln!("[Rust API] load_calibration_state called");
+    eprintln!("[Rust API] JSON input: {}", json);
+
     // Deserialize JSON to CalibrationState
-    let state: CalibrationState =
-        serde_json::from_str(&json).map_err(|e| CalibrationError::InvalidFeatures {
+    let state: CalibrationState = serde_json::from_str(&json).map_err(|e| {
+        eprintln!("[Rust API] Failed to deserialize: {}", e);
+        CalibrationError::InvalidFeatures {
             reason: format!("Failed to deserialize calibration JSON: {}", e),
-        })?;
+        }
+    })?;
+
+    eprintln!("[Rust API] Deserialized state: level={}, is_calibrated={}, t_kick_centroid={}, t_snare_centroid={}, noise_floor_rms={}",
+              state.level, state.is_calibrated, state.t_kick_centroid, state.t_snare_centroid, state.noise_floor_rms);
 
     // Load state into EngineHandle
     ENGINE_HANDLE.load_calibration(state)?;
+    eprintln!("[Rust API] Calibration state loaded into engine");
 
     Ok(())
 }
@@ -421,6 +445,10 @@ pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
 pub fn get_calibration_state() -> Result<String, CalibrationError> {
     // Get calibration state from EngineHandle
     let state = ENGINE_HANDLE.get_calibration_state()?;
+    eprintln!(
+        "[Rust API] get_calibration_state: level={}, is_calibrated={}, noise_floor_rms={}",
+        state.level, state.is_calibrated, state.noise_floor_rms
+    );
 
     // Serialize to JSON
     serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {

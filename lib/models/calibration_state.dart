@@ -9,6 +9,7 @@ class CalibrationState {
   final double tSnareCentroid;
   final double tHihatZcr;
   final bool isCalibrated;
+  final double noiseFloorRms;
 
   const CalibrationState({
     required this.level,
@@ -17,6 +18,7 @@ class CalibrationState {
     required this.tSnareCentroid,
     required this.tHihatZcr,
     required this.isCalibrated,
+    this.noiseFloorRms = 0.01,
   });
 
   factory CalibrationState.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class CalibrationState {
       tSnareCentroid: (json['t_snare_centroid'] as num? ?? 4000).toDouble(),
       tHihatZcr: (json['t_hihat_zcr'] as num? ?? 0.3).toDouble(),
       isCalibrated: json['is_calibrated'] as bool? ?? false,
+      noiseFloorRms: (json['noise_floor_rms'] as num? ?? 0.01).toDouble(),
     );
   }
 
@@ -38,6 +41,7 @@ class CalibrationState {
       't_snare_centroid': tSnareCentroid,
       't_hihat_zcr': tHihatZcr,
       'is_calibrated': isCalibrated,
+      'noise_floor_rms': noiseFloorRms,
     };
   }
 
@@ -48,6 +52,7 @@ class CalibrationState {
       't_kick_zcr': tKickZcr,
       't_snare_centroid': tSnareCentroid,
       't_hihat_zcr': tHihatZcr,
+      'noise_floor_rms': noiseFloorRms,
     };
   }
 }

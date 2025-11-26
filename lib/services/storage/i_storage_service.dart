@@ -127,6 +127,7 @@ class CalibrationData {
   /// - t_kick_zcr = 0.1
   /// - t_snare_centroid = 4000 Hz
   /// - t_hihat_zcr = 0.3
+  /// - noise_floor_rms = 0.01 (conservative default)
   factory CalibrationData.fromDefaults() {
     return CalibrationData(
       level: 1,
@@ -136,6 +137,7 @@ class CalibrationData {
         't_kick_zcr': 0.1,
         't_snare_centroid': 4000.0,
         't_hihat_zcr': 0.3,
+        'noise_floor_rms': 0.01,
       },
     );
   }
@@ -193,7 +195,7 @@ class CalibrationData {
   ///
   /// Returns:
   /// - Map with 'level', 't_kick_centroid', 't_kick_zcr', 't_snare_centroid',
-  ///   't_hihat_zcr', and 'is_calibrated' keys
+  ///   't_hihat_zcr', 'noise_floor_rms', and 'is_calibrated' keys
   ///
   /// Example:
   /// ```dart
@@ -208,6 +210,7 @@ class CalibrationData {
       tKickZcr: thresholds['t_kick_zcr'] ?? 0.1,
       tSnareCentroid: thresholds['t_snare_centroid'] ?? 4000.0,
       tHihatZcr: thresholds['t_hihat_zcr'] ?? 0.3,
+      noiseFloorRms: thresholds['noise_floor_rms'] ?? 0.01,
       // Once calibration data is persisted we only call this helper while
       // restoring thresholds on app launch, so the Rust engine must be told
       // calibration is already complete.

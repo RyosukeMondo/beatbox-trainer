@@ -69,14 +69,14 @@ class CalibrationLevelFeedback extends StatelessWidget {
             level < 0.3
                 ? '✓ Nice and quiet - perfect!'
                 : level < 0.6
-                    ? 'A bit noisy, but OK'
-                    : 'Try to reduce background noise',
+                ? 'A bit noisy, but OK'
+                : 'Try to reduce background noise',
             style: TextStyle(
               color: level < 0.3
                   ? Colors.green
                   : level < 0.6
-                      ? Colors.amber
-                      : Colors.red,
+                  ? Colors.amber
+                  : Colors.red,
               fontSize: 13,
             ),
           ),
@@ -95,7 +95,10 @@ class CalibrationLevelFeedback extends StatelessWidget {
     // Scale for display: map 0-0.15 RMS to 0-1 visual range
     const maxDisplayRms = 0.12;
     final normalizedLevel = (lastRms / maxDisplayRms).clamp(0.0, 1.0);
-    final normalizedThreshold = (detectionThreshold / maxDisplayRms).clamp(0.0, 0.6);
+    final normalizedThreshold = (detectionThreshold / maxDisplayRms).clamp(
+      0.0,
+      0.6,
+    );
 
     final isAboveThreshold = lastRms >= detectionThreshold;
     final isStrongSignal = lastRms >= detectionThreshold * 1.5;
@@ -109,8 +112,8 @@ class CalibrationLevelFeedback extends StatelessWidget {
           color: isStrongSignal
               ? sound.color.withValues(alpha: 0.5)
               : isAboveThreshold
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : Colors.white12,
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.white12,
         ),
       ),
       child: Column(

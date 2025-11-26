@@ -120,20 +120,35 @@ class _CalibrationScreenState extends State<CalibrationScreen>
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      barrierColor: Colors.black54,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
-          title: const Text('Calibration Complete!'),
+          title: const Text(
+            'Calibration Complete!',
+            style: TextStyle(color: Colors.black87),
+          ),
           content: const Text(
             'Your calibration has been saved successfully. '
             'You can now start training.',
+            style: TextStyle(color: Colors.black54),
           ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Start Training'),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
+              child: const Text('Start Training'),
             ),
           ],
         );
@@ -216,12 +231,9 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                     return _buildInitializingDisplay();
                   }
 
-                  // Auto-navigate to training on completion
-                  if (progress.isCalibrationComplete) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _handleSuccess();
-                    });
-                  }
+                  // Note: Success dialog is shown from confirmStep() callback
+                  // when calibration is complete and saved, not here.
+                  // This ensures finishCalibration() is called first to persist data.
 
                   return _buildCalibrationUI(progress);
                 },
@@ -397,7 +409,11 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                 },
                 onConfirm: () async {
                   try {
-                    await _controller.confirmStep();
+                    final hasNext = await _controller.confirmStep();
+                    // If no next step, calibration is complete and saved
+                    if (!hasNext && mounted) {
+                      await _handleSuccess();
+                    }
                   } catch (e) {
                     debugPrint('[CalibrationScreen] Confirm error: $e');
                   }
@@ -598,4 +614,3 @@ class _GuidanceBanner extends StatelessWidget {
     );
   }
 }
-

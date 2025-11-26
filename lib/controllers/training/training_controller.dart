@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../../models/classification_result.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/permission/i_permission_service.dart';
 import '../../services/settings/i_settings_service.dart';
+import '../../services/storage/i_storage_service.dart';
 
 /// Training screen business logic controller.
 ///
@@ -24,6 +27,7 @@ class TrainingController {
   final IAudioService _audioService;
   final IPermissionService _permissionService;
   final ISettingsService _settingsService;
+  final IStorageService _storageService;
 
   bool _isTraining = false;
   int _currentBpm = 120;
@@ -35,9 +39,11 @@ class TrainingController {
     required IAudioService audioService,
     required IPermissionService permissionService,
     required ISettingsService settingsService,
+    required IStorageService storageService,
   }) : _audioService = audioService,
        _permissionService = permissionService,
-       _settingsService = settingsService;
+       _settingsService = settingsService,
+       _storageService = storageService;
 
   /// Current training state.
   ///
@@ -96,9 +102,57 @@ class TrainingController {
     // Load BPM from settings
     _currentBpm = await _settingsService.getBpm();
 
+    // Load calibration state into Rust engine before starting audio
+    await _loadCalibrationState();
+
     // Start audio engine
     await _audioService.startAudio(bpm: _currentBpm);
     _isTraining = true;
+  }
+
+  /// Load calibration state from storage into Rust engine.
+  ///
+  /// Must be called before starting audio so classifier has proper thresholds.
+  /// Uses default calibration if no saved calibration exists.
+  Future<void> _loadCalibrationState() async {
+    try {
+      final calibData = await _storageService.loadCalibration();
+      if (calibData != null) {
+        debugPrint('[TrainingController] Loaded calibration from storage:');
+        debugPrint('[TrainingController]   level=${calibData.level}');
+        debugPrint('[TrainingController]   thresholds=${calibData.thresholds}');
+        final rustJson = calibData.toRustJson();
+        debugPrint(
+          '[TrainingController]   noise_floor_rms=${rustJson['noise_floor_rms']}',
+        );
+        final json = jsonEncode(rustJson);
+        debugPrint(
+          '[TrainingController] Loading calibration state into engine',
+        );
+        await _audioService.loadCalibrationState(json);
+        debugPrint(
+          '[TrainingController] Calibration state loaded successfully',
+        );
+      } else {
+        // Use default calibration if no saved data
+        final defaultData = CalibrationData.fromDefaults();
+        final json = jsonEncode(defaultData.toRustJson());
+        debugPrint('[TrainingController] No saved calibration, using defaults');
+        await _audioService.loadCalibrationState(json);
+      }
+    } catch (e) {
+      debugPrint('[TrainingController] Failed to load calibration: $e');
+      // Continue with default calibration - don't block training
+      try {
+        final defaultData = CalibrationData.fromDefaults();
+        final json = jsonEncode(defaultData.toRustJson());
+        await _audioService.loadCalibrationState(json);
+      } catch (e2) {
+        debugPrint(
+          '[TrainingController] Failed to load default calibration: $e2',
+        );
+      }
+    }
   }
 
   /// Stop training session.

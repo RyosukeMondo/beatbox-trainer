@@ -76,7 +76,8 @@ impl CalibrationManager {
         self.check_not_in_progress(&procedure_guard)?;
 
         let samples_needed = self.samples_per_sound();
-        let procedure = CalibrationProcedure::new(samples_needed);
+        let min_interval = self.calibration_config.min_sample_interval_ms;
+        let procedure = CalibrationProcedure::with_debounce(samples_needed, min_interval);
         *procedure_guard = Some(procedure);
 
         Ok(())
@@ -103,6 +104,11 @@ impl CalibrationManager {
             let new_state = procedure.finalize().inspect_err(|err| {
                 log_calibration_error(err, "finish_calibration");
             })?;
+
+            eprintln!(
+                "[CalibrationManager] finish(): new_state.noise_floor_rms={}",
+                new_state.noise_floor_rms
+            );
 
             self.update_state(new_state)?;
 
@@ -466,5 +472,112 @@ mod tests {
         // Verify Arc is None when calibration not started
         let procedure_guard = procedure_arc.lock().unwrap();
         assert!(procedure_guard.is_none());
+    }
+
+    /// Test that finish() correctly persists noise_floor_rms through get_state()
+    #[test]
+    fn test_finish_persists_noise_floor_rms() {
+        use crate::analysis::features::Features;
+
+        // Use custom config with minimal samples for faster test
+        let config = CalibrationConfig {
+            samples_per_sound: 10,
+            min_sample_interval_ms: 0, // No debounce for testing
+            ..Default::default()
+        };
+        let manager = CalibrationManager::new(config);
+        let (broadcast_tx, _) = broadcast::channel(100);
+
+        // Start calibration
+        manager.start(broadcast_tx).unwrap();
+
+        // Access procedure Arc and complete full calibration
+        {
+            let mut procedure_guard = manager.lock_procedure().unwrap();
+            let procedure = procedure_guard.as_mut().unwrap();
+
+            // Add noise floor samples
+            let noise_rms = 0.003;
+            for _ in 0..30 {
+                procedure.add_noise_floor_sample(noise_rms).unwrap();
+            }
+            // Confirm noise floor
+            procedure.confirm_and_advance().unwrap();
+
+            // Add kick, snare, hihat samples
+            let features = Features {
+                centroid: 1000.0,
+                zcr: 0.1,
+                flatness: 0.5,
+                rolloff: 5000.0,
+                decay_time_ms: 50.0,
+            };
+
+            for _ in 0..10 {
+                procedure.add_sample(features, 0.1, 0.5).unwrap();
+            }
+            procedure.confirm_and_advance().unwrap();
+
+            for _ in 0..10 {
+                procedure
+                    .add_sample(
+                        Features {
+                            centroid: 3000.0,
+                            zcr: 0.2,
+                            ..features
+                        },
+                        0.1,
+                        0.5,
+                    )
+                    .unwrap();
+            }
+            procedure.confirm_and_advance().unwrap();
+
+            for _ in 0..10 {
+                procedure
+                    .add_sample(
+                        Features {
+                            centroid: 8000.0,
+                            zcr: 0.5,
+                            ..features
+                        },
+                        0.1,
+                        0.5,
+                    )
+                    .unwrap();
+            }
+            procedure.confirm_and_advance().unwrap();
+
+            // Verify noise_floor_threshold is set before finish
+            assert!(procedure.noise_floor_threshold().is_some());
+            eprintln!(
+                "Procedure noise_floor_threshold before finish: {:?}",
+                procedure.noise_floor_threshold()
+            );
+        }
+
+        // Finish calibration - this should persist the state
+        let result = manager.finish();
+        assert!(result.is_ok(), "finish() should succeed");
+
+        // Get state and verify noise_floor_rms is preserved
+        let state = manager.get_state().unwrap();
+        eprintln!(
+            "State after finish: noise_floor_rms={}",
+            state.noise_floor_rms
+        );
+
+        // The noise floor should be based on noise_rms (0.003), not the default (0.01)
+        assert!(
+            state.noise_floor_rms < 0.01,
+            "noise_floor_rms ({}) should be less than default 0.01",
+            state.noise_floor_rms
+        );
+        assert!(
+            state.noise_floor_rms > 0.002,
+            "noise_floor_rms ({}) should be reasonable for input 0.003",
+            state.noise_floor_rms
+        );
+        assert!(state.is_calibrated, "state should be marked as calibrated");
     }
 }

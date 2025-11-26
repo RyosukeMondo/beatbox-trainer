@@ -51,6 +51,8 @@ impl Default for OnsetDetectionConfig {
 pub struct CalibrationConfig {
     /// Number of samples to collect per sound type
     pub samples_per_sound: usize,
+    /// Minimum interval between samples in milliseconds (0 to disable)
+    pub min_sample_interval_ms: u128,
     /// Enable debug overlay in UI
     pub enable_debug_overlay: bool,
     /// Log statistics every N buffers
@@ -61,6 +63,7 @@ impl Default for CalibrationConfig {
     fn default() -> Self {
         Self {
             samples_per_sound: 10,
+            min_sample_interval_ms: 250,
             enable_debug_overlay: true,
             log_every_n_buffers: 100,
         }
