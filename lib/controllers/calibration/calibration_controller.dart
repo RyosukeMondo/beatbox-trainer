@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../../bridge/api.dart/api.dart' as api;
+import '../../bridge/api.dart/api/streams.dart' as streams;
+import '../../bridge/api.dart/api/types.dart';
 import '../../models/calibration_progress.dart';
 import '../../models/calibration_state.dart';
 import '../../services/audio/i_audio_service.dart';
@@ -8,8 +12,8 @@ import '../../services/storage/i_storage_service.dart';
 
 /// Calibration screen business logic controller.
 ///
-/// Handles calibration workflow, progress tracking, and state persistence.
-/// Decoupled from UI for independent testing.
+/// Handles calibration workflow, progress tracking, audio level monitoring,
+/// and state persistence. Decoupled from UI for independent testing.
 ///
 /// Example:
 /// ```dart
@@ -37,6 +41,9 @@ class CalibrationController {
   /// Stream subscription for progress updates
   StreamSubscription<CalibrationProgress>? _progressSubscription;
 
+  /// Stream subscription for audio metrics (level meter)
+  StreamSubscription<AudioMetrics>? _audioMetricsSubscription;
+
   /// Value notifier for progress updates (for UI reactivity)
   final ValueNotifier<CalibrationProgress?> progressNotifier =
       ValueNotifier<CalibrationProgress?>(null);
@@ -44,8 +51,22 @@ class CalibrationController {
   /// Value notifier for error updates (for UI reactivity)
   final ValueNotifier<String?> errorNotifier = ValueNotifier<String?>(null);
 
+  /// Value notifier for lightweight guidance hints shown in UI
+  final ValueNotifier<String?> guidanceNotifier = ValueNotifier<String?>(null);
+
   /// Value notifier for calibration state (for UI reactivity)
   final ValueNotifier<bool> isCalibratingNotifier = ValueNotifier<bool>(false);
+
+  /// Whether manual accept is available for the current sound
+  final ValueNotifier<bool> manualAcceptAvailableNotifier = ValueNotifier<bool>(
+    false,
+  );
+
+  /// Value notifier for audio level (RMS) for live level meter
+  final ValueNotifier<double> audioLevelNotifier = ValueNotifier<double>(0.0);
+
+  /// Value notifier for "sample just collected" animation trigger
+  final ValueNotifier<int> sampleCollectedNotifier = ValueNotifier<int>(0);
 
   /// Creates a new CalibrationController with required service dependencies.
   ///
@@ -84,7 +105,9 @@ class CalibrationController {
 
   /// Start calibration workflow.
   ///
-  /// Starts the 3-step calibration procedure and subscribes to progress updates.
+  /// Starts the 4-step calibration procedure and subscribes to progress updates.
+  /// Steps: NoiseFloor → Kick → Snare → HiHat
+  /// Also subscribes to audio metrics stream for live level meter display.
   /// Throws [CalibrationServiceException] if calibration fails to start.
   /// Throws [AudioServiceException] if audio engine errors occur.
   ///
@@ -101,7 +124,7 @@ class CalibrationController {
   Future<void> startCalibration() async {
     debugPrint('[CalibrationController] Starting calibration...');
     try {
-      // Start calibration procedure
+      // Start calibration procedure first
       debugPrint(
         '[CalibrationController] Calling audioService.startCalibration()',
       );
@@ -110,7 +133,21 @@ class CalibrationController {
         '[CalibrationController] startCalibration() completed successfully',
       );
 
-      // Subscribe to calibration progress stream
+      // Set initial progress immediately (NoiseFloor, 0 samples)
+      // This ensures UI shows calibration interface right away
+      // Note: noise floor collects 30 samples in Rust, but we show it as 30
+      // to indicate automatic progress during silence
+      _currentProgress = CalibrationProgress(
+        currentSound: CalibrationSound.noiseFloor,
+        samplesCollected: 0,
+        samplesNeeded: 30,
+      );
+      progressNotifier.value = _currentProgress;
+      manualAcceptAvailableNotifier.value =
+          _currentProgress?.manualAcceptAvailable ?? false;
+      guidanceNotifier.value = null;
+
+      // Now subscribe to calibration progress stream
       debugPrint('[CalibrationController] Getting calibration stream');
       final stream = _audioService.getCalibrationStream();
       debugPrint('[CalibrationController] Got calibration stream');
@@ -121,6 +158,20 @@ class CalibrationController {
         onDone: _handleStreamDone,
       );
       _progressSubscription = subscription;
+
+      // Subscribe to audio metrics stream for live level meter
+      debugPrint('[CalibrationController] Subscribing to audio metrics stream');
+      try {
+        _audioMetricsSubscription = streams.audioMetricsStream().listen(
+          _handleAudioMetrics,
+          onError: (e) =>
+              debugPrint('[CalibrationController] Audio metrics error: $e'),
+        );
+      } catch (e) {
+        debugPrint(
+          '[CalibrationController] Audio metrics stream unavailable: $e',
+        );
+      }
 
       _setCalibrating(true);
       _clearError();
@@ -148,6 +199,14 @@ class CalibrationController {
     }
   }
 
+  /// Handle audio metrics for live level meter.
+  void _handleAudioMetrics(AudioMetrics metrics) {
+    // RMS is typically 0.0-1.0, convert to dB-like scale for display
+    // Clamp and normalize for UI display
+    final level = (metrics.rms * 2.0).clamp(0.0, 1.0);
+    audioLevelNotifier.value = level;
+  }
+
   /// Finish calibration and persist calibration state.
   ///
   /// Completes the calibration workflow and saves thresholds to storage.
@@ -158,17 +217,17 @@ class CalibrationController {
   Future<void> finishCalibration() async {
     debugPrint('[CalibrationController] Finishing calibration...');
     try {
-      final result = await _audioService.finishCalibration();
+      await _audioService.finishCalibration();
       debugPrint('[CalibrationController] Calibration finished successfully');
 
-      // Persist calibration state
-      final calibrationData = CalibrationData(
-        level: result.level,
-        timestamp: DateTime.now(),
-        thresholds: result.toThresholdMap(),
+      // Get calibration state from bridge
+      final stateJson = await api.getCalibrationState();
+      final state = CalibrationState.fromJson(
+        jsonDecode(stateJson) as Map<String, dynamic>,
       );
-      await _storageService.saveCalibration(calibrationData);
-      debugPrint('[CalibrationController] Calibration state persisted');
+
+      // Persist calibration state
+      await _persistCalibrationState(state);
 
       _setCalibrating(false);
       _clearProgress();
@@ -176,6 +235,48 @@ class CalibrationController {
       debugPrint('[CalibrationController] Finish calibration error: $e');
       _setError('Failed to finish calibration: $e');
       _setCalibrating(false);
+      rethrow;
+    }
+  }
+
+  /// User confirms current calibration step is OK and advances to next sound.
+  ///
+  /// Called when user clicks "OK" after reviewing collected samples.
+  /// Emits progress update via stream to update UI.
+  ///
+  /// Returns true if advanced to next sound, false if calibration complete.
+  Future<bool> confirmStep() async {
+    debugPrint('[CalibrationController] Confirming current step...');
+    try {
+      final hasNext = await api.confirmCalibrationStep();
+      debugPrint('[CalibrationController] Step confirmed, hasNext: $hasNext');
+      if (!hasNext) {
+        // Calibration is complete - auto-finish
+        debugPrint(
+          '[CalibrationController] Calibration complete, finishing...',
+        );
+        await finishCalibration();
+      }
+      return hasNext;
+    } catch (e) {
+      debugPrint('[CalibrationController] Confirm step error: $e');
+      _setError('Failed to confirm step: $e');
+      rethrow;
+    }
+  }
+
+  /// User wants to retry the current calibration step.
+  ///
+  /// Called when user clicks "Retry" to redo sample collection.
+  /// Clears collected samples and allows re-collection.
+  Future<void> retryStep() async {
+    debugPrint('[CalibrationController] Retrying current step...');
+    try {
+      await api.retryCalibrationStep();
+      debugPrint('[CalibrationController] Step retried, ready for new samples');
+    } catch (e) {
+      debugPrint('[CalibrationController] Retry step error: $e');
+      _setError('Failed to retry step: $e');
       rethrow;
     }
   }
@@ -211,28 +312,38 @@ class CalibrationController {
   Future<void> dispose() async {
     debugPrint('[CalibrationController] Disposing controller');
     await cancelCalibration();
+    await _audioMetricsSubscription?.cancel();
+    _audioMetricsSubscription = null;
     progressNotifier.dispose();
     errorNotifier.dispose();
+    guidanceNotifier.dispose();
     isCalibratingNotifier.dispose();
+    audioLevelNotifier.dispose();
+    sampleCollectedNotifier.dispose();
+    manualAcceptAvailableNotifier.dispose();
   }
 
   /// Handle progress update from calibration stream.
   void _handleProgressUpdate(CalibrationProgress progress) {
     debugPrint(
-      '[CalibrationController] Progress update: ${progress.currentSound} ${progress.samplesCollected}/${progress.samplesNeeded}',
+      '[CalibrationController] Progress update: ${progress.currentSound} '
+      '${progress.samplesCollected}/${progress.samplesNeeded} '
+      '(waitingForConfirmation: ${progress.waitingForConfirmation})',
     );
+
+    // Trigger sample collected animation when samples increase
+    final previousSamples = _currentProgress?.samplesCollected ?? 0;
+    if (progress.samplesCollected > previousSamples) {
+      sampleCollectedNotifier.value++;
+    }
+
     _currentProgress = progress;
     progressNotifier.value = progress;
+    manualAcceptAvailableNotifier.value = progress.manualAcceptAvailable;
+    guidanceNotifier.value = _guidanceMessage(progress.guidance);
 
-    // Auto-finish when calibration is complete
-    if (progress.isCalibrationComplete) {
-      debugPrint(
-        '[CalibrationController] All samples collected, auto-finishing',
-      );
-      finishCalibration().catchError((e) {
-        debugPrint('[CalibrationController] Auto-finish error: $e');
-      });
-    }
+    // Note: No auto-finish - user must explicitly confirm each step via OK button
+    // This allows user to review and retry if needed
   }
 
   /// Handle stream error.
@@ -290,5 +401,37 @@ class CalibrationController {
   void _clearProgress() {
     _currentProgress = null;
     progressNotifier.value = null;
+    guidanceNotifier.value = null;
+    manualAcceptAvailableNotifier.value = false;
+  }
+
+  /// Map guidance payload to user-facing banner copy.
+  String? _guidanceMessage(CalibrationGuidance? guidance) {
+    if (guidance == null) return null;
+    final soundName = guidance.sound.displayName;
+    switch (guidance.reason) {
+      case CalibrationGuidanceReason.tooQuiet:
+        return 'We hear something, but $soundName is too quiet. Get closer to the mic or project a bit more.';
+      case CalibrationGuidanceReason.clipped:
+        return '$soundName is clipping. Back off the mic slightly or reduce volume.';
+      case CalibrationGuidanceReason.stagnation:
+        return 'We hear $soundName attempts, but none counted. Try a sharper attack with short pauses.';
+    }
+  }
+
+  /// Manually count the last buffered calibration hit.
+  Future<CalibrationProgress> manualAcceptLastCandidate() async {
+    try {
+      final progress = await _audioService.manualAcceptLastCandidate();
+      _currentProgress = progress;
+      progressNotifier.value = progress;
+      manualAcceptAvailableNotifier.value = progress.manualAcceptAvailable;
+      guidanceNotifier.value = _guidanceMessage(progress.guidance);
+      sampleCollectedNotifier.value++;
+      return progress;
+    } catch (e) {
+      debugPrint('[CalibrationController] Manual accept failed: $e');
+      rethrow;
+    }
   }
 }

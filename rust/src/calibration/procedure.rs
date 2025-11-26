@@ -12,7 +12,7 @@
 use std::time::Instant;
 
 use crate::analysis::features::Features;
-use crate::calibration::progress::{CalibrationProgress, CalibrationSound};
+use crate::calibration::progress::{CalibrationGuidance, CalibrationProgress, CalibrationSound};
 use crate::calibration::state::CalibrationState;
 use crate::calibration::validation::SampleValidator;
 use crate::error::CalibrationError;
@@ -336,6 +336,15 @@ impl CalibrationProcedure {
             samples_needed,
             self.waiting_for_confirmation,
         )
+        .with_manual_accept(self.manual_accept_available())
+    }
+
+    /// Get progress with an attached guidance payload
+    pub fn get_progress_with_guidance(
+        &self,
+        guidance: Option<CalibrationGuidance>,
+    ) -> CalibrationProgress {
+        self.get_progress().with_guidance(guidance)
     }
 
     /// Get the count of samples for the current sound
@@ -405,6 +414,20 @@ impl CalibrationProcedure {
     /// Check if waiting for user confirmation
     pub fn is_waiting_for_confirmation(&self) -> bool {
         self.waiting_for_confirmation
+    }
+
+    /// Whether manual accept is available for the current sound
+    pub fn manual_accept_available(&self) -> bool {
+        self.current_sound.is_sound_phase()
+            && !self.waiting_for_confirmation
+            && self.last_candidates.has_candidate(self.current_sound)
+    }
+
+    /// Get the number of consecutive rejects for the current sound
+    pub fn rejects_for_current_sound(&self) -> u8 {
+        self.backoff
+            .rejects_for(self.current_sound)
+            .unwrap_or_default()
     }
 
     /// User confirms current phase is OK, advance to next sound

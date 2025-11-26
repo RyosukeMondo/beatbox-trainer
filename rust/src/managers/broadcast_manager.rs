@@ -311,6 +311,9 @@ mod tests {
             current_sound: CalibrationSound::Kick,
             samples_collected: 5,
             samples_needed: 10,
+            waiting_for_confirmation: false,
+            guidance: None,
+            manual_accept_available: false,
         };
 
         // Should succeed with subscriber present

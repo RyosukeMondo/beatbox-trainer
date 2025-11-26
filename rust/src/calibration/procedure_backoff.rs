@@ -92,6 +92,10 @@ impl AdaptiveBackoff {
         Self::gate_floor_value(self.noise_floor_threshold)
     }
 
+    pub(super) fn rejects_for(&self, sound: CalibrationSound) -> Option<u8> {
+        Self::gate_index(sound).map(|idx| self.gates[idx].rejects)
+    }
+
     #[cfg(test)]
     pub(super) fn gate_state(&self, sound: CalibrationSound) -> Option<&AdaptiveGateState> {
         Self::gate_index(sound).map(|idx| &self.gates[idx])

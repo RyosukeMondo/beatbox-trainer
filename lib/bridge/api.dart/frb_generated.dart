@@ -1066,6 +1066,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationGuidance dco_decode_box_autoadd_calibration_guidance(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_calibration_guidance(raw);
+  }
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   ) {
@@ -1135,16 +1141,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CalibrationProgress dco_decode_calibration_progress(dynamic raw) {
+  CalibrationGuidance dco_decode_calibration_guidance(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
     if (arr.length != 4)
       throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return CalibrationGuidance(
+      sound: dco_decode_calibration_sound(arr[0]),
+      reason: dco_decode_calibration_guidance_reason(arr[1]),
+      level: dco_decode_f_32(arr[2]),
+      misses: dco_decode_u_8(arr[3]),
+    );
+  }
+
+  @protected
+  CalibrationGuidanceReason dco_decode_calibration_guidance_reason(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CalibrationGuidanceReason.values[raw as int];
+  }
+
+  @protected
+  CalibrationProgress dco_decode_calibration_progress(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return CalibrationProgress(
       currentSound: dco_decode_calibration_sound(arr[0]),
       samplesCollected: dco_decode_u_8(arr[1]),
       samplesNeeded: dco_decode_u_8(arr[2]),
       waitingForConfirmation: dco_decode_bool(arr[3]),
+      guidance: dco_decode_opt_box_autoadd_calibration_guidance(arr[4]),
+      manualAcceptAvailable: dco_decode_bool(arr[5]),
     );
   }
 
@@ -1373,6 +1403,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  CalibrationGuidance? dco_decode_opt_box_autoadd_calibration_guidance(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_calibration_guidance(raw);
   }
 
   @protected
@@ -1702,6 +1742,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationGuidance sse_decode_box_autoadd_calibration_guidance(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_calibration_guidance(deserializer));
+  }
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   ) {
@@ -1774,6 +1822,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationGuidance sse_decode_calibration_guidance(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sound = sse_decode_calibration_sound(deserializer);
+    var var_reason = sse_decode_calibration_guidance_reason(deserializer);
+    var var_level = sse_decode_f_32(deserializer);
+    var var_misses = sse_decode_u_8(deserializer);
+    return CalibrationGuidance(
+      sound: var_sound,
+      reason: var_reason,
+      level: var_level,
+      misses: var_misses,
+    );
+  }
+
+  @protected
+  CalibrationGuidanceReason sse_decode_calibration_guidance_reason(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CalibrationGuidanceReason.values[inner];
+  }
+
+  @protected
   CalibrationProgress sse_decode_calibration_progress(
     SseDeserializer deserializer,
   ) {
@@ -1782,11 +1856,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_samplesCollected = sse_decode_u_8(deserializer);
     var var_samplesNeeded = sse_decode_u_8(deserializer);
     var var_waitingForConfirmation = sse_decode_bool(deserializer);
+    var var_guidance = sse_decode_opt_box_autoadd_calibration_guidance(
+      deserializer,
+    );
+    var var_manualAcceptAvailable = sse_decode_bool(deserializer);
     return CalibrationProgress(
       currentSound: var_currentSound,
       samplesCollected: var_samplesCollected,
       samplesNeeded: var_samplesNeeded,
       waitingForConfirmation: var_waitingForConfirmation,
+      guidance: var_guidance,
+      manualAcceptAvailable: var_manualAcceptAvailable,
     );
   }
 
@@ -2085,6 +2165,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CalibrationGuidance? sse_decode_opt_box_autoadd_calibration_guidance(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_calibration_guidance(deserializer));
     } else {
       return null;
     }
@@ -2491,6 +2584,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_calibration_guidance(
+    CalibrationGuidance self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_calibration_guidance(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -2567,6 +2669,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_calibration_guidance(
+    CalibrationGuidance self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_calibration_sound(self.sound, serializer);
+    sse_encode_calibration_guidance_reason(self.reason, serializer);
+    sse_encode_f_32(self.level, serializer);
+    sse_encode_u_8(self.misses, serializer);
+  }
+
+  @protected
+  void sse_encode_calibration_guidance_reason(
+    CalibrationGuidanceReason self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_calibration_progress(
     CalibrationProgress self,
     SseSerializer serializer,
@@ -2576,6 +2699,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_8(self.samplesCollected, serializer);
     sse_encode_u_8(self.samplesNeeded, serializer);
     sse_encode_bool(self.waitingForConfirmation, serializer);
+    sse_encode_opt_box_autoadd_calibration_guidance(self.guidance, serializer);
+    sse_encode_bool(self.manualAcceptAvailable, serializer);
   }
 
   @protected
@@ -2840,6 +2965,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_calibration_guidance(
+    CalibrationGuidance? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_calibration_guidance(self, serializer);
     }
   }
 

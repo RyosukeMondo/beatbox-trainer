@@ -6,6 +6,54 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// Guidance payload accompanying calibration progress updates
+class CalibrationGuidance {
+  /// Sound currently being calibrated
+  final CalibrationSound sound;
+
+  /// Guidance reason
+  final CalibrationGuidanceReason reason;
+
+  /// RMS/level observed when guidance was generated
+  final double level;
+
+  /// Number of consecutive misses triggering guidance
+  final int misses;
+
+  const CalibrationGuidance({
+    required this.sound,
+    required this.reason,
+    required this.level,
+    required this.misses,
+  });
+
+  @override
+  int get hashCode =>
+      sound.hashCode ^ reason.hashCode ^ level.hashCode ^ misses.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalibrationGuidance &&
+          runtimeType == other.runtimeType &&
+          sound == other.sound &&
+          reason == other.reason &&
+          level == other.level &&
+          misses == other.misses;
+}
+
+/// Reasons for providing calibration guidance to the UI
+enum CalibrationGuidanceReason {
+  /// We hear sustained audio but no samples are being accepted
+  stagnation,
+
+  /// Audio level is too low to pass the RMS gate
+  tooQuiet,
+
+  /// Audio appears clipped or overly loud
+  clipped,
+}
+
 /// Progress information for the current calibration step
 ///
 /// This struct is sent to the Dart UI via flutter_rust_bridge Stream
@@ -23,11 +71,19 @@ class CalibrationProgress {
   /// Whether waiting for user confirmation to proceed to next phase
   final bool waitingForConfirmation;
 
+  /// Optional guidance hint for the UI
+  final CalibrationGuidance? guidance;
+
+  /// Whether a manual accept candidate is available for promotion
+  final bool manualAcceptAvailable;
+
   const CalibrationProgress({
     required this.currentSound,
     required this.samplesCollected,
     required this.samplesNeeded,
     required this.waitingForConfirmation,
+    this.guidance,
+    required this.manualAcceptAvailable,
   });
 
   @override
@@ -35,7 +91,9 @@ class CalibrationProgress {
       currentSound.hashCode ^
       samplesCollected.hashCode ^
       samplesNeeded.hashCode ^
-      waitingForConfirmation.hashCode;
+      waitingForConfirmation.hashCode ^
+      guidance.hashCode ^
+      manualAcceptAvailable.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -45,7 +103,9 @@ class CalibrationProgress {
           currentSound == other.currentSound &&
           samplesCollected == other.samplesCollected &&
           samplesNeeded == other.samplesNeeded &&
-          waitingForConfirmation == other.waitingForConfirmation;
+          waitingForConfirmation == other.waitingForConfirmation &&
+          guidance == other.guidance &&
+          manualAcceptAvailable == other.manualAcceptAvailable;
 }
 
 /// Calibration phase - includes noise floor measurement before sound collection

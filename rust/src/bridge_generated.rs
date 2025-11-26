@@ -1200,6 +1200,37 @@ impl SseDecode for crate::error::calibration::CalibrationErrorCodes {
     }
 }
 
+impl SseDecode for crate::calibration::progress::CalibrationGuidance {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sound =
+            <crate::calibration::progress::CalibrationSound>::sse_decode(deserializer);
+        let mut var_reason =
+            <crate::calibration::progress::CalibrationGuidanceReason>::sse_decode(deserializer);
+        let mut var_level = <f32>::sse_decode(deserializer);
+        let mut var_misses = <u8>::sse_decode(deserializer);
+        return crate::calibration::progress::CalibrationGuidance {
+            sound: var_sound,
+            reason: var_reason,
+            level: var_level,
+            misses: var_misses,
+        };
+    }
+}
+
+impl SseDecode for crate::calibration::progress::CalibrationGuidanceReason {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::calibration::progress::CalibrationGuidanceReason::Stagnation,
+            1 => crate::calibration::progress::CalibrationGuidanceReason::TooQuiet,
+            2 => crate::calibration::progress::CalibrationGuidanceReason::Clipped,
+            _ => unreachable!("Invalid variant for CalibrationGuidanceReason: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::calibration::progress::CalibrationProgress {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1208,11 +1239,16 @@ impl SseDecode for crate::calibration::progress::CalibrationProgress {
         let mut var_samplesCollected = <u8>::sse_decode(deserializer);
         let mut var_samplesNeeded = <u8>::sse_decode(deserializer);
         let mut var_waitingForConfirmation = <bool>::sse_decode(deserializer);
+        let mut var_guidance =
+            <Option<crate::calibration::progress::CalibrationGuidance>>::sse_decode(deserializer);
+        let mut var_manualAcceptAvailable = <bool>::sse_decode(deserializer);
         return crate::calibration::progress::CalibrationProgress {
             current_sound: var_currentSound,
             samples_collected: var_samplesCollected,
             samples_needed: var_samplesNeeded,
             waiting_for_confirmation: var_waitingForConfirmation,
+            guidance: var_guidance,
+            manual_accept_available: var_manualAcceptAvailable,
         };
     }
 }
@@ -1573,6 +1609,19 @@ impl SseDecode for Option<String> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::calibration::progress::CalibrationGuidance> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <crate::calibration::progress::CalibrationGuidance>::sse_decode(deserializer),
+            );
         } else {
             return None;
         }
@@ -2022,6 +2071,51 @@ impl flutter_rust_bridge::IntoIntoDart<crate::error::calibration::CalibrationErr
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::calibration::progress::CalibrationGuidance {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.sound.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+            self.level.into_into_dart().into_dart(),
+            self.misses.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::calibration::progress::CalibrationGuidance
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::CalibrationGuidance>
+    for crate::calibration::progress::CalibrationGuidance
+{
+    fn into_into_dart(self) -> crate::calibration::progress::CalibrationGuidance {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::calibration::progress::CalibrationGuidanceReason {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Stagnation => 0.into_dart(),
+            Self::TooQuiet => 1.into_dart(),
+            Self::Clipped => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::calibration::progress::CalibrationGuidanceReason
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::CalibrationGuidanceReason>
+    for crate::calibration::progress::CalibrationGuidanceReason
+{
+    fn into_into_dart(self) -> crate::calibration::progress::CalibrationGuidanceReason {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::calibration::progress::CalibrationProgress {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2029,6 +2123,8 @@ impl flutter_rust_bridge::IntoDart for crate::calibration::progress::Calibration
             self.samples_collected.into_into_dart().into_dart(),
             self.samples_needed.into_into_dart().into_dart(),
             self.waiting_for_confirmation.into_into_dart().into_dart(),
+            self.guidance.into_into_dart().into_dart(),
+            self.manual_accept_available.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2738,6 +2834,36 @@ impl SseEncode for crate::error::calibration::CalibrationErrorCodes {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
+impl SseEncode for crate::calibration::progress::CalibrationGuidance {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::calibration::progress::CalibrationSound>::sse_encode(self.sound, serializer);
+        <crate::calibration::progress::CalibrationGuidanceReason>::sse_encode(
+            self.reason,
+            serializer,
+        );
+        <f32>::sse_encode(self.level, serializer);
+        <u8>::sse_encode(self.misses, serializer);
+    }
+}
+
+impl SseEncode for crate::calibration::progress::CalibrationGuidanceReason {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::calibration::progress::CalibrationGuidanceReason::Stagnation => 0,
+                crate::calibration::progress::CalibrationGuidanceReason::TooQuiet => 1,
+                crate::calibration::progress::CalibrationGuidanceReason::Clipped => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::calibration::progress::CalibrationProgress {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2748,6 +2874,11 @@ impl SseEncode for crate::calibration::progress::CalibrationProgress {
         <u8>::sse_encode(self.samples_collected, serializer);
         <u8>::sse_encode(self.samples_needed, serializer);
         <bool>::sse_encode(self.waiting_for_confirmation, serializer);
+        <Option<crate::calibration::progress::CalibrationGuidance>>::sse_encode(
+            self.guidance,
+            serializer,
+        );
+        <bool>::sse_encode(self.manual_accept_available, serializer);
     }
 }
 
@@ -3065,6 +3196,16 @@ impl SseEncode for Option<String> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::calibration::progress::CalibrationGuidance> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::calibration::progress::CalibrationGuidance>::sse_encode(value, serializer);
         }
     }
 }

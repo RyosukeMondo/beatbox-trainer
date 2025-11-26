@@ -33,6 +33,15 @@ impl CandidateBuffer {
         }
     }
 
+    pub(super) fn has_candidate(&self, sound: CalibrationSound) -> bool {
+        match sound {
+            CalibrationSound::Kick => self.kick.is_some(),
+            CalibrationSound::Snare => self.snare.is_some(),
+            CalibrationSound::HiHat => self.hihat.is_some(),
+            CalibrationSound::NoiseFloor => false,
+        }
+    }
+
     pub(super) fn clear_sound(&mut self, sound: CalibrationSound) {
         let _ = self.take(sound);
     }

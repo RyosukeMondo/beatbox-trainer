@@ -12,10 +12,13 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use crate::audio::buffer_pool::AnalysisThreadChannels;
 use crate::calibration::procedure::CalibrationProcedure;
-use crate::calibration::progress::CalibrationProgress;
+use crate::calibration::progress::{
+    CalibrationGuidance, CalibrationGuidanceReason, CalibrationProgress,
+};
 use crate::calibration::state::CalibrationState;
 use crate::config::OnsetDetectionConfig;
 use crate::telemetry;
@@ -117,6 +120,10 @@ pub fn spawn_analysis_thread(
             Some(log_every_n_buffers)
         };
         let mut last_noise_floor_samples: usize = 0;
+        let mut last_guidance_reason: Option<CalibrationGuidanceReason> = None;
+        let mut last_guidance_at: Option<Instant> = None;
+        let mut last_manual_available = false;
+        let guidance_rate_limit = Duration::from_secs(5);
 
         loop {
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
@@ -237,6 +244,35 @@ pub fn spawn_analysis_thread(
                 }
             }
 
+            let (calibration_active_snapshot, quiet_clear_gate) =
+                if let Ok(procedure_guard) = calibration_procedure.try_lock() {
+                    (
+                        procedure_guard.is_some(),
+                        procedure_guard
+                            .as_ref()
+                            .and_then(|p| p.noise_floor_threshold())
+                            .unwrap_or(0.02)
+                            * 1.1,
+                    )
+                } else {
+                    (false, 0.02)
+                };
+
+            if calibration_active_snapshot
+                && last_guidance_reason.is_some()
+                && rms < quiet_clear_gate
+            {
+                if let Ok(procedure_guard) = calibration_procedure.try_lock() {
+                    if let Some(ref procedure) = *procedure_guard {
+                        if let Some(ref tx) = calibration_progress_tx {
+                            let _ = tx.send(procedure.get_progress_with_guidance(None));
+                        }
+                    }
+                }
+                last_guidance_reason = None;
+                last_guidance_at = None;
+            }
+
             // Process accumulated buffer through onset detection
             let onsets = onset_detector.process(&accumulator);
 
@@ -276,25 +312,23 @@ pub fn spawn_analysis_thread(
 
                     // Extract DSP features (always needed for both modes)
                     let features = feature_extractor.extract(onset_window);
+                    let max_amplitude = onset_window
+                        .iter()
+                        .map(|sample| sample.abs())
+                        .fold(0.0f32, f32::max);
 
-                    // Check if calibration is active (non-blocking check)
-                    let calibration_active =
-                        if let Ok(procedure_guard) = calibration_procedure.try_lock() {
-                            procedure_guard.is_some()
-                        } else {
-                            false // Lock failed, assume not calibrating
-                        };
-
-                    if calibration_active {
+                    if calibration_active_snapshot {
                         // ====== CALIBRATION MODE ======
                         log::info!("[AnalysisThread] CALIBRATION MODE: Processing onset");
                         // Forward features to calibration procedure
                         if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                             if let Some(ref mut procedure) = *procedure_guard {
+                                let quiet_gate = quiet_clear_gate;
                                 match procedure.add_sample(features, onset_rms) {
                                     Ok(()) => {
                                         // Sample accepted - broadcast progress
                                         let progress = procedure.get_progress();
+                                        let manual_available = progress.manual_accept_available;
                                         log::info!(
                                             "[AnalysisThread] Sample accepted: {:?}",
                                             progress
@@ -303,11 +337,56 @@ pub fn spawn_analysis_thread(
                                         if let Some(ref tx) = calibration_progress_tx {
                                             let _ = tx.send(progress);
                                         }
+                                        last_manual_available = manual_available;
+                                        last_guidance_reason = None;
+                                        last_guidance_at = None;
                                     }
                                     Err(err) => {
                                         // Sample rejected (validation error)
                                         log::warn!("[AnalysisThread] Sample rejected: {:?}", err);
-                                        // Continue processing without crashing
+                                        let manual_available = procedure.manual_accept_available();
+                                        let manual_changed =
+                                            manual_available != last_manual_available;
+                                        last_manual_available = manual_available;
+
+                                        let reason = if onset_rms < quiet_gate {
+                                            CalibrationGuidanceReason::TooQuiet
+                                        } else if max_amplitude >= 0.98 {
+                                            CalibrationGuidanceReason::Clipped
+                                        } else {
+                                            CalibrationGuidanceReason::Stagnation
+                                        };
+
+                                        let mut guidance_payload = None;
+                                        let now = Instant::now();
+                                        let reason_changed = last_guidance_reason
+                                            .map(|r| r != reason)
+                                            .unwrap_or(true);
+                                        let past_rate_limit = last_guidance_at
+                                            .map(|ts| {
+                                                now.saturating_duration_since(ts)
+                                                    >= guidance_rate_limit
+                                            })
+                                            .unwrap_or(true);
+
+                                        if reason_changed || past_rate_limit {
+                                            guidance_payload = Some(CalibrationGuidance {
+                                                sound: procedure.current_sound(),
+                                                reason,
+                                                level: onset_rms as f32,
+                                                misses: procedure.rejects_for_current_sound(),
+                                            });
+                                            last_guidance_reason = Some(reason);
+                                            last_guidance_at = Some(now);
+                                        }
+
+                                        if manual_changed || guidance_payload.is_some() {
+                                            let progress = procedure
+                                                .get_progress_with_guidance(guidance_payload);
+                                            if let Some(ref tx) = calibration_progress_tx {
+                                                let _ = tx.send(progress);
+                                            }
+                                        }
                                     }
                                 }
                             }

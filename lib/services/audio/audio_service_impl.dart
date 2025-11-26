@@ -242,6 +242,21 @@ class AudioServiceImpl implements IAudioService {
   }
 
   @override
+  Future<CalibrationProgress> manualAcceptLastCandidate() async {
+    try {
+      final progress = await api.manualAcceptLastCandidate();
+      return _mapFfiToModelCalibrationProgress(progress);
+    } catch (e) {
+      final errorStr = e.toString();
+      if (errorStr.toLowerCase().contains('calibration')) {
+        throw _errorHandler.createCalibrationException(errorStr);
+      } else {
+        throw _errorHandler.createAudioException(errorStr);
+      }
+    }
+  }
+
+  @override
   Future<void> applyParamPatch({
     int? bpm,
     double? centroidThreshold,
@@ -278,6 +293,9 @@ class AudioServiceImpl implements IAudioService {
       currentSound: _mapFfiToModelCalibrationSound(ffiProgress.currentSound),
       samplesCollected: ffiProgress.samplesCollected,
       samplesNeeded: ffiProgress.samplesNeeded,
+      waitingForConfirmation: ffiProgress.waitingForConfirmation,
+      guidance: _mapFfiToModelGuidance(ffiProgress.guidance),
+      manualAcceptAvailable: ffiProgress.manualAcceptAvailable,
     );
   }
 
@@ -286,12 +304,39 @@ class AudioServiceImpl implements IAudioService {
     ffi_calibration.CalibrationSound ffiSound,
   ) {
     switch (ffiSound) {
+      case ffi_calibration.CalibrationSound.noiseFloor:
+        return CalibrationSound.noiseFloor;
       case ffi_calibration.CalibrationSound.kick:
         return CalibrationSound.kick;
       case ffi_calibration.CalibrationSound.snare:
         return CalibrationSound.snare;
       case ffi_calibration.CalibrationSound.hiHat:
         return CalibrationSound.hiHat;
+    }
+  }
+
+  CalibrationGuidance? _mapFfiToModelGuidance(
+    ffi_calibration.CalibrationGuidance? guidance,
+  ) {
+    if (guidance == null) return null;
+    return CalibrationGuidance(
+      sound: _mapFfiToModelCalibrationSound(guidance.sound),
+      reason: _mapFfiGuidanceReason(guidance.reason),
+      level: guidance.level,
+      misses: guidance.misses,
+    );
+  }
+
+  CalibrationGuidanceReason _mapFfiGuidanceReason(
+    ffi_calibration.CalibrationGuidanceReason reason,
+  ) {
+    switch (reason) {
+      case ffi_calibration.CalibrationGuidanceReason.stagnation:
+        return CalibrationGuidanceReason.stagnation;
+      case ffi_calibration.CalibrationGuidanceReason.tooQuiet:
+        return CalibrationGuidanceReason.tooQuiet;
+      case ffi_calibration.CalibrationGuidanceReason.clipped:
+        return CalibrationGuidanceReason.clipped;
     }
   }
 

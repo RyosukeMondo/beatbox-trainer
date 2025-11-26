@@ -147,6 +147,11 @@ abstract class IAudioService {
   /// ```
   Stream<CalibrationProgress> getCalibrationStream();
 
+  /// Manually accept the last buffered calibration candidate.
+  ///
+  /// Returns updated [CalibrationProgress] when successful.
+  Future<CalibrationProgress> manualAcceptLastCandidate();
+
   /// Apply parameter overrides to the running engine.
   ///
   /// Parameters are optional but at least one must be provided.

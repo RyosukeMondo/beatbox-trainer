@@ -101,6 +101,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  CalibrationGuidance dco_decode_box_autoadd_calibration_guidance(dynamic raw);
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   );
@@ -124,6 +127,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationErrorCodes dco_decode_calibration_error_codes(dynamic raw);
+
+  @protected
+  CalibrationGuidance dco_decode_calibration_guidance(dynamic raw);
+
+  @protected
+  CalibrationGuidanceReason dco_decode_calibration_guidance_reason(dynamic raw);
 
   @protected
   CalibrationProgress dco_decode_calibration_progress(dynamic raw);
@@ -192,6 +201,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  CalibrationGuidance? dco_decode_opt_box_autoadd_calibration_guidance(
+    dynamic raw,
+  );
 
   @protected
   ClassificationResult? dco_decode_opt_box_autoadd_classification_result(
@@ -320,6 +334,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  CalibrationGuidance sse_decode_box_autoadd_calibration_guidance(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   );
@@ -343,6 +362,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationErrorCodes sse_decode_calibration_error_codes(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CalibrationGuidance sse_decode_calibration_guidance(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CalibrationGuidanceReason sse_decode_calibration_guidance_reason(
     SseDeserializer deserializer,
   );
 
@@ -429,6 +458,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  CalibrationGuidance? sse_decode_opt_box_autoadd_calibration_guidance(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ClassificationResult? sse_decode_opt_box_autoadd_classification_result(
@@ -581,6 +615,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_calibration_guidance(
+    CalibrationGuidance self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -613,6 +653,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_calibration_error_codes(
     CalibrationErrorCodes self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_guidance(
+    CalibrationGuidance self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_guidance_reason(
+    CalibrationGuidanceReason self,
     SseSerializer serializer,
   );
 
@@ -726,6 +778,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_calibration_guidance(
+    CalibrationGuidance? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_classification_result(

@@ -189,7 +189,7 @@
   - _Leverage: FR-4B in requirements; Design Section 11.2_
   - _Prompt: Implement the task for spec calibration-workflow-fix, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust FFI engineer | Task: Add candidate buffering and manual accept API. Persist the last rejected candidate per sound in CalibrationProcedure; add manual_accept_last_candidate() in api.rs + FRB bindings; ensure it bypasses adaptive gates but still validates shape; emits CalibrationProgress on success. Clear buffer on transition/success. Log telemetry for usage. | Restrictions: Keep buffer fixed (Option<Features>), thread-safe under existing mutex, no new allocations in hot path, add unit tests for buffer lifecycle and manual accept success/failure paths. | _Leverage: Existing progress stream and CalibrationProcedure mutex_ | Success: Manual accept works only when candidate exists and matches active sound, emits progress, buffer clears appropriately, tests pass. |
 
-- [ ] 7.3 Guidance stream and UI hooks
+- [x] 7.3 Guidance stream and UI hooks
   - Files: `rust/src/api.rs` (new guidance payload), `lib/controllers/calibration/calibration_controller.dart`, `lib/ui/screens/calibration_screen.dart`
   - Emit guidance events (stagnation/too quiet/clipped) at most once per 5s; clear on progress/quiet. Wire Dart to show banner and enable “Count last hit” button when manual accept is available.
   - _Leverage: Design Section 12.1–12.2; existing guidance prototype in controller/screen_
