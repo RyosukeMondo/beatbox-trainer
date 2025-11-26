@@ -8,24 +8,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-use futures::Stream;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc, Mutex};
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::analysis::ClassificationResult;
-use crate::api::{AudioMetrics, OnsetEvent};
-#[cfg(any(test, feature = "diagnostics_fixtures"))]
-use crate::calibration::CalibrationProcedure;
-use crate::calibration::{CalibrationProgress, CalibrationState};
+use crate::calibration::CalibrationState;
 use crate::config::AppConfig;
 use crate::engine::backend::{AudioBackend, EngineStartContext, TimeSource};
 #[cfg(not(target_os = "android"))]
-use crate::engine::backend::{DesktopStubBackend, StubTimeSource};
+use crate::engine::backend::{CpalBackend, StubTimeSource};
 #[cfg(target_os = "android")]
 use crate::engine::backend::{OboeBackend, SystemTimeSource};
 use crate::error::{AudioError, CalibrationError};
 use crate::managers::{BroadcastChannelManager, CalibrationManager};
+
+#[path = "core_subscriptions.rs"]
+mod core_subscriptions;
 
 /// Patch describing parameter updates to apply to the running engine.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -125,8 +122,12 @@ impl EngineHandle {
     }
 
     #[cfg(not(target_os = "android"))]
-    fn create_backend(_config: &AppConfig) -> Arc<dyn AudioBackend> {
-        Arc::new(DesktopStubBackend::new())
+    fn create_backend(config: &AppConfig) -> Arc<dyn AudioBackend> {
+        Arc::new(CpalBackend::new(
+            config.audio.clone(),
+            config.onset_detection.clone(),
+            config.calibration.log_every_n_buffers,
+        ))
     }
 
     #[cfg(target_os = "android")]
@@ -154,36 +155,46 @@ impl EngineHandle {
         let command_rx = Arc::clone(&self.command_rx);
         let start_instant = self.start_instant;
 
-        tokio::spawn(async move {
-            loop {
-                let patch = {
-                    let mut guard = command_rx.lock().await;
-                    guard.recv().await
-                };
+        // Spawn a dedicated thread with its own Tokio runtime
+        // This is necessary because the Flutter Rust Bridge may not have a Tokio runtime
+        // available on desktop platforms when this is called
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime for command worker");
 
-                match patch {
-                    Some(patch) => {
-                        if let Some(bpm) = patch.bpm {
-                            let result = backend.set_bpm(bpm);
-                            let (kind, detail) = match result {
-                                Ok(_) => (TelemetryEventKind::BpmChanged { bpm }, None),
-                                Err(err) => (
-                                    TelemetryEventKind::Warning,
-                                    Some(format!("Failed to apply BPM patch: {}", err)),
-                                ),
-                            };
-                            Self::publish_event(
-                                &telemetry_tx,
-                                &time_source,
-                                start_instant,
-                                kind,
-                                detail,
-                            );
+            rt.block_on(async move {
+                loop {
+                    let patch = {
+                        let mut guard = command_rx.lock().await;
+                        guard.recv().await
+                    };
+
+                    match patch {
+                        Some(patch) => {
+                            if let Some(bpm) = patch.bpm {
+                                let result = backend.set_bpm(bpm);
+                                let (kind, detail) = match result {
+                                    Ok(_) => (TelemetryEventKind::BpmChanged { bpm }, None),
+                                    Err(err) => (
+                                        TelemetryEventKind::Warning,
+                                        Some(format!("Failed to apply BPM patch: {}", err)),
+                                    ),
+                                };
+                                Self::publish_event(
+                                    &telemetry_tx,
+                                    &time_source,
+                                    start_instant,
+                                    kind,
+                                    detail,
+                                );
+                            }
                         }
+                        None => break,
                     }
-                    None => break,
                 }
-            }
+            });
         });
     }
 
@@ -226,12 +237,16 @@ impl EngineHandle {
         let calibration_procedure = self.calibration.get_procedure_arc();
         let calibration_progress_tx = self.broadcasts.get_calibration_sender();
 
+        // Initialize audio metrics channel for live level meter
+        let audio_metrics_tx = Some(self.broadcasts.init_audio_metrics());
+
         let ctx = EngineStartContext {
             bpm,
             calibration_state,
             calibration_procedure,
             calibration_progress_tx,
             classification_tx: broadcast_tx,
+            audio_metrics_tx,
         };
 
         self.backend.start(ctx)?;
@@ -243,6 +258,10 @@ impl EngineHandle {
 
     /// Stop the audio engine.
     pub fn stop_audio(&self) -> Result<(), AudioError> {
+        if !self.engine_running.load(Ordering::SeqCst) {
+            return Err(AudioError::NotRunning);
+        }
+
         self.backend.stop()?;
         self.engine_running.store(false, Ordering::SeqCst);
         self.emit_event(TelemetryEventKind::EngineStopped, None);
@@ -272,23 +291,35 @@ impl EngineHandle {
         let broadcast_tx = self.broadcasts.init_calibration();
         self.calibration.start(broadcast_tx)?;
 
-        #[cfg(target_os = "android")]
-        {
-            if let Err(err) = self.stop_audio() {
-                eprintln!(
-                    "Warning: Failed to stop audio engine during calibration start: {:?}",
-                    err
-                );
-            }
+        // Stop any existing audio and restart for calibration on all platforms
+        if let Err(err) = self.stop_audio() {
+            eprintln!(
+                "Warning: Failed to stop audio engine during calibration start: {:?}",
+                err
+            );
+        }
 
-            const DEFAULT_CALIBRATION_BPM: u32 = 120;
-            self.start_audio(DEFAULT_CALIBRATION_BPM)
-                .map_err(|audio_err| CalibrationError::Timeout {
-                    reason: format!(
-                        "Failed to start audio engine for calibration: {:?}",
-                        audio_err
-                    ),
-                })?;
+        const DEFAULT_CALIBRATION_BPM: u32 = 120;
+        self.start_audio(DEFAULT_CALIBRATION_BPM)
+            .map_err(|audio_err| CalibrationError::Timeout {
+                reason: format!(
+                    "Failed to start audio engine for calibration: {:?}",
+                    audio_err
+                ),
+            })?;
+
+        // Emit initial calibration progress so UI can show the calibration interface
+        if let Some(tx) = self.broadcasts.get_calibration_sender() {
+            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref procedure) = *procedure_guard {
+                    let initial_progress = procedure.get_progress();
+                    log::info!(
+                        "[EngineHandle] Emitting initial calibration progress: {:?}",
+                        initial_progress
+                    );
+                    let _ = tx.send(initial_progress);
+                }
+            }
         }
 
         Ok(())
@@ -298,158 +329,56 @@ impl EngineHandle {
         self.calibration.finish()
     }
 
-    // ========================================================================
-    // STREAM SUBSCRIPTIONS
-    // ========================================================================
+    /// User confirms current calibration step and advances to next sound
+    ///
+    /// Called when user clicks "OK" after reviewing current sound samples.
+    /// Emits updated progress via calibration stream.
+    ///
+    /// # Returns
+    /// * `Ok(true)` - Advanced to next sound
+    /// * `Ok(false)` - Calibration complete
+    pub fn confirm_calibration_step(&self) -> Result<bool, CalibrationError> {
+        let result = self.calibration.confirm_step()?;
 
-    pub fn subscribe_classification(&self) -> mpsc::UnboundedReceiver<ClassificationResult> {
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        if let Some(mut broadcast_rx) = self.broadcasts.subscribe_classification() {
-            tokio::spawn(async move {
-                while let Ok(result) = broadcast_rx.recv().await {
-                    if tx.send(result).is_err() {
-                        break;
-                    }
-                }
-            });
-        }
-
-        rx
-    }
-
-    pub fn subscribe_calibration(&self) -> mpsc::UnboundedReceiver<CalibrationProgress> {
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        if let Some(mut broadcast_rx) = self.broadcasts.subscribe_calibration() {
-            tokio::spawn(async move {
-                while let Ok(progress) = broadcast_rx.recv().await {
-                    if tx.send(progress).is_err() {
-                        break;
-                    }
-                }
-            });
-        }
-
-        rx
-    }
-
-    pub fn subscribe_audio_metrics(&self) -> mpsc::UnboundedReceiver<AudioMetrics> {
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        if let Some(mut broadcast_rx) = self.broadcasts.subscribe_audio_metrics() {
-            tokio::spawn(async move {
-                while let Ok(metrics) = broadcast_rx.recv().await {
-                    if tx.send(metrics).is_err() {
-                        break;
-                    }
-                }
-            });
-        }
-
-        rx
-    }
-
-    pub fn subscribe_onset_events(&self) -> mpsc::UnboundedReceiver<OnsetEvent> {
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        if let Some(mut broadcast_rx) = self.broadcasts.subscribe_onset_events() {
-            tokio::spawn(async move {
-                while let Ok(event) = broadcast_rx.recv().await {
-                    if tx.send(event).is_err() {
-                        break;
-                    }
-                }
-            });
-        }
-
-        rx
-    }
-
-    pub fn subscribe_telemetry(&self) -> mpsc::UnboundedReceiver<TelemetryEvent> {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let mut broadcast_rx = self.telemetry_tx.subscribe();
-
-        tokio::spawn(async move {
-            while let Ok(event) = broadcast_rx.recv().await {
-                if tx.send(event).is_err() {
-                    break;
+        // Emit progress update after confirmation
+        if let Some(tx) = self.broadcasts.get_calibration_sender() {
+            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref procedure) = *procedure_guard {
+                    let progress = procedure.get_progress();
+                    log::info!(
+                        "[EngineHandle] Emitting calibration progress after confirm: {:?}",
+                        progress
+                    );
+                    let _ = tx.send(progress);
                 }
             }
-        });
+        }
 
-        rx
+        Ok(result)
     }
 
-    pub fn telemetry_receiver(&self) -> broadcast::Receiver<TelemetryEvent> {
-        self.telemetry_tx.subscribe()
-    }
+    /// User wants to retry the current calibration step
+    ///
+    /// Called when user clicks "Retry" to redo current sound samples.
+    /// Emits updated progress via calibration stream.
+    pub fn retry_calibration_step(&self) -> Result<(), CalibrationError> {
+        self.calibration.retry_step()?;
 
-    // ========================================================================
-    // ASYNC STREAM ADAPTERS
-    // ========================================================================
+        // Emit progress update after retry
+        if let Some(tx) = self.broadcasts.get_calibration_sender() {
+            if let Ok(procedure_guard) = self.calibration.get_procedure_arc().lock() {
+                if let Some(ref procedure) = *procedure_guard {
+                    let progress = procedure.get_progress();
+                    log::info!(
+                        "[EngineHandle] Emitting calibration progress after retry: {:?}",
+                        progress
+                    );
+                    let _ = tx.send(progress);
+                }
+            }
+        }
 
-    pub async fn classification_stream(&self) -> impl Stream<Item = ClassificationResult> + Unpin {
-        UnboundedReceiverStream::new(self.subscribe_classification())
-    }
-
-    pub async fn calibration_stream(&self) -> impl Stream<Item = CalibrationProgress> + Unpin {
-        UnboundedReceiverStream::new(self.subscribe_calibration())
-    }
-
-    pub async fn audio_metrics_stream(&self) -> impl Stream<Item = AudioMetrics> + Unpin {
-        UnboundedReceiverStream::new(self.subscribe_audio_metrics())
-    }
-
-    pub async fn onset_events_stream(&self) -> impl Stream<Item = OnsetEvent> + Unpin {
-        UnboundedReceiverStream::new(self.subscribe_onset_events())
-    }
-
-    pub async fn telemetry_stream(&self) -> impl Stream<Item = TelemetryEvent> + Unpin {
-        UnboundedReceiverStream::new(self.subscribe_telemetry())
-    }
-
-    // ========================================================================
-    // PARAM PATCH COMMANDS
-    // ========================================================================
-
-    /// Get a clone of the sender for ParamPatch commands.
-    pub fn command_sender(&self) -> mpsc::Sender<ParamPatch> {
-        self.command_tx.clone()
-    }
-
-    /// Check whether audio backend is running (best effort).
-    pub fn is_audio_running(&self) -> bool {
-        self.engine_running.load(Ordering::SeqCst)
-    }
-
-    /// Milliseconds elapsed since the handle was created (used for telemetry).
-    pub fn uptime_ms(&self) -> u64 {
-        self.time_source
-            .now()
-            .saturating_duration_since(self.start_instant)
-            .as_millis() as u64
-    }
-
-    /// Snapshot the current app configuration (tooling helper).
-    pub fn config_snapshot(&self) -> AppConfig {
-        self.config
-            .read()
-            .map(|cfg| cfg.clone())
-            .unwrap_or_else(|err| err.into_inner().clone())
-    }
-
-    /// Expose calibration state handle for fixture processors.
-    pub fn calibration_state_handle(&self) -> Arc<RwLock<CalibrationState>> {
-        self.calibration.get_state_arc()
-    }
-
-    /// Expose calibration procedure handle when diagnostics fixtures need it.
-    #[cfg(any(test, feature = "diagnostics_fixtures"))]
-    pub fn calibration_procedure_handle(
-        &self,
-    ) -> Arc<std::sync::Mutex<Option<CalibrationProcedure>>> {
-        self.calibration.get_procedure_arc()
+        Ok(())
     }
 }
 

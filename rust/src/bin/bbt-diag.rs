@@ -255,6 +255,7 @@ fn serve_command(args: ServeArgs) -> Result<()> {
 
 #[cfg(feature = "diagnostics_fixtures")]
 fn run_impl(args: RunArgs) -> Result<()> {
+    use beatbox_trainer::analysis::ClassificationResult;
     use beatbox_trainer::testing::fixture_engine;
     use std::thread;
 

@@ -48,6 +48,8 @@ pub struct ClassificationResult {
     pub confidence: f32,
 }
 
+use crate::api::AudioMetrics;
+
 /// Spawn the analysis thread that processes audio buffers through DSP pipeline
 ///
 /// The analysis thread consumes filled audio buffers from the DATA_QUEUE,
@@ -65,6 +67,7 @@ pub struct ClassificationResult {
 /// * `bpm` - Shared BPM setting from AudioEngine
 /// * `sample_rate` - Audio sample rate in Hz
 /// * `result_sender` - Tokio broadcast channel sender for ClassificationResult
+/// * `audio_metrics_tx` - Optional broadcast channel for audio metrics (level meter)
 ///
 /// # Returns
 /// JoinHandle for the spawned analysis thread
@@ -93,6 +96,7 @@ pub fn spawn_analysis_thread(
     onset_config: OnsetDetectionConfig,
     log_every_n_buffers: u64,
     shutdown_flag: Option<Arc<AtomicBool>>,
+    audio_metrics_tx: Option<tokio::sync::broadcast::Sender<AudioMetrics>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         // Initialize DSP components (all allocations happen here, not in loop)
@@ -112,14 +116,17 @@ pub fn spawn_analysis_thread(
         } else {
             Some(log_every_n_buffers)
         };
+        let mut last_noise_floor_samples: usize = 0;
 
         loop {
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
             let buffer = match analysis_channels.data_consumer.pop() {
                 Ok(buf) => buf,
                 Err(PopError::Empty) => {
+                    // Check shutdown flag - exit if shutdown requested (flag is true)
                     if let Some(flag) = shutdown_flag.as_ref() {
-                        if !flag.load(Ordering::SeqCst) {
+                        if flag.load(Ordering::SeqCst) {
+                            log::info!("[AnalysisThread] Shutdown flag set, exiting");
                             break;
                         }
                     }
@@ -146,6 +153,73 @@ pub fn spawn_analysis_thread(
                 continue;
             }
 
+            // Calculate RMS for audio metrics (level meter)
+            let rms: f64 = {
+                let sum_squares: f64 = accumulator.iter().map(|&x| (x as f64) * (x as f64)).sum();
+                (sum_squares / accumulator.len() as f64).sqrt()
+            };
+
+            // Emit audio metrics for live level meter display
+            if let Some(ref tx) = audio_metrics_tx {
+                let current_frame = frame_counter.load(Ordering::Relaxed);
+                let timestamp_ms = (current_frame as f64 / sample_rate as f64 * 1000.0) as u64;
+                let metrics = AudioMetrics {
+                    rms,
+                    spectral_centroid: 0.0, // Could compute from feature_extractor if needed
+                    spectral_flux: 0.0,
+                    frame_number: current_frame,
+                    timestamp: timestamp_ms,
+                };
+                let _ = tx.send(metrics);
+            }
+
+            // ====== NOISE FLOOR CALIBRATION PHASE ======
+            // During noise floor phase, collect RMS samples WITHOUT onset detection
+            let in_noise_floor_phase = if let Ok(procedure_guard) = calibration_procedure.try_lock()
+            {
+                procedure_guard
+                    .as_ref()
+                    .map(|p| p.is_in_noise_floor_phase())
+                    .unwrap_or(false)
+            } else {
+                false
+            };
+
+            if in_noise_floor_phase {
+                // Feed RMS to noise floor calibration
+                if let Ok(mut procedure_guard) = calibration_procedure.lock() {
+                    if let Some(ref mut procedure) = *procedure_guard {
+                        match procedure.add_noise_floor_sample(rms) {
+                            Ok(complete) => {
+                                // Broadcast progress
+                                let progress = procedure.get_progress();
+                                let samples = progress.samples_collected as usize;
+                                // Only emit when sample count changes to avoid log spam while waiting
+                                if samples != last_noise_floor_samples {
+                                    if let Some(ref tx) = calibration_progress_tx {
+                                        let _ = tx.send(progress.clone());
+                                    }
+                                    last_noise_floor_samples = samples;
+                                }
+
+                                if complete {
+                                    log::info!(
+                                        "[AnalysisThread] Noise floor calibration complete! Threshold: {:?}",
+                                        procedure.noise_floor_threshold()
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                log::warn!("[AnalysisThread] Noise floor sample rejected: {:?}", e);
+                            }
+                        }
+                    }
+                }
+                // Clear accumulator and skip onset detection during noise floor phase
+                accumulator.clear();
+                continue;
+            }
+
             // Check if buffer contains non-zero samples
             static mut NON_ZERO_CHECK: u64 = 0;
             unsafe {
@@ -155,8 +229,9 @@ pub fn spawn_analysis_thread(
                         let max_amplitude =
                             accumulator.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
                         log::info!(
-                            "[AnalysisThread] Max amplitude in accumulated buffer: {}",
-                            max_amplitude
+                            "[AnalysisThread] Max amplitude in accumulated buffer: {}, RMS: {}",
+                            max_amplitude,
+                            rms
                         );
                     }
                 }
@@ -191,6 +266,13 @@ pub fn spawn_analysis_thread(
                         onset_idx + 1024
                     );
                     let onset_window = &accumulator[onset_idx..onset_idx + 1024];
+                    let onset_rms = {
+                        let sum_squares: f64 = onset_window
+                            .iter()
+                            .map(|&sample| (sample as f64) * (sample as f64))
+                            .sum();
+                        (sum_squares / onset_window.len() as f64).sqrt()
+                    };
 
                     // Extract DSP features (always needed for both modes)
                     let features = feature_extractor.extract(onset_window);
@@ -209,7 +291,7 @@ pub fn spawn_analysis_thread(
                         // Forward features to calibration procedure
                         if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                             if let Some(ref mut procedure) = *procedure_guard {
-                                match procedure.add_sample(features) {
+                                match procedure.add_sample(features, onset_rms) {
                                     Ok(()) => {
                                         // Sample accepted - broadcast progress
                                         let progress = procedure.get_progress();
