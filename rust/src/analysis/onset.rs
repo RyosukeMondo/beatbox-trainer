@@ -261,6 +261,16 @@ impl OnsetDetector {
     fn pick_peaks(&self) -> Vec<usize> {
         self.pick_peaks_in_range(0, self.flux_signal.len())
     }
+
+    /// Get the most recent spectral flux value
+    ///
+    /// Returns the latest spectral flux value from the flux signal buffer,
+    /// or 0.0 if no samples have been processed yet.
+    ///
+    /// This is useful for real-time visualization of spectral flux in debug UI.
+    pub fn last_spectral_flux(&self) -> f32 {
+        self.flux_signal.back().copied().unwrap_or(0.0)
+    }
 }
 
 #[cfg(test)]

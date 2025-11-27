@@ -226,10 +226,20 @@ pub fn spawn_analysis_thread(
             if let Some(ref tx) = audio_metrics_tx {
                 let current_frame = frame_counter.load(Ordering::Relaxed);
                 let timestamp_ms = (current_frame as f64 / sample_rate as f64 * 1000.0) as u64;
+
+                // Extract features for spectral centroid (only if we have enough samples)
+                let features = if accumulator.len() >= 1024 {
+                    Some(feature_extractor.extract(&accumulator[accumulator.len() - 1024..]))
+                } else if !accumulator.is_empty() {
+                    Some(feature_extractor.extract(&accumulator))
+                } else {
+                    None
+                };
+
                 let metrics = AudioMetrics {
                     rms,
-                    spectral_centroid: 0.0, // Could compute from feature_extractor if needed
-                    spectral_flux: 0.0,
+                    spectral_centroid: features.map(|f| f.centroid as f64).unwrap_or(0.0),
+                    spectral_flux: onset_detector.last_spectral_flux() as f64,
                     frame_number: current_frame,
                     timestamp: timestamp_ms,
                 };
