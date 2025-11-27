@@ -31,14 +31,21 @@ pub struct BroadcastChannelManager {
 }
 
 impl BroadcastChannelManager {
-    /// Create a new BroadcastChannelManager with all channels uninitialized
+    /// Create a new BroadcastChannelManager
     ///
-    /// Channels must be explicitly initialized via init_* methods before use.
+    /// Audio metrics channel is initialized eagerly to support early FFI subscription
+    /// (Flutter subscribes at app startup before audio engine starts).
+    /// Other channels are initialized lazily via init_* methods.
     pub fn new() -> Self {
+        // Audio metrics channel must be initialized eagerly because Flutter's
+        // DebugServiceImpl.init() subscribes to the FFI stream at app startup,
+        // before start_audio() is called. Without eager init, the subscription
+        // would return an empty receiver that never receives data.
+        let (audio_metrics_tx, _) = broadcast::channel(100);
         Self {
             classification: Arc::new(Mutex::new(None)),
             calibration: Arc::new(Mutex::new(None)),
-            audio_metrics: Arc::new(Mutex::new(None)),
+            audio_metrics: Arc::new(Mutex::new(Some(audio_metrics_tx))),
             onset_events: Arc::new(Mutex::new(None)),
         }
     }
@@ -149,10 +156,11 @@ impl BroadcastChannelManager {
     // AUDIO METRICS CHANNEL (DEBUG)
     // ========================================================================
 
-    /// Initialize audio metrics broadcast channel
+    /// Get audio metrics broadcast sender for audio engine
     ///
     /// Returns sender for audio engine to publish debug metrics.
-    /// Creates a broadcast channel with 100-message buffer for metrics streaming.
+    /// The channel is initialized eagerly at construction time to support
+    /// early FFI subscription from Flutter.
     ///
     /// # Returns
     /// `broadcast::Sender<AudioMetrics>` - Sender for publishing metrics
@@ -161,10 +169,15 @@ impl BroadcastChannelManager {
     /// - Buffer size: 100 messages
     /// - Used for debug UI visualization only
     /// - Not part of critical audio path
+    /// - Channel is created at BroadcastChannelManager construction
     pub fn init_audio_metrics(&self) -> broadcast::Sender<AudioMetrics> {
-        let (tx, _) = broadcast::channel(100);
-        *self.audio_metrics.lock().unwrap() = Some(tx.clone());
-        tx
+        // Return clone of eagerly-initialized sender
+        self.audio_metrics
+            .lock()
+            .unwrap()
+            .as_ref()
+            .expect("audio_metrics channel should be initialized at construction")
+            .clone()
     }
 
     /// Subscribe to audio metrics
@@ -325,15 +338,16 @@ mod tests {
     fn test_audio_metrics_channel_lifecycle() {
         let manager = BroadcastChannelManager::new();
 
-        // Initially no subscription possible
-        assert!(manager.subscribe_audio_metrics().is_none());
-
-        // Initialize channel
-        let _tx = manager.init_audio_metrics();
-
-        // Now subscription works
+        // Audio metrics is initialized eagerly - subscription should work immediately
         let rx = manager.subscribe_audio_metrics();
         assert!(rx.is_some());
+
+        // init_audio_metrics returns the existing sender
+        let _tx = manager.init_audio_metrics();
+
+        // Subscription still works
+        let rx2 = manager.subscribe_audio_metrics();
+        assert!(rx2.is_some());
     }
 
     #[test]
@@ -355,10 +369,12 @@ mod tests {
     fn test_default_implementation() {
         let manager = BroadcastChannelManager::default();
 
-        // All channels should be uninitialized
+        // Classification, calibration, onset_events should be uninitialized
         assert!(manager.subscribe_classification().is_none());
         assert!(manager.subscribe_calibration().is_none());
-        assert!(manager.subscribe_audio_metrics().is_none());
         assert!(manager.subscribe_onset_events().is_none());
+
+        // Audio metrics is initialized eagerly
+        assert!(manager.subscribe_audio_metrics().is_some());
     }
 }

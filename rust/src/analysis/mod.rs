@@ -278,7 +278,7 @@ pub fn spawn_analysis_thread(
                         }
                     }
                 }
-                // Clear accumulator and skip onset detection during noise floor phase
+                // Clear accumulator for next batch
                 accumulator.clear();
                 continue;
             }
@@ -449,6 +449,69 @@ pub fn spawn_analysis_thread(
                     last_level_crossing_capture = Instant::now();
                 }
             }
+
+            // ====== LEVEL-CROSSING DETECTOR FOR CLASSIFICATION ======
+            // Same approach as calibration: detect when RMS crosses from below to above threshold
+            // This is more reliable than onset detection which can fire on spectral changes in quiet audio
+            if !calibration_active_snapshot
+                && accumulator.len() >= 1024
+                && last_level_crossing_capture.elapsed()
+                    >= Duration::from_millis(LEVEL_CROSSING_DEBOUNCE_MS)
+            {
+                let noise_floor_gate = match calibration_state.read() {
+                    Ok(state) => state.noise_floor_rms * 2.0,
+                    Err(_) => 0.02, // Conservative fallback
+                };
+                let crossed_threshold =
+                    prev_rms_for_crossing < noise_floor_gate && rms >= noise_floor_gate;
+
+                if crossed_threshold {
+                    eprintln!(
+                        "[AnalysisThread] Level crossing for classification: prev_rms {:.4} -> rms {:.4} (gate {:.4})",
+                        prev_rms_for_crossing,
+                        rms,
+                        noise_floor_gate
+                    );
+
+                    // Extract features from the most recent 1024 samples
+                    let crossing_window = &accumulator[accumulator.len() - 1024..];
+                    let crossing_features = feature_extractor.extract(crossing_window);
+
+                    // Classify sound (returns tuple of (BeatboxHit, confidence))
+                    let (sound, confidence) = classifier.classify_level1(&crossing_features);
+
+                    // Timing feedback
+                    // Note: For level-crossing detection, we don't have precise onset timestamps.
+                    // Return neutral "on-time" feedback. Future improvement: track sample counter.
+                    let timing = TimingFeedback {
+                        classification: quantizer::TimingClassification::OnTime,
+                        error_ms: 0.0,
+                    };
+
+                    // Timestamp is approximate for level-crossing detection
+                    let timestamp_ms = 0u64; // TODO: Implement proper timestamp tracking
+
+                    // Create result and send to Dart UI
+                    let result = ClassificationResult {
+                        sound,
+                        timing,
+                        timestamp_ms,
+                        confidence,
+                    };
+
+                    eprintln!(
+                        "[AnalysisThread] CLASSIFIED via level-crossing: {:?} (confidence {:.2})",
+                        sound, confidence
+                    );
+
+                    // Send result to broadcast channel
+                    telemetry::hub().record_classification(&result);
+                    let _ = result_sender.send(result);
+
+                    last_level_crossing_capture = Instant::now();
+                }
+            }
+
             prev_rms_for_crossing = rms;
 
             // Process accumulated buffer through onset detection
@@ -460,189 +523,190 @@ pub fn spawn_analysis_thread(
 
             // For each detected onset, run pipeline (calibration or classification mode)
             // IMPORTANT: Process onsets BEFORE clearing accumulator!
+            //
+            // Note: The onset detector returns timestamps relative to its total frames processed,
+            // but since we clear the accumulator after each processing cycle, the timestamps
+            // don't directly map to positions in the current buffer. Instead, we use the same
+            // approach as level-crossing detection: extract the most recent 1024 samples,
+            // which contain the onset (due to the onset detector's look-ahead delay).
             for onset_timestamp in onsets {
-                // Extract 1024-sample window starting at onset
-                // onset_timestamp is relative to when the audio engine started
-                // We need to find it within the current accumulator
-                let onset_idx = (onset_timestamp % accumulator.len() as u64) as usize;
-
-                if onset_idx + 1024 <= accumulator.len() {
-                    let onset_window = &accumulator[onset_idx..onset_idx + 1024];
-                    let onset_rms = {
-                        let sum_squares: f64 = onset_window
-                            .iter()
-                            .map(|&sample| (sample as f64) * (sample as f64))
-                            .sum();
-                        (sum_squares / onset_window.len() as f64).sqrt()
-                    };
-
-                    let max_amplitude = onset_window
-                        .iter()
-                        .map(|sample| sample.abs())
-                        .fold(0.0f32, f32::max);
-                    // Extract DSP features (always needed for both modes)
-                    let features = feature_extractor.extract(onset_window);
+                // Skip if accumulator doesn't have enough samples
+                if accumulator.len() < 1024 {
                     log::debug!(
-                        "[AnalysisThread] Onset features: centroid {:.1} Hz, zcr {:.3}, rms {:.4}, max_amp {:.3}",
-                        features.centroid,
-                        features.zcr,
-                        onset_rms,
-                        max_amplitude
+                        "[AnalysisThread] Skipping onset - accumulator too small: {} < 1024",
+                        accumulator.len()
                     );
+                    continue;
+                }
 
-                    if calibration_active_snapshot {
-                        // ====== CALIBRATION MODE ======
-                        // Forward features to calibration procedure
-                        if let Ok(mut procedure_guard) = calibration_procedure.lock() {
-                            if let Some(ref mut procedure) = *procedure_guard {
-                                let quiet_gate = quiet_clear_gate;
-                                match procedure.add_sample(features, onset_rms, max_amplitude) {
-                                    Ok(()) => {
-                                        // Sample accepted - broadcast progress with debug snapshot
-                                        let progress = procedure
-                                            .get_progress_with_guidance_and_features(
-                                                None,
-                                                Some(&features),
-                                                Some(onset_rms),
-                                                Some(max_amplitude),
-                                            );
-                                        debug_emit_counter = debug_emit_counter.wrapping_add(1);
-                                        log::debug!(
-                                            "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
-                                            debug_emit_counter,
-                                            progress.debug.as_ref().and_then(|d| d.rms_gate),
-                                            progress.debug.as_ref().and_then(|d| d.last_rms),
-                                            progress.debug.as_ref().and_then(|d| d.last_centroid),
-                                            progress.debug.as_ref().and_then(|d| d.last_zcr),
-                                            progress.debug.as_ref().and_then(|d| d.last_max_amp),
-                                            progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
+                // Use the most recent 1024 samples (the onset is in this region due to detection delay)
+                let onset_window = &accumulator[accumulator.len() - 1024..];
+                let onset_rms = {
+                    let sum_squares: f64 = onset_window
+                        .iter()
+                        .map(|&sample| (sample as f64) * (sample as f64))
+                        .sum();
+                    (sum_squares / onset_window.len() as f64).sqrt()
+                };
+
+                let max_amplitude = onset_window
+                    .iter()
+                    .map(|sample| sample.abs())
+                    .fold(0.0f32, f32::max);
+                // Extract DSP features (always needed for both modes)
+                let features = feature_extractor.extract(onset_window);
+                log::debug!(
+                    "[AnalysisThread] Onset features: centroid {:.1} Hz, zcr {:.3}, rms {:.4}, max_amp {:.3}",
+                    features.centroid,
+                    features.zcr,
+                    onset_rms,
+                    max_amplitude
+                );
+
+                if calibration_active_snapshot {
+                    // ====== CALIBRATION MODE ======
+                    // Forward features to calibration procedure
+                    if let Ok(mut procedure_guard) = calibration_procedure.lock() {
+                        if let Some(ref mut procedure) = *procedure_guard {
+                            let quiet_gate = quiet_clear_gate;
+                            match procedure.add_sample(features, onset_rms, max_amplitude) {
+                                Ok(()) => {
+                                    // Sample accepted - broadcast progress with debug snapshot
+                                    let progress = procedure
+                                        .get_progress_with_guidance_and_features(
+                                            None,
+                                            Some(&features),
+                                            Some(onset_rms),
+                                            Some(max_amplitude),
                                         );
-                                        if let Some(ref tx) = calibration_progress_tx {
-                                            let _ = tx.send(progress);
-                                        }
-                                        guidance_limiter.clear();
+                                    debug_emit_counter = debug_emit_counter.wrapping_add(1);
+                                    log::debug!(
+                                        "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
+                                        debug_emit_counter,
+                                        progress.debug.as_ref().and_then(|d| d.rms_gate),
+                                        progress.debug.as_ref().and_then(|d| d.last_rms),
+                                        progress.debug.as_ref().and_then(|d| d.last_centroid),
+                                        progress.debug.as_ref().and_then(|d| d.last_zcr),
+                                        progress.debug.as_ref().and_then(|d| d.last_max_amp),
+                                        progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
+                                    );
+                                    if let Some(ref tx) = calibration_progress_tx {
+                                        let _ = tx.send(progress);
                                     }
-                                    Err(err) => {
-                                        // Sample rejected (validation error) - keep warning to a minimum
-                                        log::debug!(
-                                            "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?})",
-                                            err,
-                                            procedure.rejects_for_current_sound(),
-                                            procedure.rms_gate_for_current()
+                                    guidance_limiter.clear();
+                                }
+                                Err(err) => {
+                                    // Sample rejected (validation error) - keep warning to a minimum
+                                    log::debug!(
+                                        "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?})",
+                                        err,
+                                        procedure.rejects_for_current_sound(),
+                                        procedure.rms_gate_for_current()
+                                    );
+                                    let reason = if onset_rms < quiet_gate {
+                                        CalibrationGuidanceReason::TooQuiet
+                                    } else if max_amplitude >= 0.98 {
+                                        CalibrationGuidanceReason::Clipped
+                                    } else {
+                                        CalibrationGuidanceReason::Stagnation
+                                    };
+
+                                    let mut guidance_payload = None;
+                                    let now = Instant::now();
+
+                                    if guidance_limiter.should_emit(reason, now) {
+                                        guidance_payload = Some(CalibrationGuidance {
+                                            sound: procedure.current_sound(),
+                                            reason,
+                                            level: onset_rms as f32,
+                                            misses: procedure.rejects_for_current_sound(),
+                                        });
+                                    }
+
+                                    let progress = procedure
+                                        .get_progress_with_guidance_and_features(
+                                            guidance_payload,
+                                            Some(&features),
+                                            Some(onset_rms),
+                                            Some(max_amplitude),
                                         );
-                                        let reason = if onset_rms < quiet_gate {
-                                            CalibrationGuidanceReason::TooQuiet
-                                        } else if max_amplitude >= 0.98 {
-                                            CalibrationGuidanceReason::Clipped
-                                        } else {
-                                            CalibrationGuidanceReason::Stagnation
-                                        };
-
-                                        let mut guidance_payload = None;
-                                        let now = Instant::now();
-
-                                        if guidance_limiter.should_emit(reason, now) {
-                                            guidance_payload = Some(CalibrationGuidance {
-                                                sound: procedure.current_sound(),
-                                                reason,
-                                                level: onset_rms as f32,
-                                                misses: procedure.rejects_for_current_sound(),
-                                            });
-                                        }
-
-                                        let progress = procedure
-                                            .get_progress_with_guidance_and_features(
-                                                guidance_payload,
-                                                Some(&features),
-                                                Some(onset_rms),
-                                                Some(max_amplitude),
-                                            );
-                                        debug_emit_counter = debug_emit_counter.wrapping_add(1);
-                                        log::debug!(
-                                            "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
-                                            debug_emit_counter,
-                                            progress.debug.as_ref().and_then(|d| d.rms_gate),
-                                            progress.debug.as_ref().and_then(|d| d.last_rms),
-                                            progress.debug.as_ref().and_then(|d| d.last_centroid),
-                                            progress.debug.as_ref().and_then(|d| d.last_zcr),
-                                            progress.debug.as_ref().and_then(|d| d.last_max_amp),
-                                            progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
-                                        );
-                                        if let Some(ref tx) = calibration_progress_tx {
-                                            let _ = tx.send(progress);
-                                        }
+                                    debug_emit_counter = debug_emit_counter.wrapping_add(1);
+                                    log::debug!(
+                                        "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
+                                        debug_emit_counter,
+                                        progress.debug.as_ref().and_then(|d| d.rms_gate),
+                                        progress.debug.as_ref().and_then(|d| d.last_rms),
+                                        progress.debug.as_ref().and_then(|d| d.last_centroid),
+                                        progress.debug.as_ref().and_then(|d| d.last_zcr),
+                                        progress.debug.as_ref().and_then(|d| d.last_max_amp),
+                                        progress.debug.as_ref().map(|d| d.misses).unwrap_or(0),
+                                    );
+                                    if let Some(ref tx) = calibration_progress_tx {
+                                        let _ = tx.send(progress);
                                     }
                                 }
                             }
                         }
-                    } else {
-                        // ====== CLASSIFICATION MODE ======
-                        // Gate onset by noise floor to prevent false positives from ambient noise
-                        // Use 2x noise floor as detection threshold (same as calibration)
-                        let noise_floor_gate = match calibration_state.read() {
-                            Ok(state) => state.noise_floor_rms * 2.0,
-                            Err(_) => 0.02, // Conservative fallback
-                        };
-
-                        // Log every onset attempt for debugging
-                        eprintln!(
-                            "[AnalysisThread] Onset: rms={:.4}, gate={:.4}, pass={}",
-                            onset_rms,
-                            noise_floor_gate,
-                            onset_rms >= noise_floor_gate
-                        );
-
-                        if onset_rms < noise_floor_gate {
-                            // Below noise floor - skip classification to avoid false positives
-                            eprintln!(
-                                "[AnalysisThread] SKIPPED onset below noise floor: rms {:.4} < gate {:.4}",
-                                onset_rms,
-                                noise_floor_gate
-                            );
-                            continue;
-                        }
-
-                        // Classify sound (returns tuple of (BeatboxHit, confidence))
-                        let (sound, confidence) = classifier.classify_level1(&features);
-
-                        // Quantize timing (only if metronome is running, BPM > 0)
-                        let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
-                        let timing = if current_bpm > 0 {
-                            quantizer.quantize(onset_timestamp)
-                        } else {
-                            // No metronome - no timing feedback
-                            TimingFeedback {
-                                classification: quantizer::TimingClassification::OnTime,
-                                error_ms: 0.0,
-                            }
-                        };
-
-                        // Convert timestamp to milliseconds
-                        let timestamp_ms =
-                            (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
-
-                        // Create result and send to Dart UI
-                        let result = ClassificationResult {
-                            sound,
-                            timing,
-                            timestamp_ms,
-                            confidence,
-                        };
-
-                        // Send result to broadcast channel (drops if no subscribers)
-                        // Broadcast channels don't fail on send, they just drop messages if no one is listening
-                        telemetry::hub().record_classification(&result);
-                        let _ = result_sender.send(result);
                     }
                 } else {
-                    log::warn!(
-                        "[AnalysisThread] Onset window incomplete: need {} samples but only {} available from idx {}",
-                        1024,
-                        accumulator.len() - onset_idx,
-                        onset_idx
+                    // ====== CLASSIFICATION MODE ======
+                    // Gate onset by noise floor to prevent false positives from ambient noise
+                    // Use 2x noise floor as detection threshold (same as calibration)
+                    let noise_floor_gate = match calibration_state.read() {
+                        Ok(state) => state.noise_floor_rms * 2.0,
+                        Err(_) => 0.02, // Conservative fallback
+                    };
+
+                    // Log every onset attempt for debugging
+                    eprintln!(
+                        "[AnalysisThread] Onset: rms={:.4}, gate={:.4}, pass={}",
+                        onset_rms,
+                        noise_floor_gate,
+                        onset_rms >= noise_floor_gate
                     );
+
+                    if onset_rms < noise_floor_gate {
+                        // Below noise floor - skip classification to avoid false positives
+                        eprintln!(
+                            "[AnalysisThread] SKIPPED onset below noise floor: rms {:.4} < gate {:.4}",
+                            onset_rms,
+                            noise_floor_gate
+                        );
+                        continue;
+                    }
+
+                    // Classify sound (returns tuple of (BeatboxHit, confidence))
+                    let (sound, confidence) = classifier.classify_level1(&features);
+
+                    // Quantize timing (only if metronome is running, BPM > 0)
+                    let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
+                    let timing = if current_bpm > 0 {
+                        quantizer.quantize(onset_timestamp)
+                    } else {
+                        // No metronome - no timing feedback
+                        TimingFeedback {
+                            classification: quantizer::TimingClassification::OnTime,
+                            error_ms: 0.0,
+                        }
+                    };
+
+                    // Convert timestamp to milliseconds
+                    let timestamp_ms =
+                        (onset_timestamp as f64 / sample_rate as f64 * 1000.0) as u64;
+
+                    // Create result and send to Dart UI
+                    let result = ClassificationResult {
+                        sound,
+                        timing,
+                        timestamp_ms,
+                        confidence,
+                    };
+
+                    // Send result to broadcast channel (drops if no subscribers)
+                    // Broadcast channels don't fail on send, they just drop messages if no one is listening
+                    telemetry::hub().record_classification(&result);
+                    let _ = result_sender.send(result);
                 }
-                // If onset is too close to end of buffer, skip it (will be caught in next buffer)
             }
 
             // Clear accumulator for next batch (AFTER processing all onsets!)
