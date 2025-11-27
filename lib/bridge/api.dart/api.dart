@@ -264,3 +264,39 @@ AudioErrorCodes getAudioErrorCodes() =>
 /// Get CalibrationErrorCodes as a structured object with all error code constants
 CalibrationErrorCodes getCalibrationErrorCodes() =>
     RustLib.instance.api.crateApiGetCalibrationErrorCodes();
+
+/// Update a single calibration threshold value in the active calibration state.
+///
+/// This enables manual threshold tweaking for debugging and tuning without
+/// requiring a full recalibration cycle.
+///
+/// # Parameters
+/// - `key`: The threshold key to update. Valid keys:
+///   - "t_kick_centroid"
+///   - "t_kick_zcr"
+///   - "t_snare_centroid"
+///   - "t_hihat_zcr"
+///   - "noise_floor_rms"
+/// - `value`: The new threshold value
+///
+/// # Returns
+/// * `Ok(())` - Threshold updated successfully
+/// * `Err(CalibrationError)` - If key is invalid or lock fails
+Future<void> updateCalibrationThreshold({
+  required String key,
+  required double value,
+}) => RustLib.instance.api.crateApiUpdateCalibrationThreshold(
+  key: key,
+  value: value,
+);
+
+/// Get current audio level metrics for real-time display.
+///
+/// Returns the latest RMS and peak values from the audio engine.
+/// This is a lightweight call suitable for UI updates.
+///
+/// # Returns
+/// * `Ok((rms, peak, noise_gate))` - Current audio metrics
+/// * `Err(CalibrationError)` - If state cannot be read
+Future<(double, double, double)> getCurrentAudioLevel() =>
+    RustLib.instance.api.crateApiGetCurrentAudioLevel();

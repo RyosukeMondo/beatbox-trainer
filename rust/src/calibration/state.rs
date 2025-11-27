@@ -423,4 +423,69 @@ mod tests {
 
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_serialization_includes_noise_floor_rms() {
+        // Create a calibration state with specific noise_floor_rms
+        let kick_samples = create_test_samples(1000.0, 0.05);
+        let snare_samples = create_test_samples(3000.0, 0.15);
+        let hihat_samples = create_test_samples(8000.0, 0.5);
+
+        let noise_floor = 0.0065; // Specific value to check
+        let state = CalibrationState::from_samples(
+            &kick_samples,
+            &snare_samples,
+            &hihat_samples,
+            10,
+            noise_floor,
+        )
+        .unwrap();
+
+        // Serialize to JSON
+        let json = serde_json::to_string(&state).unwrap();
+        eprintln!("Serialized JSON: {}", json);
+
+        // Verify noise_floor_rms is in the JSON
+        assert!(
+            json.contains("noise_floor_rms"),
+            "JSON should contain noise_floor_rms field: {}",
+            json
+        );
+        assert!(
+            json.contains("0.0065"),
+            "JSON should contain noise_floor_rms value 0.0065: {}",
+            json
+        );
+
+        // Deserialize and verify round-trip
+        let deserialized: CalibrationState = serde_json::from_str(&json).unwrap();
+        assert!(
+            (deserialized.noise_floor_rms - noise_floor).abs() < 0.0001,
+            "Round-trip should preserve noise_floor_rms: {} vs {}",
+            deserialized.noise_floor_rms,
+            noise_floor
+        );
+    }
+
+    #[test]
+    fn test_deserialization_without_noise_floor_uses_default() {
+        // JSON without noise_floor_rms field (legacy format)
+        let json = r#"{
+            "level": 1,
+            "t_kick_centroid": 1200.0,
+            "t_kick_zcr": 0.06,
+            "t_snare_centroid": 3600.0,
+            "t_hihat_zcr": 0.6,
+            "is_calibrated": true
+        }"#;
+
+        let state: CalibrationState = serde_json::from_str(json).unwrap();
+
+        // Should use default value
+        assert!(
+            (state.noise_floor_rms - 0.01).abs() < 0.0001,
+            "Missing noise_floor_rms should default to 0.01: {}",
+            state.noise_floor_rms
+        );
+    }
 }

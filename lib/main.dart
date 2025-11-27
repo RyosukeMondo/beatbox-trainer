@@ -8,6 +8,7 @@ import 'ui/screens/calibration_screen.dart';
 import 'ui/screens/training_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/debug_lab_screen.dart';
+import 'ui/widgets/main_scaffold.dart';
 import 'services/settings/i_settings_service.dart';
 import 'services/storage/i_storage_service.dart';
 
@@ -62,21 +63,36 @@ final GoRouter _router = GoRouter(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
     ),
-    GoRoute(
-      path: '/calibration',
-      builder: (context, state) => CalibrationScreen.create(),
-    ),
-    GoRoute(
-      path: '/training',
-      builder: (context, state) => TrainingScreen.create(),
-    ),
-    GoRoute(
-      path: '/settings',
-      builder: (context, state) => SettingsScreen.create(),
-    ),
-    GoRoute(
-      path: '/debug',
-      builder: (context, state) => DebugLabScreen.create(),
+    // Main app shell with bottom navigation for all main screens
+    ShellRoute(
+      builder: (context, state, child) {
+        // Determine current index from path
+        final path = state.uri.path;
+        final index = switch (path) {
+          '/calibration' => 1,
+          '/settings' => 2,
+          _ => 0, // training is default
+        };
+        return MainScaffold(currentIndex: index, child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/training',
+          builder: (context, state) => TrainingScreen.create(),
+        ),
+        GoRoute(
+          path: '/calibration',
+          builder: (context, state) => CalibrationScreen.create(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => SettingsScreen.create(),
+        ),
+        GoRoute(
+          path: '/debug',
+          builder: (context, state) => DebugLabScreen.create(),
+        ),
+      ],
     ),
   ],
 );

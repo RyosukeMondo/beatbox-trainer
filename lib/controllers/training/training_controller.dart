@@ -69,6 +69,14 @@ class TrainingController {
     return await _settingsService.getDebugMode();
   }
 
+  /// Get noise floor RMS from calibration.
+  ///
+  /// Returns the calibrated noise floor RMS value, or default (0.01) if not calibrated.
+  Future<double> getNoiseFloorRms() async {
+    final calibData = await _storageService.loadCalibration();
+    return calibData?.thresholds['noise_floor_rms'] ?? 0.01;
+  }
+
   /// Start training session.
   ///
   /// Requests microphone permission if needed, loads BPM from settings,
@@ -89,25 +97,35 @@ class TrainingController {
   /// }
   /// ```
   Future<void> startTraining() async {
+    debugPrint('[TrainingController] startTraining() called');
     if (_isTraining) {
       throw StateError('Training already in progress');
     }
 
     // Request permission if not granted
+    debugPrint('[TrainingController] Requesting microphone permission...');
     final hasPermission = await _requestMicrophonePermission();
+    debugPrint('[TrainingController] Permission granted: $hasPermission');
     if (!hasPermission) {
       throw PermissionException('Microphone permission denied');
     }
 
     // Load BPM from settings
+    debugPrint('[TrainingController] Loading BPM from settings...');
     _currentBpm = await _settingsService.getBpm();
+    debugPrint('[TrainingController] BPM loaded: $_currentBpm');
 
     // Load calibration state into Rust engine before starting audio
+    debugPrint('[TrainingController] Loading calibration state...');
     await _loadCalibrationState();
+    debugPrint('[TrainingController] Calibration state loaded');
 
     // Start audio engine
+    debugPrint('[TrainingController] Calling audioService.startAudio(bpm: $_currentBpm)...');
     await _audioService.startAudio(bpm: _currentBpm);
+    debugPrint('[TrainingController] audioService.startAudio() completed');
     _isTraining = true;
+    debugPrint('[TrainingController] Training started successfully');
   }
 
   /// Load calibration state from storage into Rust engine.

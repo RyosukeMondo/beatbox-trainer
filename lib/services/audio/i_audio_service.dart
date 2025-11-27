@@ -183,4 +183,22 @@ abstract class IAudioService {
   /// await audioService.startAudio(bpm: 120);
   /// ```
   Future<void> loadCalibrationState(String json);
+
+  /// Update a single calibration threshold value.
+  ///
+  /// Enables manual threshold tweaking for debugging without full recalibration.
+  ///
+  /// Parameters:
+  /// - [key]: Threshold key (t_kick_centroid, t_kick_zcr, t_snare_centroid,
+  ///   t_hihat_zcr, noise_floor_rms)
+  /// - [value]: New threshold value
+  ///
+  /// Throws:
+  /// - [CalibrationServiceException] if key is invalid
+  Future<void> updateCalibrationThreshold(String key, double value);
+
+  /// Get current calibration state as JSON string.
+  ///
+  /// Returns the active calibration parameters for display/debugging.
+  Future<String> getCalibrationState();
 }

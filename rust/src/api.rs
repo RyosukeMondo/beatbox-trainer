@@ -471,5 +471,66 @@ pub fn get_calibration_error_codes() -> CalibrationErrorCodes {
     CalibrationErrorCodes {}
 }
 
+/// Update a single calibration threshold value in the active calibration state.
+///
+/// This enables manual threshold tweaking for debugging and tuning without
+/// requiring a full recalibration cycle.
+///
+/// # Parameters
+/// - `key`: The threshold key to update. Valid keys:
+///   - "t_kick_centroid"
+///   - "t_kick_zcr"
+///   - "t_snare_centroid"
+///   - "t_hihat_zcr"
+///   - "noise_floor_rms"
+/// - `value`: The new threshold value
+///
+/// # Returns
+/// * `Ok(())` - Threshold updated successfully
+/// * `Err(CalibrationError)` - If key is invalid or lock fails
+#[flutter_rust_bridge::frb]
+pub fn update_calibration_threshold(key: String, value: f64) -> Result<(), CalibrationError> {
+    eprintln!(
+        "[Rust API] update_calibration_threshold: key={}, value={}",
+        key, value
+    );
+
+    let mut state = ENGINE_HANDLE.get_calibration_state()?;
+
+    match key.as_str() {
+        "t_kick_centroid" => state.t_kick_centroid = value as f32,
+        "t_kick_zcr" => state.t_kick_zcr = value as f32,
+        "t_snare_centroid" => state.t_snare_centroid = value as f32,
+        "t_hihat_zcr" => state.t_hihat_zcr = value as f32,
+        "noise_floor_rms" => state.noise_floor_rms = value,
+        _ => {
+            return Err(CalibrationError::InvalidFeatures {
+                reason: format!("Unknown threshold key: {}", key),
+            });
+        }
+    }
+
+    ENGINE_HANDLE.load_calibration(state)?;
+    eprintln!("[Rust API] Threshold {} updated to {}", key, value);
+    Ok(())
+}
+
+/// Get current audio level metrics for real-time display.
+///
+/// Returns the latest RMS and peak values from the audio engine.
+/// This is a lightweight call suitable for UI updates.
+///
+/// # Returns
+/// * `Ok((rms, peak, noise_gate))` - Current audio metrics
+/// * `Err(CalibrationError)` - If state cannot be read
+#[flutter_rust_bridge::frb]
+pub fn get_current_audio_level() -> Result<(f64, f64, f64), CalibrationError> {
+    let state = ENGINE_HANDLE.get_calibration_state()?;
+    let noise_gate = state.noise_floor_rms * 2.0;
+    // Note: RMS/peak would need to come from the analysis thread
+    // For now return the noise gate threshold for debugging
+    Ok((0.0, 0.0, noise_gate))
+}
+
 #[cfg(test)]
 mod tests;

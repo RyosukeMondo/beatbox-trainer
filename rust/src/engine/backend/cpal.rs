@@ -127,11 +127,15 @@ impl AudioBackend for CpalBackend {
         // Spawn stream thread - this thread owns the CPAL stream
         let stream_handle = thread::spawn(move || {
             // Initialize CPAL in this thread
+            eprintln!("[CpalBackend] Stream thread started, getting default host...");
             let host = cpal::default_host();
+            eprintln!("[CpalBackend] Got host: {:?}", host.id());
 
+            eprintln!("[CpalBackend] Getting default input device...");
             let device = match host.default_input_device() {
                 Some(d) => d,
                 None => {
+                    eprintln!("[CpalBackend] ERROR: No input device available");
                     let _ = sample_rate_tx.send(Err(AudioError::HardwareError {
                         details: "No input device available".to_string(),
                     }));
@@ -139,17 +143,20 @@ impl AudioBackend for CpalBackend {
                 }
             };
 
-            log::info!("[CpalBackend] Using input device: {:?}", device.name());
+            eprintln!("[CpalBackend] Using input device: {:?}", device.name());
 
+            eprintln!("[CpalBackend] Getting default input config...");
             let supported_config = match device.default_input_config() {
                 Ok(c) => c,
                 Err(e) => {
+                    eprintln!("[CpalBackend] ERROR: Failed to get input config: {}", e);
                     let _ = sample_rate_tx.send(Err(AudioError::StreamOpenFailed {
                         reason: format!("Failed to get default input config: {}", e),
                     }));
                     return;
                 }
             };
+            eprintln!("[CpalBackend] Got input config: {:?}", supported_config);
 
             let sample_rate = supported_config.sample_rate().0;
             let channels = supported_config.channels() as usize;
@@ -177,6 +184,10 @@ impl AudioBackend for CpalBackend {
             let err_fn = |err| log::error!("[CpalBackend] Stream error: {}", err);
 
             // Build the input stream based on sample format
+            eprintln!(
+                "[CpalBackend] Building input stream with format {:?}...",
+                supported_config.sample_format()
+            );
             let stream = match supported_config.sample_format() {
                 SampleFormat::F32 => {
                     device.build_input_stream(
@@ -276,9 +287,14 @@ impl AudioBackend for CpalBackend {
                 }
             };
 
+            eprintln!("[CpalBackend] build_input_stream returned, checking result...");
             let stream = match stream {
-                Ok(s) => s,
+                Ok(s) => {
+                    eprintln!("[CpalBackend] Stream built successfully");
+                    s
+                }
                 Err(e) => {
+                    eprintln!("[CpalBackend] ERROR: Failed to build stream: {}", e);
                     let _ = sample_rate_tx.send(Err(AudioError::StreamOpenFailed {
                         reason: format!("Failed to build input stream: {}", e),
                     }));
@@ -287,6 +303,7 @@ impl AudioBackend for CpalBackend {
             };
 
             // Start the stream
+            eprintln!("[CpalBackend] Starting stream (play)...");
             if let Err(e) = stream.play() {
                 let _ = sample_rate_tx.send(Err(AudioError::HardwareError {
                     details: format!("Failed to start stream: {}", e),

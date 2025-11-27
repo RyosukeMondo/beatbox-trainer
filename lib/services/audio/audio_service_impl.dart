@@ -424,4 +424,29 @@ class AudioServiceImpl implements IAudioService {
       throw _errorHandler.createCalibrationException(e.toString());
     }
   }
+
+  @override
+  Future<void> updateCalibrationThreshold(String key, double value) async {
+    debugPrint('[AudioServiceImpl] updateCalibrationThreshold: $key = $value');
+    try {
+      await api.updateCalibrationThreshold(key: key, value: value);
+      debugPrint('[AudioServiceImpl] Threshold updated successfully');
+    } catch (e) {
+      debugPrint('[AudioServiceImpl] updateCalibrationThreshold error: $e');
+      throw _errorHandler.createCalibrationException(e.toString());
+    }
+  }
+
+  @override
+  Future<String> getCalibrationState() async {
+    debugPrint('[AudioServiceImpl] getCalibrationState called');
+    try {
+      final json = await api.getCalibrationState();
+      debugPrint('[AudioServiceImpl] getCalibrationState: $json');
+      return json;
+    } catch (e) {
+      debugPrint('[AudioServiceImpl] getCalibrationState error: $e');
+      throw _errorHandler.createCalibrationException(e.toString());
+    }
+  }
 }

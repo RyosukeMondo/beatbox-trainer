@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 122771348;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 490423394;
 
 // Section: executor
 
@@ -414,6 +414,40 @@ fn wire__crate__api__get_calibration_state_impl(
                 transform_result_sse::<_, crate::error::calibration::CalibrationError>(
                     (move || {
                         let output_ok = crate::api::get_calibration_state()?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__get_current_audio_level_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_current_audio_level",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::get_current_audio_level()?;
                         Ok(output_ok)
                     })(),
                 )
@@ -916,6 +950,43 @@ fn wire__crate__api__streams__telemetry_stream_impl(
                     })?;
                     Ok(output_ok)
                 })())
+            }
+        },
+    )
+}
+fn wire__crate__api__update_calibration_threshold_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_calibration_threshold",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_key = <String>::sse_decode(&mut deserializer);
+            let api_value = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok =
+                            crate::api::update_calibration_threshold(api_key, api_value)?;
+                        Ok(output_ok)
+                    })(),
+                )
             }
         },
     )
@@ -1749,6 +1820,16 @@ impl SseDecode for crate::engine::core::ParamPatch {
     }
 }
 
+impl SseDecode for (f64, f64, f64) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <f64>::sse_decode(deserializer);
+        let mut var_field1 = <f64>::sse_decode(deserializer);
+        let mut var_field2 = <f64>::sse_decode(deserializer);
+        return (var_field0, var_field1, var_field2);
+    }
+}
+
 impl SseDecode for (String, String) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1897,26 +1978,30 @@ fn pde_ffi_dispatcher_primary_impl(
         ),
         7 => wire__crate__api__finish_calibration_impl(port, ptr, rust_vec_len, data_len),
         11 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        17 => {
+        12 => wire__crate__api__get_current_audio_level_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        18 => {
             wire__crate__api__manual_accept_last_candidate_impl(port, ptr, rust_vec_len, data_len)
         }
-        18 => {
+        19 => {
             wire__crate__api__streams__onset_events_stream_impl(port, ptr, rust_vec_len, data_len)
         }
-        19 => wire__crate__api__retry_calibration_step_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__diagnostics__start_fixture_session_impl(
+        20 => wire__crate__api__retry_calibration_step_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__diagnostics__start_fixture_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
+        28 => {
+            wire__crate__api__update_calibration_threshold_impl(port, ptr, rust_vec_len, data_len)
+        }
         _ => unreachable!(),
     }
 }
@@ -1934,10 +2019,10 @@ fn pde_ffi_dispatcher_sync_impl(
         }
         9 => wire__crate__api__get_audio_error_codes_impl(ptr, rust_vec_len, data_len),
         10 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3386,6 +3471,15 @@ impl SseEncode for crate::engine::core::ParamPatch {
         <Option<u32>>::sse_encode(self.bpm, serializer);
         <Option<f32>>::sse_encode(self.centroid_threshold, serializer);
         <Option<f32>>::sse_encode(self.zcr_threshold, serializer);
+    }
+}
+
+impl SseEncode for (f64, f64, f64) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.0, serializer);
+        <f64>::sse_encode(self.1, serializer);
+        <f64>::sse_encode(self.2, serializer);
     }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/debug/i_debug_service.dart';
+import 'calibration_debug_panel.dart';
 
 /// Debug overlay widget for displaying real-time audio metrics and onset events.
 ///
@@ -79,17 +80,21 @@ class _DebugOverlayState extends State<DebugOverlay> {
             color: Colors.black.withValues(alpha: 0.85),
             padding: const EdgeInsets.all(16),
             child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const Divider(color: Colors.white54),
-                  const SizedBox(height: 8),
-                  _buildAudioMetrics(),
-                  const SizedBox(height: 16),
-                  _buildOnsetLog(),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const Divider(color: Colors.white54),
+                    const SizedBox(height: 8),
+                    const CalibrationDebugPanel(),
+                    const SizedBox(height: 16),
+                    _buildAudioMetrics(),
+                    const SizedBox(height: 16),
+                    _buildOnsetLog(),
+                  ],
+                ),
               ),
             ),
           ),

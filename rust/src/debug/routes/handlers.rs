@@ -37,6 +37,8 @@ pub fn build_router(state: DebugHttpState) -> Router {
         .route("/trace", get(trace_stream_handler))
         .route("/classification-stream", get(classification_stream_handler))
         .route("/params", get(list_params).post(apply_params))
+        .route("/control/start", axum::routing::post(control_start))
+        .route("/control/stop", axum::routing::post(control_stop))
         .with_state(state)
 }
 
@@ -318,4 +320,68 @@ pub fn extract_token(headers: &HeaderMap, query_token: Option<&str>) -> Option<S
                 .and_then(|value| value.to_str().ok())
                 .and_then(|raw| raw.strip_prefix("Bearer ").map(|v| v.to_string()))
         })
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StartParams {
+    #[serde(default = "default_bpm")]
+    pub bpm: u32,
+}
+
+fn default_bpm() -> u32 {
+    120
+}
+
+#[derive(Debug, Serialize)]
+pub struct ControlResponse {
+    pub success: bool,
+    pub engine_running: bool,
+    pub message: String,
+}
+
+/// POST /control/start - Start the audio engine
+pub async fn control_start(
+    State(state): State<DebugHttpState>,
+    Query(query): Query<AuthQuery>,
+    headers: HeaderMap,
+    params: Option<Json<StartParams>>,
+) -> Result<Json<ControlResponse>, HttpServerError> {
+    authorize(&state, &headers, query.token.as_deref())?;
+
+    let bpm = params.map(|p| p.bpm).unwrap_or(120);
+
+    match state.handle.start_audio(bpm) {
+        Ok(()) => Ok(Json(ControlResponse {
+            success: true,
+            engine_running: state.handle.is_audio_running(),
+            message: format!("Audio engine started at {} BPM", bpm),
+        })),
+        Err(e) => Ok(Json(ControlResponse {
+            success: false,
+            engine_running: state.handle.is_audio_running(),
+            message: format!("Failed to start: {:?}", e),
+        })),
+    }
+}
+
+/// POST /control/stop - Stop the audio engine
+pub async fn control_stop(
+    State(state): State<DebugHttpState>,
+    Query(query): Query<AuthQuery>,
+    headers: HeaderMap,
+) -> Result<Json<ControlResponse>, HttpServerError> {
+    authorize(&state, &headers, query.token.as_deref())?;
+
+    match state.handle.stop_audio() {
+        Ok(()) => Ok(Json(ControlResponse {
+            success: true,
+            engine_running: state.handle.is_audio_running(),
+            message: "Audio engine stopped".to_string(),
+        })),
+        Err(e) => Ok(Json(ControlResponse {
+            success: false,
+            engine_running: state.handle.is_audio_running(),
+            message: format!("Failed to stop: {:?}", e),
+        })),
+    }
 }

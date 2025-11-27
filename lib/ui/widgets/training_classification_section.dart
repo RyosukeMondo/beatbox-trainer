@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/classification_result.dart';
-import '../widgets/loading_overlay.dart';
 import '../utils/display_formatters.dart';
 
 /// Classification viewer with fade animation and stream handling.
@@ -50,13 +49,11 @@ class _TrainingClassificationSectionState
       return _buildIdleState();
     }
 
+    // When training is active, show the stream results
+    // The isTraining flag guarantees the engine is started
     return StreamBuilder<ClassificationResult>(
       stream: widget.classificationStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingOverlay(message: 'Starting audio engine...');
-        }
-
         if (snapshot.hasError) {
           return _buildErrorState(snapshot.error.toString());
         }
@@ -67,6 +64,8 @@ class _TrainingClassificationSectionState
           return _buildClassificationDisplay(_currentResult!);
         }
 
+        // Engine is running (isTraining=true), waiting for sound detection
+        // This covers both ConnectionState.waiting and ConnectionState.active with no data
         return _buildWaitingForSoundState();
       },
     );

@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
 import '../../controllers/training/training_controller.dart';
 import '../../services/debug/i_debug_service.dart';
@@ -7,6 +7,7 @@ import '../../services/debug/i_debug_capabilities.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/debug_overlay.dart';
 import '../widgets/training_classification_section.dart';
+import '../widgets/training_level_indicator.dart';
 import '../utils/display_formatters.dart';
 
 /// TrainingScreen provides the main training UI with real-time feedback
@@ -118,6 +119,15 @@ class _TrainingScreenState extends State<TrainingScreen>
   /// Whether debug overlay is currently visible
   bool _debugOverlayVisible = false;
 
+  /// Current audio metrics for level indicator
+  AudioMetrics? _currentMetrics;
+
+  /// Subscription to audio metrics stream
+  StreamSubscription<AudioMetrics>? _metricsSubscription;
+
+  /// Noise floor RMS from calibration (for gate calculation)
+  double _noiseFloorRms = 0.01;
+
   @override
   void initState() {
     super.initState();
@@ -145,6 +155,8 @@ class _TrainingScreenState extends State<TrainingScreen>
 
   @override
   void dispose() {
+    // Cancel metrics subscription
+    _metricsSubscription?.cancel();
     // Note: We call dispose without awaiting since Widget.dispose() is synchronous
     // The controller will handle async cleanup internally
     widget.controller.dispose();
@@ -153,11 +165,34 @@ class _TrainingScreenState extends State<TrainingScreen>
 
   /// Handle start training button press
   Future<void> _handleStartTraining() async {
+    debugPrint('[TrainingScreen] _handleStartTraining called');
     try {
+      debugPrint('[TrainingScreen] Calling controller.startTraining()...');
       await widget.controller.startTraining();
+      debugPrint('[TrainingScreen] controller.startTraining() completed');
+
+      // Load noise floor RMS from calibration
+      final noiseFloor = await widget.controller.getNoiseFloorRms();
+
+      // Start audio metrics subscription for level indicator
+      _metricsSubscription?.cancel();
+      _metricsSubscription = widget.debugService.getAudioMetricsStream().listen(
+        (metrics) {
+          if (mounted) {
+            setState(() {
+              _currentMetrics = metrics;
+            });
+          }
+        },
+        onError: (e) {
+          debugPrint('[TrainingScreen] Audio metrics stream error: $e');
+        },
+      );
+
       setState(() {
         _bpmValue = widget.controller.currentBpm.toDouble();
-      }); // Refresh UI after state change
+        _noiseFloorRms = noiseFloor;
+      });
     } on PermissionException catch (e) {
       if (mounted) {
         await _showPermissionDialog(e.message);
@@ -176,8 +211,14 @@ class _TrainingScreenState extends State<TrainingScreen>
   /// Handle stop training button press
   Future<void> _handleStopTraining() async {
     try {
+      // Cancel metrics subscription
+      _metricsSubscription?.cancel();
+      _metricsSubscription = null;
+
       await widget.controller.stopTraining();
-      setState(() {}); // Refresh UI after state change
+      setState(() {
+        _currentMetrics = null;
+      });
     } catch (e) {
       if (mounted) {
         await ErrorDialog.show(context, message: 'Failed to stop training: $e');
@@ -303,11 +344,6 @@ class _TrainingScreenState extends State<TrainingScreen>
                 ? 'Hide Debug Overlay'
                 : 'Show Debug Overlay',
           ),
-        IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () => context.go('/settings'),
-          tooltip: 'Settings',
-        ),
       ],
     );
   }
@@ -323,7 +359,14 @@ class _TrainingScreenState extends State<TrainingScreen>
           _buildBpmDisplay(context),
           const SizedBox(height: 16),
           _buildBpmSlider(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          // Real-time audio level indicator (visible when training)
+          if (widget.controller.isTraining)
+            TrainingLevelIndicator(
+              metrics: _currentMetrics,
+              noiseFloorRms: _noiseFloorRms,
+            ),
+          const SizedBox(height: 16),
           Expanded(
             child: TrainingClassificationSection(
               isTraining: widget.controller.isTraining,

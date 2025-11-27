@@ -111,10 +111,10 @@ Future<void> setupServiceLocator(GoRouter router) async {
   // - IDebugService (legacy interface for backward compatibility)
   // - IAudioMetricsProvider (ISP: audio metrics streaming)
   // - IOnsetEventProvider (ISP: onset event streaming)
-  // Telemetry availability is false until FFI streams are wired; failures
-  // fall back to a no-op debug service so app startup is resilient.
+  // Telemetry streams are available via FFI; failures fall back to a no-op
+  // debug service so app startup is resilient.
   try {
-    final debugServiceInstance = DebugServiceImpl(telemetryAvailable: false);
+    final debugServiceInstance = DebugServiceImpl(telemetryAvailable: true);
     await debugServiceInstance.init();
     getIt.registerSingleton<IDebugService>(debugServiceInstance);
     getIt.registerSingleton<IAudioMetricsProvider>(debugServiceInstance);
