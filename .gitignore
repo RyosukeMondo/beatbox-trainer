@@ -34,6 +34,8 @@ migrate_working_dir/
 /build/
 /coverage/
 .flutter-sdk/
+.flutter-local/
+.flutter-wrapper/
 logs/*
 !logs/smoke/
 logs/smoke/*
