@@ -13,14 +13,18 @@ import android.util.Log
 class DiagnosticsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action != ACTION_DIAGNOSTICS_EVENT) {
-            Log.w(TAG, "Ignoring intent ${intent?.action}")
+        if (context == null || intent == null) return
+        if (intent.action != ACTION_DIAGNOSTICS_EVENT) {
+            Log.w(TAG, "Ignoring intent ${intent.action}")
             return
         }
 
-        val phase = intent.getStringExtra(EXTRA_PHASE)?.let { DiagnosticsPhase.valueOf(it) } ?: return
-        val status = intent.getStringExtra(EXTRA_STATUS)?.let { DiagnosticsStatus.valueOf(it) }
-            ?: DiagnosticsStatus.SUCCESS
+        val phase = intent.getStringExtra(EXTRA_PHASE)?.let {
+            runCatching { DiagnosticsPhase.valueOf(it) }.getOrNull()
+        } ?: return
+        val status = intent.getStringExtra(EXTRA_STATUS)?.let {
+            runCatching { DiagnosticsStatus.valueOf(it) }.getOrNull()
+        } ?: DiagnosticsStatus.SUCCESS
         val detail = intent.getStringExtra(EXTRA_DETAIL).orEmpty()
         val timestamp = intent.getLongExtra(EXTRA_TIMESTAMP, System.currentTimeMillis())
         val permission = intent.getStringExtra(EXTRA_PERMISSION)
@@ -50,9 +54,8 @@ class DiagnosticsReceiver : BroadcastReceiver() {
             DiagnosticsStatus.SUCCESS -> Log.INFO
         }
 
-        val summary =
-            "[${entry.phase}] ${entry.detail.ifEmpty { \"(no detail)\" }} " +
-                "permission=${entry.permission ?: \"-\"} granted=${entry.granted?.toString() ?: \"-\"}"
+        val summary = "[${entry.phase}] ${entry.detail.ifEmpty { "(no detail)" }} " +
+            "permission=${entry.permission ?: "-"} granted=${entry.granted?.toString() ?: "-"}"
         Log.println(priority, TAG, summary)
     }
 
