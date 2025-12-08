@@ -38,6 +38,7 @@ impl CalibrationProcedure {
             last_rms: None,
             last_max_amp: None,
             debug_seq: 0,
+            last_features: None,
         }
     }
 

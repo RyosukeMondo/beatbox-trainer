@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 490423394;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 948656586;
 
 // Section: executor
 
@@ -552,6 +552,35 @@ fn wire__crate__api__init_app_impl(
         },
     )
 }
+fn wire__crate__api__is_pipeline_tracing_enabled_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "is_pipeline_tracing_enabled",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::is_pipeline_tracing_enabled())?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__load_calibration_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -688,6 +717,40 @@ fn wire__crate__api__streams__onset_events_stream_impl(
         },
     )
 }
+fn wire__crate__api__reset_calibration_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "reset_calibration_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::error::calibration::CalibrationError>(
+                    (move || {
+                        let output_ok = crate::api::reset_calibration_session()?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__retry_calibration_step_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -752,6 +815,36 @@ fn wire__crate__api__set_bpm_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__set_pipeline_tracing_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_pipeline_tracing",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_enabled = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::set_pipeline_tracing(api_enabled))?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -1980,26 +2073,27 @@ fn pde_ffi_dispatcher_primary_impl(
         11 => wire__crate__api__get_calibration_state_impl(port, ptr, rust_vec_len, data_len),
         12 => wire__crate__api__get_current_audio_level_impl(port, ptr, rust_vec_len, data_len),
         15 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
-        18 => {
+        17 => wire__crate__api__load_calibration_state_impl(port, ptr, rust_vec_len, data_len),
+        19 => {
             wire__crate__api__manual_accept_last_candidate_impl(port, ptr, rust_vec_len, data_len)
         }
-        19 => {
+        20 => {
             wire__crate__api__streams__onset_events_stream_impl(port, ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__retry_calibration_step_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__diagnostics__start_fixture_session_impl(
+        21 => wire__crate__api__reset_calibration_session_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__retry_calibration_step_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__set_bpm_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__start_audio_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__start_calibration_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__diagnostics__start_fixture_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
-        28 => {
+        28 => wire__crate__api__stop_audio_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__streams__telemetry_stream_impl(port, ptr, rust_vec_len, data_len),
+        31 => {
             wire__crate__api__update_calibration_threshold_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -2021,8 +2115,10 @@ fn pde_ffi_dispatcher_sync_impl(
         10 => wire__crate__api__get_calibration_error_codes_impl(ptr, rust_vec_len, data_len),
         13 => wire__crate__api__get_version_impl(ptr, rust_vec_len, data_len),
         14 => wire__crate__api__greet_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__is_pipeline_tracing_enabled_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__diagnostics__load_fixture_catalog_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__set_pipeline_tracing_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__diagnostics__stop_fixture_session_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

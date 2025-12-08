@@ -247,6 +247,7 @@ impl EngineHandle {
             calibration_progress_tx,
             classification_tx: broadcast_tx,
             audio_metrics_tx,
+            metronome_enabled: true,
         };
 
         self.backend.start(ctx)?;
@@ -300,13 +301,42 @@ impl EngineHandle {
         }
 
         const DEFAULT_CALIBRATION_BPM: u32 = 120;
-        self.start_audio(DEFAULT_CALIBRATION_BPM)
-            .map_err(|audio_err| CalibrationError::Timeout {
+        let broadcast_tx = self.broadcasts.init_classification();
+        let calibration_state = self.calibration.get_state_arc();
+        let calibration_procedure = self.calibration.get_procedure_arc();
+        let calibration_progress_tx = self.broadcasts.get_calibration_sender();
+        let audio_metrics_tx = Some(self.broadcasts.init_audio_metrics());
+
+        let ctx = EngineStartContext {
+            bpm: DEFAULT_CALIBRATION_BPM,
+            calibration_state,
+            calibration_procedure,
+            calibration_progress_tx,
+            classification_tx: broadcast_tx,
+            audio_metrics_tx,
+            metronome_enabled: false,
+        };
+
+        if let Err(audio_err) = self.backend.start(ctx) {
+            // Reset calibration state so next attempt can start cleanly
+            let _ = self.calibration.cancel();
+            let _ = self.stop_audio();
+            return Err(CalibrationError::Timeout {
                 reason: format!(
                     "Failed to start audio engine for calibration: {:?}",
                     audio_err
                 ),
-            })?;
+            });
+        }
+
+        self.engine_running.store(true, Ordering::SeqCst);
+        self.emit_event(
+            TelemetryEventKind::EngineStarted {
+                bpm: DEFAULT_CALIBRATION_BPM,
+            },
+            None,
+        );
+        self.init_command_worker();
 
         // Emit initial calibration progress so UI can show the calibration interface
         if let Some(tx) = self.broadcasts.get_calibration_sender() {
@@ -323,6 +353,12 @@ impl EngineHandle {
         }
 
         Ok(())
+    }
+
+    /// Force-reset calibration session (clears procedure and stops audio).
+    pub fn reset_calibration_session(&self) -> Result<(), CalibrationError> {
+        let _ = self.stop_audio();
+        self.calibration.cancel()
     }
 
     pub fn finish_calibration(&self) -> Result<(), CalibrationError> {

@@ -213,6 +213,8 @@ class AudioServiceImpl implements IAudioService {
   @override
   Future<void> startCalibration() async {
     try {
+      // Ensure previous calibration sessions are fully cleared before starting again.
+      await api.resetCalibrationSession();
       // Delegate to FFI bridge
       await api.startCalibration();
     } catch (e) {
@@ -446,6 +448,18 @@ class AudioServiceImpl implements IAudioService {
       return json;
     } catch (e) {
       debugPrint('[AudioServiceImpl] getCalibrationState error: $e');
+      throw _errorHandler.createCalibrationException(e.toString());
+    }
+  }
+
+  @override
+  Future<void> resetCalibrationSession() async {
+    debugPrint('[AudioServiceImpl] resetCalibrationSession called');
+    try {
+      await api.resetCalibrationSession();
+      debugPrint('[AudioServiceImpl] resetCalibrationSession completed');
+    } catch (e) {
+      debugPrint('[AudioServiceImpl] resetCalibrationSession error: $e');
       throw _errorHandler.createCalibrationException(e.toString());
     }
   }

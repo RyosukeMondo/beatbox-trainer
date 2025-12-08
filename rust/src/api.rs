@@ -48,6 +48,7 @@ static ENGINE_HANDLE: Lazy<EngineHandle> = Lazy::new(EngineHandle::new);
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
+    crate::debug::pipeline_tracer::init();
     crate::http::spawn_if_enabled(&ENGINE_HANDLE);
 }
 
@@ -250,6 +251,12 @@ pub fn classification_stream(sink: StreamSink<ClassificationResult>) {
 #[flutter_rust_bridge::frb]
 pub fn start_calibration() -> Result<(), CalibrationError> {
     ENGINE_HANDLE.start_calibration()
+}
+
+/// Reset calibration session (clears any in-progress procedure and stops audio).
+#[flutter_rust_bridge::frb]
+pub fn reset_calibration_session() -> Result<(), CalibrationError> {
+    ENGINE_HANDLE.reset_calibration_session()
 }
 
 /// Finish calibration and compute thresholds
@@ -530,6 +537,42 @@ pub fn get_current_audio_level() -> Result<(f64, f64, f64), CalibrationError> {
     // Note: RMS/peak would need to come from the analysis thread
     // For now return the noise gate threshold for debugging
     Ok((0.0, 0.0, noise_gate))
+}
+
+/// Enable or disable pipeline tracing at runtime
+///
+/// When enabled, detailed trace logs are emitted for each pipeline stage:
+/// - AUDIO_CB: Audio callback receives samples
+/// - BUF_QUEUE: Buffer queued to analysis thread
+/// - ANALYSIS_RX: Analysis thread receives buffer
+/// - RMS: RMS level computed
+/// - GATE: Gate decision (above/below threshold)
+/// - ONSET: Onset detected by spectral flux
+/// - LEVEL_X: Level crossing detected
+/// - FEATURES: Features extracted from audio window
+/// - CLASSIFY: Classification decision made
+/// - RESULT_TX: Result sent to Dart
+///
+/// # Arguments
+/// * `enabled` - true to enable tracing, false to disable
+///
+/// # Returns
+/// * Previous tracing state (true if was enabled)
+#[flutter_rust_bridge::frb(sync)]
+pub fn set_pipeline_tracing(enabled: bool) -> bool {
+    let was_enabled = crate::debug::pipeline_tracer::is_enabled();
+    if enabled {
+        crate::debug::pipeline_tracer::enable();
+    } else {
+        crate::debug::pipeline_tracer::disable();
+    }
+    was_enabled
+}
+
+/// Check if pipeline tracing is currently enabled
+#[flutter_rust_bridge::frb(sync)]
+pub fn is_pipeline_tracing_enabled() -> bool {
+    crate::debug::pipeline_tracer::is_enabled()
 }
 
 #[cfg(test)]

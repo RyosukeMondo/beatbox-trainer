@@ -207,6 +207,15 @@ impl CalibrationManager {
         }
     }
 
+    /// Cancel calibration without persisting changes.
+    ///
+    /// Clears any in-progress procedure so a fresh calibration can start.
+    pub fn cancel(&self) -> Result<(), CalibrationError> {
+        let mut procedure_guard = self.lock_procedure()?;
+        *procedure_guard = None;
+        Ok(())
+    }
+
     /// Manually accept the last rejected-but-valid candidate for the current sound
     ///
     /// Allows UI to promote a buffered candidate when adaptive gates are too strict.

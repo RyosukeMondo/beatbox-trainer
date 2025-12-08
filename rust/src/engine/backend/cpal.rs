@@ -88,6 +88,7 @@ impl CpalBackend {
 
 impl AudioBackend for CpalBackend {
     fn start(&self, ctx: EngineStartContext) -> Result<(), AudioError> {
+        let _ = ctx.metronome_enabled;
         if ctx.bpm == 0 {
             return Err(AudioError::BpmInvalid { bpm: ctx.bpm });
         }

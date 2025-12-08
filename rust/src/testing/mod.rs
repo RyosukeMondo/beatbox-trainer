@@ -9,3 +9,4 @@ pub mod fixture_engine;
 pub mod fixture_manifest;
 pub mod fixture_validation;
 pub mod fixtures;
+pub mod pipeline_integration;

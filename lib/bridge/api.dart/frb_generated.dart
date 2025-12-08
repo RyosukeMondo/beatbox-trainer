@@ -79,7 +79,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 490423394;
+  int get rustContentHash => 948656586;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -122,6 +122,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiInitApp();
 
+  bool crateApiIsPipelineTracingEnabled();
+
   Future<void> crateApiLoadCalibrationState({required String json});
 
   List<FixtureManifestEntry> crateApiDiagnosticsLoadFixtureCatalog();
@@ -130,9 +132,13 @@ abstract class RustLibApi extends BaseApi {
 
   Stream<OnsetEvent> crateApiStreamsOnsetEventsStream();
 
+  Future<void> crateApiResetCalibrationSession();
+
   Future<void> crateApiRetryCalibrationStep();
 
   Future<void> crateApiSetBpm({required int bpm});
+
+  bool crateApiSetPipelineTracing({required bool enabled});
 
   Future<void> crateApiStartAudio({required int bpm});
 
@@ -591,6 +597,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
+  bool crateApiIsPipelineTracingEnabled() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiIsPipelineTracingEnabledConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIsPipelineTracingEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "is_pipeline_tracing_enabled",
+        argNames: [],
+      );
+
+  @override
   Future<void> crateApiLoadCalibrationState({required String json}) {
     return handler.executeNormal(
       NormalTask(
@@ -600,7 +631,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -627,7 +658,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_fixture_manifest_entry,
@@ -652,7 +683,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -685,7 +716,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 19,
+              funcId: 20,
               port: port_,
             );
           },
@@ -706,6 +737,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "onset_events_stream", argNames: ["sink"]);
 
   @override
+  Future<void> crateApiResetCalibrationSession() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_calibration_error,
+        ),
+        constMeta: kCrateApiResetCalibrationSessionConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiResetCalibrationSessionConstMeta =>
+      const TaskConstMeta(debugName: "reset_calibration_session", argNames: []);
+
+  @override
   Future<void> crateApiRetryCalibrationStep() {
     return handler.executeNormal(
       NormalTask(
@@ -714,7 +772,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 22,
             port: port_,
           );
         },
@@ -742,7 +800,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 23,
             port: port_,
           );
         },
@@ -761,6 +819,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "set_bpm", argNames: ["bpm"]);
 
   @override
+  bool crateApiSetPipelineTracing({required bool enabled}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(enabled, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSetPipelineTracingConstMeta,
+        argValues: [enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSetPipelineTracingConstMeta => const TaskConstMeta(
+    debugName: "set_pipeline_tracing",
+    argNames: ["enabled"],
+  );
+
+  @override
   Future<void> crateApiStartAudio({required int bpm}) {
     return handler.executeNormal(
       NormalTask(
@@ -770,7 +853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 25,
             port: port_,
           );
         },
@@ -797,7 +880,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 26,
             port: port_,
           );
         },
@@ -830,7 +913,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 27,
             port: port_,
           );
         },
@@ -860,7 +943,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 28,
             port: port_,
           );
         },
@@ -884,7 +967,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -912,7 +995,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 27,
+              funcId: 30,
               port: port_,
             );
           },
@@ -946,7 +1029,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 31,
             port: port_,
           );
         },

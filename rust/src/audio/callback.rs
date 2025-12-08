@@ -26,6 +26,7 @@ use oboe::{
     AudioInputStreamSync, AudioOutputCallback, AudioOutputStreamSafe, AudioStreamSync,
     DataCallbackResult, Input,
 };
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -72,6 +73,8 @@ pub struct OutputCallback {
     input_stream: Arc<std::sync::Mutex<Option<AudioStreamSync<Input, (f32, oboe::Mono)>>>>,
     /// Buffer pool channels for sending audio to analysis thread
     audio_channels: Arc<std::sync::Mutex<Option<AudioThreadChannels>>>,
+    /// Whether metronome output is enabled (calibration disables clicks)
+    metronome_enabled: Arc<AtomicBool>,
 }
 
 impl OutputCallback {
@@ -93,6 +96,7 @@ impl OutputCallback {
         click_position: Arc<AtomicU64>,
         input_stream: Arc<std::sync::Mutex<Option<AudioStreamSync<Input, (f32, oboe::Mono)>>>>,
         audio_channels: Arc<std::sync::Mutex<Option<AudioThreadChannels>>>,
+        metronome_enabled: Arc<AtomicBool>,
     ) -> Self {
         Self {
             frame_counter,
@@ -102,6 +106,7 @@ impl OutputCallback {
             click_position,
             input_stream,
             audio_channels,
+            metronome_enabled,
         }
     }
 
@@ -114,7 +119,7 @@ impl OutputCallback {
         if let Ok(mut input_guard) = self.input_stream.try_lock() {
             if let Some(ref mut input) = *input_guard {
                 let mut input_buffer = vec![0.0f32; frame_capacity];
-                let frames_read = input.read(&mut input_buffer, 0).unwrap_or(0);
+                let frames_read = input.read(&mut input_buffer, 0).unwrap_or(0) as usize;
 
                 if frames_read > 0 {
                     if let Ok(mut channels_guard) = self.audio_channels.try_lock() {
@@ -166,17 +171,18 @@ impl AudioOutputCallback for OutputCallback {
         self.pump_input_stream(frames.len());
 
         // Process each output frame (metronome generation)
+        let clicks_enabled = self.metronome_enabled.load(Ordering::Relaxed);
         for (i, sample) in frames.iter_mut().enumerate() {
             // Calculate current frame index for this sample
             let frame = current_frame + i as u64;
 
-            if is_on_beat(frame, current_bpm, self.sample_rate) {
+            if clicks_enabled && is_on_beat(frame, current_bpm, self.sample_rate) {
                 // Start playing click sample
                 click_pos = 0;
             }
 
             // Generate metronome click if we're within click duration
-            if click_pos < self.click_samples.len() {
+            if clicks_enabled && click_pos < self.click_samples.len() {
                 *sample = self.click_samples[click_pos];
                 click_pos += 1;
             } else {

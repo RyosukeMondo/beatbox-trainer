@@ -83,6 +83,8 @@ pub struct AudioEngine {
     buffer_channels: BufferPoolChannels,
     /// Current position in click sample playback (for output callback state)
     click_position: Arc<AtomicU64>,
+    /// Whether metronome output is enabled (calibration disables clicks)
+    metronome_enabled: Arc<std::sync::atomic::AtomicBool>,
 }
 
 #[cfg(target_os = "android")]
@@ -118,7 +120,13 @@ impl AudioEngine {
             click_samples: Arc::new(click_samples),
             buffer_channels,
             click_position: Arc::new(AtomicU64::new(0)),
+            metronome_enabled: Arc::new(std::sync::atomic::AtomicBool::new(true)),
         })
+    }
+
+    pub fn set_metronome_enabled(&mut self, enabled: bool) {
+        self.metronome_enabled
+            .store(enabled, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// Create and open the input audio stream
@@ -159,6 +167,7 @@ impl AudioEngine {
             Arc::clone(&self.click_position),
             Arc::clone(&self.input_stream_arc),
             Arc::clone(&self.audio_channels_arc),
+            Arc::clone(&self.metronome_enabled),
         );
 
         AudioStreamBuilder::default()
@@ -217,6 +226,7 @@ impl AudioEngine {
             result_sender,
             onset_config,
             log_every_n_buffers,
+            None,
             None,
         );
     }

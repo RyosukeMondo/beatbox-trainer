@@ -176,9 +176,11 @@ pub fn spawn_analysis_thread(
         let mut debug_emit_counter: u64 = 0;
         let mut last_debug_probe = Instant::now();
         // Level-crossing detector state for calibration mode
-        // This captures samples when RMS crosses from below to above the detection threshold
+        // This captures samples when RMS crosses from below to above the detection threshold,
+        // with hysteresis to avoid double-counting the same utterance.
         let mut prev_rms_for_crossing: f64 = 0.0;
         let mut last_level_crossing_capture = Instant::now();
+        let mut calibration_captured_in_gate = false;
         const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150; // Minimum time between captures
 
         loop {
@@ -220,6 +222,14 @@ pub fn spawn_analysis_thread(
             let rms: f64 = {
                 let sum_squares: f64 = accumulator.iter().map(|&x| (x as f64) * (x as f64)).sum();
                 (sum_squares / accumulator.len() as f64).sqrt()
+            };
+            // More responsive RMS from the most recent window (used for gating)
+            let window_rms: f64 = if accumulator.len() >= 1024 {
+                let window = &accumulator[accumulator.len() - 1024..];
+                let sum_squares: f64 = window.iter().map(|&x| (x as f64) * (x as f64)).sum();
+                (sum_squares / window.len() as f64).sqrt()
+            } else {
+                rms
             };
 
             // Emit audio metrics for live level meter display
@@ -324,6 +334,18 @@ pub fn spawn_analysis_thread(
                     (false, 0.02)
                 };
 
+            let detection_threshold_snapshot = if calibration_active_snapshot {
+                if let Ok(procedure_guard) = calibration_procedure.try_lock() {
+                    procedure_guard
+                        .as_ref()
+                        .map(|procedure| procedure.detection_threshold())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             if calibration_active_snapshot
                 && guidance_limiter.has_active()
                 && rms < quiet_clear_gate
@@ -361,7 +383,7 @@ pub fn spawn_analysis_thread(
                     if let Some(ref mut procedure) = *procedure_guard {
                         procedure.update_last_features_for_debug(
                             &debug_features,
-                            rms,
+                            window_rms,
                             debug_max_amp,
                         );
                     }
@@ -404,26 +426,93 @@ pub fn spawn_analysis_thread(
                 && last_level_crossing_capture.elapsed()
                     >= Duration::from_millis(LEVEL_CROSSING_DEBOUNCE_MS)
             {
-                let detection_threshold = quiet_clear_gate * 2.0; // 2x noise floor
-                let crossed_threshold =
-                    prev_rms_for_crossing < detection_threshold && rms >= detection_threshold;
+                let detection_threshold =
+                    detection_threshold_snapshot.unwrap_or(quiet_clear_gate * 2.0); // 2x noise floor fallback
+                let reset_threshold = detection_threshold * 0.6; // hysteresis to avoid double counts
+                let crossed_threshold = prev_rms_for_crossing < detection_threshold
+                    && window_rms >= detection_threshold;
+
+                // Track gate state for hysteresis
+                if window_rms <= reset_threshold {
+                    calibration_captured_in_gate = false;
+                }
+
+                // If we're already above the gate and haven't captured yet, force a capture using
+                // the latest window to avoid missing loud hits that slip past onset/crossing logic.
+                if !calibration_captured_in_gate && window_rms >= detection_threshold {
+                    let capture_window = if accumulator.len() >= 1024 {
+                        &accumulator[accumulator.len() - 1024..]
+                    } else {
+                        &accumulator[..]
+                    };
+                    let capture_features = feature_extractor.extract(capture_window);
+                    let capture_max_amp = capture_window
+                        .iter()
+                        .map(|sample| sample.abs())
+                        .fold(0.0f32, f32::max);
+                    if let Ok(mut procedure_guard) = calibration_procedure.lock() {
+                        if let Some(ref mut procedure) = *procedure_guard {
+                            match procedure.add_sample(
+                                capture_features,
+                                window_rms,
+                                capture_max_amp,
+                            ) {
+                                Ok(()) => {
+                                    log::info!(
+                                        "[AnalysisThread] Forced-window sample accepted (rms {:.4}, gate {:.4})",
+                                        window_rms,
+                                        detection_threshold
+                                    );
+                                    let progress = procedure
+                                        .get_progress_with_guidance_and_features(
+                                            None,
+                                            Some(&capture_features),
+                                            Some(window_rms),
+                                            Some(capture_max_amp),
+                                        );
+                                    if let Some(ref tx) = calibration_progress_tx {
+                                        let _ = tx.send(progress);
+                                    }
+                                    calibration_captured_in_gate = true;
+                                    guidance_limiter.clear();
+                                    last_level_crossing_capture = Instant::now();
+                                }
+                                Err(err) => {
+                                    log::info!(
+                                        "[AnalysisThread] Forced-window sample rejected: {:?} (rms {:.4}, gate {:.4})",
+                                        err,
+                                        window_rms,
+                                        detection_threshold
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if crossed_threshold {
                     log::info!(
                         "[AnalysisThread] Level crossing detected: prev_rms {:.4} -> rms {:.4} (threshold {:.4})",
                         prev_rms_for_crossing,
-                        rms,
+                        window_rms,
                         detection_threshold
                     );
 
+                    // Skip if we've already captured in this gate window
+                    if calibration_captured_in_gate {
+                        prev_rms_for_crossing = window_rms;
+                        continue;
+                    }
+
                     // Extract features from the most recent 1024 samples
                     let crossing_window = &accumulator[accumulator.len() - 1024..];
-                    let crossing_rms = rms;
+                    let crossing_rms = window_rms;
                     let crossing_max_amp = crossing_window
                         .iter()
                         .map(|sample| sample.abs())
                         .fold(0.0f32, f32::max);
                     let crossing_features = feature_extractor.extract(crossing_window);
+                    let crossing_features_for_progress = crossing_features;
 
                     // Try to add sample via calibration procedure
                     if let Ok(mut procedure_guard) = calibration_procedure.lock() {
@@ -434,11 +523,14 @@ pub fn spawn_analysis_thread(
                                 crossing_max_amp,
                             ) {
                                 Ok(()) => {
-                                    log::info!("[AnalysisThread] Level-crossing sample accepted!");
+                                    log::info!(
+                                        "[AnalysisThread] Level-crossing sample accepted (rms {:.4})",
+                                        crossing_rms
+                                    );
                                     let progress = procedure
                                         .get_progress_with_guidance_and_features(
                                             None,
-                                            Some(&crossing_features),
+                                            Some(&crossing_features_for_progress),
                                             Some(crossing_rms),
                                             Some(crossing_max_amp),
                                         );
@@ -448,15 +540,17 @@ pub fn spawn_analysis_thread(
                                     guidance_limiter.clear();
                                 }
                                 Err(err) => {
-                                    log::debug!(
-                                        "[AnalysisThread] Level-crossing sample rejected: {:?}",
-                                        err
+                                    log::info!(
+                                        "[AnalysisThread] Level-crossing sample rejected: {:?} (rms {:.4})",
+                                        err,
+                                        crossing_rms
                                     );
                                 }
                             }
                         }
                     }
                     last_level_crossing_capture = Instant::now();
+                    calibration_captured_in_gate = true;
                 }
             }
 
@@ -522,7 +616,7 @@ pub fn spawn_analysis_thread(
                 }
             }
 
-            prev_rms_for_crossing = rms;
+            prev_rms_for_crossing = window_rms;
 
             // Process accumulated buffer through onset detection
             let onsets = onset_detector.process(&accumulator);
@@ -565,6 +659,7 @@ pub fn spawn_analysis_thread(
                     .fold(0.0f32, f32::max);
                 // Extract DSP features (always needed for both modes)
                 let features = feature_extractor.extract(onset_window);
+                let features_for_progress = features;
                 log::debug!(
                     "[AnalysisThread] Onset features: centroid {:.1} Hz, zcr {:.3}, rms {:.4}, max_amp {:.3}",
                     features.centroid,
@@ -574,18 +669,28 @@ pub fn spawn_analysis_thread(
                 );
 
                 if calibration_active_snapshot {
+                    // If we already captured in this gate window, skip to avoid double counts
+                    if calibration_captured_in_gate {
+                        continue;
+                    }
                     // ====== CALIBRATION MODE ======
                     // Forward features to calibration procedure
                     if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                         if let Some(ref mut procedure) = *procedure_guard {
-                            let quiet_gate = quiet_clear_gate;
+                            let quiet_gate =
+                                detection_threshold_snapshot.unwrap_or(quiet_clear_gate);
                             match procedure.add_sample(features, onset_rms, max_amplitude) {
                                 Ok(()) => {
+                                    log::info!(
+                                        "[AnalysisThread] Onset sample accepted (rms {:.4}, max_amp {:.3})",
+                                        onset_rms,
+                                        max_amplitude
+                                    );
                                     // Sample accepted - broadcast progress with debug snapshot
                                     let progress = procedure
                                         .get_progress_with_guidance_and_features(
                                             None,
-                                            Some(&features),
+                                            Some(&features_for_progress),
                                             Some(onset_rms),
                                             Some(max_amplitude),
                                         );
@@ -607,11 +712,12 @@ pub fn spawn_analysis_thread(
                                 }
                                 Err(err) => {
                                     // Sample rejected (validation error) - keep warning to a minimum
-                                    log::debug!(
-                                        "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?})",
+                                    log::info!(
+                                        "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?}, rms {:.4})",
                                         err,
                                         procedure.rejects_for_current_sound(),
-                                        procedure.rms_gate_for_current()
+                                        procedure.rms_gate_for_current(),
+                                        onset_rms
                                     );
                                     let reason = if onset_rms < quiet_gate {
                                         CalibrationGuidanceReason::TooQuiet
@@ -636,7 +742,7 @@ pub fn spawn_analysis_thread(
                                     let progress = procedure
                                         .get_progress_with_guidance_and_features(
                                             guidance_payload,
-                                            Some(&features),
+                                            Some(&features_for_progress),
                                             Some(onset_rms),
                                             Some(max_amplitude),
                                         );

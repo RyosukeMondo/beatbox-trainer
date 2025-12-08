@@ -36,10 +36,22 @@ const DEFAULT_MIN_SAMPLE_INTERVAL_MS: u128 = 250;
 const NOISE_FLOOR_SAMPLES_NEEDED: u8 = 30;
 
 /// Multiplier applied to noise floor RMS to set onset threshold (keep conservative)
+#[cfg(target_os = "android")]
+const NOISE_FLOOR_THRESHOLD_MULTIPLIER: f64 = 1.1;
+#[cfg(not(target_os = "android"))]
 const NOISE_FLOOR_THRESHOLD_MULTIPLIER: f64 = 1.2;
 
 /// Minimum RMS threshold to prevent complete silence from being too sensitive
+#[cfg(target_os = "android")]
+const MIN_RMS_THRESHOLD: f64 = 0.0015;
+#[cfg(not(target_os = "android"))]
 const MIN_RMS_THRESHOLD: f64 = 0.0025;
+
+/// How much above noise floor a calibration sample must be to count
+#[cfg(target_os = "android")]
+const DETECTION_THRESHOLD_MULTIPLIER: f64 = 1.25;
+#[cfg(not(target_os = "android"))]
+const DETECTION_THRESHOLD_MULTIPLIER: f64 = 2.0;
 
 /// CalibrationProcedure manages the sample collection workflow
 pub struct CalibrationProcedure {
@@ -77,6 +89,8 @@ pub struct CalibrationProcedure {
     last_max_amp: Option<f32>,
     /// Debug sequence counter
     debug_seq: u64,
+    /// Snapshot of last features (for debug payloads)
+    last_features: Option<Features>,
 }
 
 impl CalibrationProcedure {
@@ -150,6 +164,17 @@ impl CalibrationProcedure {
         self.current_sound == CalibrationSound::NoiseFloor
     }
 
+    /// Current RMS detection threshold derived from measured noise floor
+    pub fn detection_threshold(&self) -> f64 {
+        let noise_floor = self.noise_floor_threshold.unwrap_or(MIN_RMS_THRESHOLD);
+        // Upper bound keeps gate reasonable even if noise floor measurement spikes
+        let min_gate = MIN_RMS_THRESHOLD * 1.2;
+        let max_gate = MIN_RMS_THRESHOLD * 4.0;
+        (noise_floor * DETECTION_THRESHOLD_MULTIPLIER)
+            .max(min_gate)
+            .min(max_gate)
+    }
+
     /// Add a sample for the current sound
     ///
     /// # Arguments
@@ -174,6 +199,13 @@ impl CalibrationProcedure {
 
         // Reject if waiting for user confirmation
         if self.waiting_for_confirmation {
+            log::info!(
+                "[CalibrationProcedure] Reject {:?}: waiting for confirmation (rms {:.4}, centroid {:.1}, zcr {:.3})",
+                current_sound,
+                rms,
+                features.centroid,
+                features.zcr
+            );
             return Err(CalibrationError::InvalidFeatures {
                 reason: "Waiting for user confirmation. Call confirm_and_advance() to proceed."
                     .to_string(),
@@ -182,6 +214,13 @@ impl CalibrationProcedure {
 
         // Reject if still in noise floor phase
         if self.current_sound == CalibrationSound::NoiseFloor {
+            log::info!(
+                "[CalibrationProcedure] Reject {:?}: noise floor not complete (rms {:.4}, centroid {:.1}, zcr {:.3})",
+                current_sound,
+                rms,
+                features.centroid,
+                features.zcr
+            );
             return Err(CalibrationError::InvalidFeatures {
                 reason: "Noise floor calibration not complete. Call add_noise_floor_sample first."
                     .to_string(),
@@ -193,25 +232,38 @@ impl CalibrationProcedure {
         self.last_zcr = Some(features.zcr);
         self.last_rms = Some(rms);
         self.last_max_amp = Some(max_amp);
+        self.last_features = Some(features);
+
+        let detection_threshold = self.detection_threshold();
 
         log::debug!(
-            "[CalibrationProcedure] Evaluating {:?}: rms {:.4}, centroid {:.1}, zcr {:.3}, max_amp {:.3}",
+            "[CalibrationProcedure] Evaluating {:?}: rms {:.4}, centroid {:.1}, zcr {:.3}, max_amp {:.3}, gate {:.4}",
             self.current_sound,
             rms,
             features.centroid,
             features.zcr,
-            max_amp
+            max_amp,
+            detection_threshold,
         );
 
         // USER-CENTRIC CALIBRATION: Accept all sounds above noise floor
         // We learn what the user's sounds look like, not force them to match our expectations
 
-        // Only reject if below 2x noise floor (clear separation from background noise)
-        // Using 2x multiplier prevents flickering UI from borderline sounds
+        // Only reject if below configured multiplier of noise floor (clear separation from background noise)
+        // Android devices often report lower RMS; the multiplier is platform-tuned above.
         if let Some(noise_threshold) = self.noise_floor_threshold {
-            let detection_threshold = noise_threshold * 2.0;
             if rms < detection_threshold {
                 self.store_candidate(current_sound, features);
+                log::info!(
+                    "[CalibrationProcedure] Reject {:?}: too quiet rms {:.4} < thresh {:.4} (noise_floor {:.4}) centroid {:.1} zcr {:.3} max_amp {:.3}",
+                    current_sound,
+                    rms,
+                    detection_threshold,
+                    noise_threshold,
+                    features.centroid,
+                    features.zcr,
+                    max_amp
+                );
                 return Err(CalibrationError::InvalidFeatures {
                     reason: format!(
                         "Sound too quiet (RMS {:.4} < threshold {:.4}). Make it louder!",
@@ -219,34 +271,37 @@ impl CalibrationProcedure {
                     ),
                 });
             }
-        }
-
-        // Basic sanity check - reject obviously invalid features (hardware glitches)
-        if features.centroid <= 0.0 || features.centroid > 20000.0 {
+        } else if rms < detection_threshold {
+            // No noise floor? Stay conservative but still gate by a minimal threshold to avoid silence captures.
+            self.store_candidate(current_sound, features);
+            log::info!(
+                "[CalibrationProcedure] Reject {:?}: noise floor unset, rms {:.4} < gate {:.4}",
+                current_sound,
+                rms,
+                detection_threshold
+            );
             return Err(CalibrationError::InvalidFeatures {
-                reason: "Invalid frequency detected - please try again".to_string(),
+                reason: format!(
+                    "Sound too quiet (RMS {:.4} < threshold {:.4}). Make it louder!",
+                    rms, detection_threshold
+                ),
             });
         }
 
-        // Debounce: reject samples that come too fast (if debouncing is enabled)
-        if self.min_sample_interval_ms > 0 {
-            let now = Instant::now();
-            if let Some(last_time) = self.last_sample_time {
-                let elapsed_ms = now.duration_since(last_time).as_millis();
-                if elapsed_ms < self.min_sample_interval_ms {
-                    self.backoff.record_reject(self.current_sound, "debounce");
-                    self.store_candidate(current_sound, features);
-                    return Err(CalibrationError::InvalidFeatures {
-                        reason: format!(
-                            "Sample rejected: {}ms since last sample (minimum {}ms)",
-                            elapsed_ms, self.min_sample_interval_ms
-                        ),
-                    });
-                }
-            }
+        // Reject implausible centroids that indicate corrupted audio
+        if features.centroid > 20_000.0 {
+            log::warn!(
+                "[CalibrationProcedure] Reject {:?}: centroid {:.1} exceeds hardware range",
+                current_sound,
+                features.centroid
+            );
+            return Err(CalibrationError::InvalidFeatures {
+                reason: "Invalid frequency detected (possible hardware glitch)".to_string(),
+            });
         }
 
-        // Update last sample time after validation passes (if debouncing is enabled)
+        // No feature-shape rejection: once RMS clears the gate, accept the sample.
+        // Record timestamp for reference only.
         if self.min_sample_interval_ms > 0 {
             self.last_sample_time = Some(Instant::now());
         }
@@ -268,14 +323,25 @@ impl CalibrationProcedure {
             }
         }
         self.clear_candidate_for_sound(current_sound);
+        self.backoff.record_success(self.current_sound);
 
         // Log successful sample collection
         log::info!(
-            "[CalibrationProcedure] {:?} sample {} accepted: centroid {:.1} Hz, zcr {:.3}",
+            "[CalibrationProcedure] {:?} sample {} accepted: centroid {:.1} Hz, zcr {:.3}, rms {:.4} (gate {:.4})",
             self.current_sound,
             self.get_current_sound_count(),
             features.centroid,
-            features.zcr
+            features.zcr,
+            rms,
+            detection_threshold
+        );
+        eprintln!(
+            "[CalibrationProcedure] ACCEPT {:?} #{}/{} rms {:.4} gate {:.4}",
+            self.current_sound,
+            self.get_current_sound_count(),
+            self.samples_needed,
+            rms,
+            detection_threshold
         );
 
         // Set waiting_for_confirmation when current sound is complete (DON'T auto-advance)
@@ -538,7 +604,11 @@ impl CalibrationProcedure {
 
     /// Current RMS gate for the active sound
     pub fn rms_gate_for_current(&self) -> Option<f64> {
-        self.backoff.rms_gate(self.current_sound)
+        if self.current_sound.is_sound_phase() {
+            Some(self.detection_threshold())
+        } else {
+            None
+        }
     }
 
     /// Debug payload for UI instrumentation
@@ -553,10 +623,11 @@ impl CalibrationProcedure {
             return None;
         }
         let gates = self.backoff.gate_state(self.current_sound)?;
+        let rms_gate = Some(self.detection_threshold());
         self.debug_seq = self.debug_seq.wrapping_add(1);
         Some(CalibrationProgressDebug {
             seq: self.debug_seq,
-            rms_gate: self.backoff.rms_gate(self.current_sound),
+            rms_gate,
             centroid_min: gates.centroid_min,
             centroid_max: gates.centroid_max,
             zcr_min: gates.zcr_min,

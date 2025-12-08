@@ -201,4 +201,7 @@ abstract class IAudioService {
   ///
   /// Returns the active calibration parameters for display/debugging.
   Future<String> getCalibrationState();
+
+  /// Reset calibration session (clears in-progress state and stops audio).
+  Future<void> resetCalibrationSession();
 }

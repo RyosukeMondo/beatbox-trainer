@@ -28,6 +28,7 @@ impl Default for DesktopStubBackend {
 
 impl AudioBackend for DesktopStubBackend {
     fn start(&self, ctx: EngineStartContext) -> Result<(), AudioError> {
+        let _ = ctx.metronome_enabled;
         if ctx.bpm == 0 {
             return Err(AudioError::BpmInvalid { bpm: ctx.bpm });
         }

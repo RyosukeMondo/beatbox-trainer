@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::analysis::features::Features;
 use crate::calibration::progress::CalibrationSound;
 

@@ -131,6 +131,10 @@ Stream<ClassificationResult> classificationStream() =>
 Future<void> startCalibration() =>
     RustLib.instance.api.crateApiStartCalibration();
 
+/// Reset calibration session (clears any in-progress procedure and stops audio).
+Future<void> resetCalibrationSession() =>
+    RustLib.instance.api.crateApiResetCalibrationSession();
+
 /// Finish calibration and compute thresholds
 ///
 /// Completes the calibration process, computes thresholds from collected samples,
@@ -300,3 +304,29 @@ Future<void> updateCalibrationThreshold({
 /// * `Err(CalibrationError)` - If state cannot be read
 Future<(double, double, double)> getCurrentAudioLevel() =>
     RustLib.instance.api.crateApiGetCurrentAudioLevel();
+
+/// Enable or disable pipeline tracing at runtime
+///
+/// When enabled, detailed trace logs are emitted for each pipeline stage:
+/// - AUDIO_CB: Audio callback receives samples
+/// - BUF_QUEUE: Buffer queued to analysis thread
+/// - ANALYSIS_RX: Analysis thread receives buffer
+/// - RMS: RMS level computed
+/// - GATE: Gate decision (above/below threshold)
+/// - ONSET: Onset detected by spectral flux
+/// - LEVEL_X: Level crossing detected
+/// - FEATURES: Features extracted from audio window
+/// - CLASSIFY: Classification decision made
+/// - RESULT_TX: Result sent to Dart
+///
+/// # Arguments
+/// * `enabled` - true to enable tracing, false to disable
+///
+/// # Returns
+/// * Previous tracing state (true if was enabled)
+bool setPipelineTracing({required bool enabled}) =>
+    RustLib.instance.api.crateApiSetPipelineTracing(enabled: enabled);
+
+/// Check if pipeline tracing is currently enabled
+bool isPipelineTracingEnabled() =>
+    RustLib.instance.api.crateApiIsPipelineTracingEnabled();

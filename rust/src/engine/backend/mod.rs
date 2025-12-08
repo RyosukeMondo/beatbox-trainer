@@ -21,6 +21,7 @@ pub struct EngineStartContext {
     pub calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>,
     pub classification_tx: broadcast::Sender<ClassificationResult>,
     pub audio_metrics_tx: Option<broadcast::Sender<AudioMetrics>>,
+    pub metronome_enabled: bool,
 }
 
 /// Trait implemented by platform-specific audio backends.

@@ -101,6 +101,7 @@ impl AudioEngineManager {
         calibration_procedure: Arc<Mutex<Option<CalibrationProcedure>>>,
         calibration_progress_tx: Option<broadcast::Sender<CalibrationProgress>>,
         broadcast_tx: broadcast::Sender<ClassificationResult>,
+        metronome_enabled: bool,
     ) -> Result<(), AudioError> {
         #[cfg(not(target_os = "android"))]
         {
@@ -120,6 +121,7 @@ impl AudioEngineManager {
 
             let buffer_pool = self.create_buffer_pool();
             let mut engine = self.create_engine(bpm, buffer_pool)?;
+            engine.set_metronome_enabled(metronome_enabled);
 
             engine
                 .start(

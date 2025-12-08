@@ -29,6 +29,7 @@ impl AudioBackend for OboeBackend {
             ctx.calibration_procedure,
             ctx.calibration_progress_tx,
             ctx.classification_tx,
+            ctx.metronome_enabled,
         )
     }
 
