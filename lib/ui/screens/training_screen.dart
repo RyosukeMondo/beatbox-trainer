@@ -9,6 +9,7 @@ import '../widgets/debug_overlay.dart';
 import '../widgets/training_classification_section.dart';
 import '../widgets/training_level_indicator.dart';
 import '../utils/display_formatters.dart';
+import '../widgets/screen_background.dart';
 
 /// TrainingScreen provides the main training UI with real-time feedback
 ///
@@ -309,9 +310,17 @@ class _TrainingScreenState extends State<TrainingScreen>
   @override
   Widget build(BuildContext context) {
     final scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: _buildAppBar(context),
       body: _buildBody(context),
       floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+
+    final wrapped = ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_training.png',
+      overlayOpacity: 0.62,
+      child: scaffold,
     );
 
     // Wrap with DebugOverlay if debug mode is enabled and overlay is visible
@@ -319,18 +328,20 @@ class _TrainingScreenState extends State<TrainingScreen>
       return DebugOverlay(
         debugService: widget.debugService,
         onClose: _toggleDebugOverlay,
-        child: scaffold,
+        child: wrapped,
       );
     }
 
-    return scaffold;
+    return wrapped;
   }
 
   /// Build app bar with title and action buttons
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
       title: const Text('Beatbox Trainer'),
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      backgroundColor: Colors.black.withValues(alpha: 0.25),
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.white,
       actions: [
         if (_canShowDebugOverlay)
           IconButton(
@@ -352,28 +363,45 @@ class _TrainingScreenState extends State<TrainingScreen>
   Widget _buildBody(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildBpmDisplay(context),
-          const SizedBox(height: 16),
-          _buildBpmSlider(),
-          const SizedBox(height: 16),
-          // Real-time audio level indicator (visible when training)
-          if (widget.controller.isTraining)
-            TrainingLevelIndicator(
-              metrics: _currentMetrics,
-              noiseFloorRms: _noiseFloorRms,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white24),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black54,
+              offset: Offset(0, 12),
+              blurRadius: 28,
             ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: TrainingClassificationSection(
-              isTraining: widget.controller.isTraining,
-              classificationStream: widget.controller.classificationStream,
-            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildBpmDisplay(context),
+              const SizedBox(height: 16),
+              _buildBpmSlider(),
+              const SizedBox(height: 16),
+              // Real-time audio level indicator (visible when training)
+              if (widget.controller.isTraining)
+                TrainingLevelIndicator(
+                  metrics: _currentMetrics,
+                  noiseFloorRms: _noiseFloorRms,
+                ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: TrainingClassificationSection(
+                  isTraining: widget.controller.isTraining,
+                  classificationStream: widget.controller.classificationStream,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -382,9 +410,10 @@ class _TrainingScreenState extends State<TrainingScreen>
   Widget _buildBpmDisplay(BuildContext context) {
     return Text(
       DisplayFormatters.formatBpm(_bpmValue.round()),
-      style: Theme.of(
-        context,
-      ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
       textAlign: TextAlign.center,
     );
   }
@@ -405,11 +434,53 @@ class _TrainingScreenState extends State<TrainingScreen>
   /// Build floating action button for start/stop
   Widget _buildFloatingActionButton() {
     final isTraining = widget.controller.isTraining;
-    return FloatingActionButton.extended(
-      onPressed: isTraining ? _handleStopTraining : _handleStartTraining,
-      icon: Icon(isTraining ? Icons.stop : Icons.play_arrow),
-      label: Text(isTraining ? 'Stop' : 'Start'),
-      backgroundColor: isTraining ? Colors.red : Colors.green,
+    final asset = isTraining
+        ? 'assets/images/buttons/cta_secondary.png'
+        : 'assets/images/buttons/cta_primary.png';
+    final iconAsset = isTraining
+        ? 'assets/images/icons/icon_stop.png'
+        : 'assets/images/icons/icon_play.png';
+    final label = isTraining ? 'Stop' : 'Start';
+
+    return SizedBox(
+      width: 220,
+      height: 72,
+      child: ElevatedButton(
+        onPressed: isTraining ? _handleStopTraining : _handleStartTraining,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          elevation: 10,
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.deepPurpleAccent.withValues(alpha: 0.7),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(36),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(36),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(asset, fit: BoxFit.cover),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(iconAsset, height: 26, fit: BoxFit.contain),
+                  const SizedBox(width: 12),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

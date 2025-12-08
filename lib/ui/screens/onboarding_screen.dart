@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/screen_background.dart';
 
 /// Onboarding screen that explains calibration to first-time users
 ///
@@ -17,20 +18,25 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 32),
-              _buildCalibrationSteps(context),
-              const SizedBox(height: 48),
-              _buildStartButton(context),
-            ],
+    return ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_onboarding.png',
+      overlayOpacity: 0.6,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 32),
+                _buildCalibrationSteps(context),
+                const SizedBox(height: 48),
+                _buildStartButton(context),
+              ],
+            ),
           ),
         ),
       ),
@@ -41,20 +47,27 @@ class OnboardingScreen extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return Column(
       children: [
-        const Icon(Icons.mic, size: 100, color: Colors.deepPurple),
+        Image.asset(
+          'assets/images/icons/icon_calibrate.png',
+          height: 100,
+          fit: BoxFit.contain,
+        ),
         const SizedBox(height: 32),
         Text(
           'Welcome to Beatbox Trainer!',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
         Text(
           'Before you start training, we need to calibrate '
           'the app to recognize your beatbox sounds.',
-          style: Theme.of(context).textTheme.bodyLarge,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
           textAlign: TextAlign.center,
         ),
       ],
@@ -63,14 +76,39 @@ class OnboardingScreen extends StatelessWidget {
 
   /// Builds the start calibration button
   Widget _buildStartButton(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => context.go('/calibration'),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 56),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+    return SizedBox(
+      height: 64,
+      child: ElevatedButton(
+        onPressed: () => context.go('/calibration'),
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          elevation: 6,
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.deepPurpleAccent.withValues(alpha: 0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+        child: Ink(
+          decoration: BoxDecoration(
+            image: const DecorationImage(
+              image: AssetImage('assets/images/buttons/cta_primary.png'),
+              fit: BoxFit.cover,
+            ),
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: const Center(
+            child: Text(
+              'Start Calibration',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
       ),
-      child: const Text('Start Calibration', style: TextStyle(fontSize: 18)),
     );
   }
 
@@ -81,9 +119,10 @@ class OnboardingScreen extends StatelessWidget {
       children: [
         Text(
           'Calibration Steps:',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 16),
         _buildStep(context, '1', 'Make 10 KICK sounds', Icons.circle),
@@ -109,7 +148,7 @@ class OnboardingScreen extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.deepPurple.shade100,
+            color: Colors.white.withValues(alpha: 0.14),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -118,7 +157,7 @@ class OnboardingScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.deepPurple.shade700,
+                color: Colors.white,
               ),
             ),
           ),
@@ -126,14 +165,16 @@ class OnboardingScreen extends StatelessWidget {
         const SizedBox(width: 16),
 
         // Step icon
-        Icon(icon, color: Colors.deepPurple.shade300, size: 24),
+        Icon(icon, color: Colors.white70, size: 24),
         const SizedBox(width: 12),
 
         // Step description
         Expanded(
           child: Text(
             description,
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Colors.white),
           ),
         ),
       ],

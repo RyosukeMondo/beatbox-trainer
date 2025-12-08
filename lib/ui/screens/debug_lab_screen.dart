@@ -13,6 +13,7 @@ import '../widgets/debug/debug_log_list.dart';
 import '../widgets/debug/debug_server_panel.dart';
 import '../widgets/debug/param_slider_card.dart';
 import '../widgets/debug/telemetry_chart.dart';
+import '../widgets/screen_background.dart';
 
 /// Debug Lab screen showing live telemetry, SSE hooks, and parameter sliders.
 class DebugLabScreen extends StatefulWidget {
@@ -73,52 +74,87 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Debug Lab'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.note),
-            tooltip: 'Export logs',
-            onPressed: _exportLogs,
-          ),
-        ],
+    return ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_debug.png',
+      overlayOpacity: 0.64,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Debug Lab'),
+          backgroundColor: Colors.black.withValues(alpha: 0.3),
+          surfaceTintColor: Colors.transparent,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.note),
+              tooltip: 'Export logs',
+              onPressed: _exportLogs,
+            ),
+          ],
+        ),
+        body: _buildBody(context),
       ),
-      body: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DebugServerPanel(
-            remoteConnected: widget.controller.remoteConnected,
-            errorText: widget.controller.remoteError,
-            onConnect: (uri, token) =>
-                widget.controller.connectRemote(baseUri: uri, token: token),
-            onDisconnect: widget.controller.disconnectRemote,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.38),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: DefaultTextStyle.merge(
+            style:
+                Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.white) ??
+                const TextStyle(color: Colors.white),
+            child: IconTheme.merge(
+              data: const IconThemeData(color: Colors.white),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DebugServerPanel(
+                    remoteConnected: widget.controller.remoteConnected,
+                    errorText: widget.controller.remoteError,
+                    onConnect: (uri, token) => widget.controller.connectRemote(
+                      baseUri: uri,
+                      token: token,
+                    ),
+                    onDisconnect: widget.controller.disconnectRemote,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSyntheticToggle(),
+                  const SizedBox(height: 12),
+                  _buildFixtureControls(),
+                  const SizedBox(height: 16),
+                  _buildMetricsCard(),
+                  const SizedBox(height: 16),
+                  TelemetryChart(stream: widget.controller.telemetryStream),
+                  const SizedBox(height: 16),
+                  _buildParamCards(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Event Log',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<List<DebugLogEntry>>(
+                    valueListenable: widget.controller.logEntries,
+                    builder: (context, entries, _) =>
+                        DebugLogList(entries: entries),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
-          _buildSyntheticToggle(),
-          const SizedBox(height: 12),
-          _buildFixtureControls(),
-          const SizedBox(height: 16),
-          _buildMetricsCard(),
-          const SizedBox(height: 16),
-          TelemetryChart(stream: widget.controller.telemetryStream),
-          const SizedBox(height: 16),
-          _buildParamCards(),
-          const SizedBox(height: 16),
-          Text('Event Log', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ValueListenableBuilder<List<DebugLogEntry>>(
-            valueListenable: widget.controller.logEntries,
-            builder: (context, entries, _) => DebugLogList(entries: entries),
-          ),
-        ],
+        ),
       ),
     );
   }

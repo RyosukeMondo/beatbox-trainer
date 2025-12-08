@@ -5,6 +5,7 @@ import '../../services/storage/i_storage_service.dart';
 import '../../services/storage/storage_service_impl.dart';
 import '../../bridge/api.dart/api.dart' as api;
 import '../widgets/error_dialog.dart';
+import '../widgets/screen_background.dart';
 
 /// Splash screen that checks for existing calibration data
 ///
@@ -115,38 +116,56 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App logo/icon
-            const Icon(Icons.music_note, size: 64, color: Colors.deepPurple),
-            const SizedBox(height: 16),
-
-            // App title
-            const Text(
-              'Beatbox Trainer',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
-
-            // Loading indicator (or error message)
-            if (_errorMessage == null)
-              const CircularProgressIndicator()
-            else
-              Column(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+    return ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_splash.png',
+      overlayOpacity: 0.6,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // App logo/icon
+              Image.asset(
+                'assets/images/icons/icon_play.png',
+                height: 96,
+                fit: BoxFit.contain,
               ),
-          ],
+              const SizedBox(height: 16),
+
+              // App title
+              Text(
+                'Beatbox Trainer',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Loading indicator (or error message)
+              if (_errorMessage == null)
+                const CircularProgressIndicator.adaptive(
+                  backgroundColor: Colors.white24,
+                )
+              else
+                Column(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.redAccent),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,9 +5,8 @@ import '../../di/service_locator.dart';
 import '../../models/calibration_progress.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/storage/i_storage_service.dart';
-import '../widgets/calibration_confirmation_buttons.dart';
-import '../widgets/calibration_level_feedback.dart';
-import '../widgets/sample_progress_dots.dart';
+import '../widgets/calibration_content.dart';
+import '../widgets/screen_background.dart';
 
 /// CalibrationScreen guides users through 4-step calibration workflow
 ///
@@ -186,61 +185,95 @@ class _CalibrationScreenState extends State<CalibrationScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      appBar: AppBar(
-        title: const Text('Calibration'),
-        backgroundColor: const Color(0xFF16213E),
-        foregroundColor: Colors.white,
-        actions: [
-          ValueListenableBuilder<bool>(
-            valueListenable: _controller.isCalibratingNotifier,
-            builder: (context, isCalibrating, _) {
-              return IconButton(
-                icon: const Icon(Icons.restart_alt),
-                tooltip: 'Restart calibration',
-                onPressed: isCalibrating
-                    ? () async {
-                        await _controller.cancelCalibration();
-                        await _controller.startCalibration();
-                      }
-                    : null,
-              );
-            },
-          ),
-        ],
-      ),
-      body: ValueListenableBuilder<String?>(
-        valueListenable: _controller.errorNotifier,
-        builder: (context, error, _) {
-          if (error != null) {
-            return _buildErrorDisplay(error);
-          }
+    return ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_calibration.png',
+      overlayOpacity: 0.64,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Calibration'),
+          backgroundColor: Colors.black.withValues(alpha: 0.32),
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          actions: [
+            ValueListenableBuilder<bool>(
+              valueListenable: _controller.isCalibratingNotifier,
+              builder: (context, isCalibrating, _) {
+                return IconButton(
+                  icon: const Icon(Icons.restart_alt),
+                  tooltip: 'Restart calibration',
+                  onPressed: isCalibrating
+                      ? () async {
+                          await _controller.cancelCalibration();
+                          await _controller.startCalibration();
+                        }
+                      : null,
+                );
+              },
+            ),
+          ],
+        ),
+        body: ValueListenableBuilder<String?>(
+          valueListenable: _controller.errorNotifier,
+          builder: (context, error, _) {
+            if (error != null) {
+              return _buildErrorDisplay(error);
+            }
 
-          return ValueListenableBuilder<bool>(
-            valueListenable: _controller.isCalibratingNotifier,
-            builder: (context, isCalibrating, _) {
-              if (!isCalibrating) {
-                return _buildInitializingDisplay();
-              }
+            return ValueListenableBuilder<bool>(
+              valueListenable: _controller.isCalibratingNotifier,
+              builder: (context, isCalibrating, _) {
+                if (!isCalibrating) {
+                  return _buildInitializingDisplay();
+                }
 
-              return ValueListenableBuilder<CalibrationProgress?>(
-                valueListenable: _controller.progressNotifier,
-                builder: (context, progress, _) {
-                  if (progress == null) {
-                    return _buildInitializingDisplay();
-                  }
+                return ValueListenableBuilder<CalibrationProgress?>(
+                  valueListenable: _controller.progressNotifier,
+                  builder: (context, progress, _) {
+                    if (progress == null) {
+                      return _buildInitializingDisplay();
+                    }
 
-                  // Note: Success dialog is shown from confirmStep() callback
-                  // when calibration is complete and saved, not here.
-                  // This ensures finishCalibration() is called first to persist data.
+                    // Note: Success dialog is shown from confirmStep() callback
+                    // when calibration is complete and saved, not here.
+                    // This ensures finishCalibration() is called first to persist data.
 
-                  return _buildCalibrationUI(progress);
-                },
-              );
-            },
-          );
-        },
+                    return CalibrationContent(
+                      progress: progress,
+                      audioRms: _controller.audioRmsNotifier,
+                      guidance: _controller.guidanceNotifier,
+                      manualAcceptAvailable:
+                          _controller.manualAcceptAvailableNotifier,
+                      onManualAccept: _onManualAccept,
+                      onRetry: () async {
+                        try {
+                          await _controller.retryStep();
+                        } catch (e) {
+                          debugPrint('[CalibrationScreen] Retry error: $e');
+                        }
+                      },
+                      onConfirm: () async {
+                        try {
+                          return await _controller.confirmStep();
+                        } catch (e) {
+                          debugPrint('[CalibrationScreen] Confirm error: $e');
+                          rethrow;
+                        }
+                      },
+                      onComplete: () async {
+                        if (mounted) {
+                          await _handleSuccess();
+                        }
+                      },
+                      pulseAnimation: _pulseAnimation,
+                      flashAnimation: _flashAnimation,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -307,307 +340,6 @@ class _CalibrationScreenState extends State<CalibrationScreen>
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.white54),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalibrationUI(CalibrationProgress progress) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // Overall progress header
-            _buildOverallProgress(progress),
-            const SizedBox(height: 24),
-
-            // Sound type indicator with animation
-            _buildSoundTypeIndicator(progress),
-            const SizedBox(height: 24),
-
-            // Enhanced visual feedback with level bar and thresholds
-            ValueListenableBuilder<double?>(
-              valueListenable: _controller.audioRmsNotifier,
-              builder: (context, currentRms, _) => CalibrationLevelFeedback(
-                currentRms: currentRms,
-                debug: progress.debug,
-                sound: progress.currentSound,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Quick pass/fail status summary for sound phases
-            if (progress.currentSound.isSoundPhase)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: CalibrationStatusSummary(
-                  debug: progress.debug,
-                  sound: progress.currentSound,
-                ),
-              ),
-
-            // Live guidance banner when we hear sound but haven't accepted samples
-            ValueListenableBuilder<String?>(
-              valueListenable: _controller.guidanceNotifier,
-              builder: (context, guidance, _) {
-                if (guidance == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _GuidanceBanner(message: guidance),
-                );
-              },
-            ),
-
-            // Manual accept button
-            ValueListenableBuilder<bool>(
-              valueListenable: _controller.manualAcceptAvailableNotifier,
-              builder: (context, available, _) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: available ? _onManualAccept : null,
-                      icon: const Icon(Icons.rule),
-                      label: const Text('Count last hit'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.lightBlueAccent,
-                        side: BorderSide(
-                          color: Colors.lightBlueAccent.withValues(alpha: 0.6),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            // Sample collection progress
-            SampleProgressDots(
-              collected: progress.samplesCollected,
-              needed: progress.samplesNeeded,
-              color: progress.currentSound.color,
-            ),
-            const SizedBox(height: 20),
-
-            // Show confirmation buttons or instructions based on state
-            if (progress.waitingForConfirmation)
-              CalibrationConfirmationButtons(
-                sound: progress.currentSound,
-                onRetry: () async {
-                  try {
-                    await _controller.retryStep();
-                  } catch (e) {
-                    debugPrint('[CalibrationScreen] Retry error: $e');
-                  }
-                },
-                onConfirm: () async {
-                  try {
-                    final hasNext = await _controller.confirmStep();
-                    // If no next step, calibration is complete and saved
-                    if (!hasNext && mounted) {
-                      await _handleSuccess();
-                    }
-                  } catch (e) {
-                    debugPrint('[CalibrationScreen] Confirm error: $e');
-                  }
-                },
-              )
-            else
-              _buildInstructions(progress),
-            const SizedBox(height: 20),
-
-            // Tips at bottom
-            _buildTips(progress),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverallProgress(CalibrationProgress progress) {
-    final currentStep = progress.currentSound.index + 1;
-    const totalSteps = 4; // NoiseFloor, Kick, Snare, HiHat
-    final overallProgress = progress.overallProgressFraction;
-
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Step $currentStep of $totalSteps',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '${(overallProgress * 100).toInt()}% Complete',
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: overallProgress,
-            minHeight: 8,
-            backgroundColor: Colors.white24,
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00D9FF)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSoundTypeIndicator(CalibrationProgress progress) {
-    final sound = progress.currentSound;
-    final color = sound.color;
-    final icon = sound.icon;
-
-    return AnimatedBuilder(
-      animation: _flashAnimation,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(
-                  alpha: 0.3 + (_flashAnimation.value * 0.5),
-                ),
-                blurRadius: 30 + (_flashAnimation.value * 20),
-                spreadRadius: 5 + (_flashAnimation.value * 10),
-              ),
-            ],
-          ),
-          child: ScaleTransition(
-            scale: _pulseAnimation,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.2),
-                border: Border.all(color: color, width: 3),
-              ),
-              child: Icon(icon, size: 70, color: color),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInstructions(CalibrationProgress progress) {
-    final sound = progress.currentSound;
-    final isNoiseFloor = sound == CalibrationSound.noiseFloor;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            isNoiseFloor
-                ? 'Measuring Ambient Noise'
-                : 'Make the ${sound.displayName} sound',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            sound.instructionText,
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: sound.color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              sound.phoneticHint,
-              style: TextStyle(
-                color: sound.color,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontStyle: isNoiseFloor ? FontStyle.normal : FontStyle.italic,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTips(CalibrationProgress progress) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.lightbulb_outline, color: Colors.amber[300], size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              progress.currentSound.tipText,
-              style: TextStyle(color: Colors.amber[100], fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GuidanceBanner extends StatelessWidget {
-  const _GuidanceBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.blueGrey.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.hearing, color: Colors.lightBlueAccent, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
           ),
         ],
       ),

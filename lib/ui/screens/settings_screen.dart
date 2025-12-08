@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
 import '../../services/settings/i_settings_service.dart';
 import '../../services/storage/i_storage_service.dart';
+import '../widgets/screen_background.dart';
 
 /// Settings screen for configuring app preferences
 ///
@@ -138,22 +139,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                _buildBpmSetting(),
-                const Divider(),
-                _buildDebugModeSetting(),
-                if (_debugMode) ...[const Divider(), _buildDebugLabEntry()],
-                const Divider(),
-                _buildClassifierLevelSetting(),
-                const Divider(),
-                _buildRecalibrateSetting(),
-              ],
-            ),
+    final theme = Theme.of(context);
+    return ScreenBackground(
+      asset: 'assets/images/backgrounds/bg_settings.png',
+      overlayOpacity: 0.64,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Settings'),
+          backgroundColor: Colors.black.withValues(alpha: 0.3),
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 8.0,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Theme(
+                    data: theme.copyWith(
+                      textTheme: theme.textTheme.apply(
+                        bodyColor: Colors.white,
+                        displayColor: Colors.white,
+                      ),
+                      sliderTheme: theme.sliderTheme.copyWith(
+                        activeTrackColor: Colors.cyanAccent,
+                        inactiveTrackColor: Colors.white30,
+                        thumbColor: Colors.white,
+                      ),
+                      switchTheme: theme.switchTheme.copyWith(
+                        thumbColor: WidgetStateProperty.resolveWith(
+                          (states) => Colors.cyanAccent,
+                        ),
+                        trackColor: WidgetStateProperty.resolveWith(
+                          (states) => states.contains(WidgetState.selected)
+                              ? Colors.cyanAccent.withValues(alpha: 0.5)
+                              : Colors.white24,
+                        ),
+                      ),
+                    ),
+                    child: ListView(
+                      children: [
+                        _buildBpmSetting(),
+                        const Divider(),
+                        _buildDebugModeSetting(),
+                        if (_debugMode) ...[
+                          const Divider(),
+                          _buildDebugLabEntry(),
+                        ],
+                        const Divider(),
+                        _buildClassifierLevelSetting(),
+                        const Divider(),
+                        _buildRecalibrateSetting(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+      ),
     );
   }
 
