@@ -61,3 +61,6 @@ rust/is_mul
 # Spec workflow generated artifacts
 .spec-workflow/approvals/
 .spec-workflow/specs/*/Implementation\ Logs/
+
+# FVM (ignore entire .fvm directory, track .fvmrc)
+.fvm/

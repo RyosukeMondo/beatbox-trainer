@@ -478,11 +478,11 @@ run_cli_smoke_tests() {
 
     if (
         cd "$PROJECT_ROOT/rust" &&
-            "${classify_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
-            "${stream_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
-            "${dump_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
-            "${diag_run_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1 &&
-            "${diag_record_cmd[@]}" >>"$CLI_SMOKE_LOG" 2>&1
+            timeout "$TIMEOUT" "${classify_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
+            timeout "$TIMEOUT" "${stream_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
+            timeout "$TIMEOUT" "${dump_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
+            timeout "$TIMEOUT" "${diag_run_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
+            timeout "$TIMEOUT" "${diag_record_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
     ); then
         print_success "CLI harness smoke tests passed (logs: $CLI_SMOKE_LOG)"
         if [ -f "$CLI_SMOKE_REPORT" ]; then
@@ -505,7 +505,7 @@ run_http_smoke_checks() {
 
     if (
         cd "$PROJECT_ROOT/rust" &&
-            cargo test --features debug_http http::routes::tests:: -- --nocapture >>"$HTTP_SMOKE_LOG" 2>&1
+            timeout "$TIMEOUT" cargo test --features debug_http http::routes::tests:: -- --nocapture </dev/null >>"$HTTP_SMOKE_LOG" 2>&1
     ); then
         print_success "HTTP smoke tests passed (logs: $HTTP_SMOKE_LOG)"
     else
