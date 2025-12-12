@@ -6,7 +6,9 @@
 import 'analysis.dart';
 import 'analysis/classifier.dart';
 import 'analysis/quantizer.dart';
+import 'api/types.dart';
 import 'calibration/progress.dart';
+import 'calibration/state.dart';
 import 'engine/core.dart';
 import 'error/audio.dart';
 import 'error/calibration.dart';
@@ -232,33 +234,30 @@ Stream<CalibrationProgress> calibrationStream() =>
 ///   print('Failed to load calibration: $e');
 /// }
 /// ```
-Future<void> loadCalibrationState({required String json}) =>
-    RustLib.instance.api.crateApiLoadCalibrationState(json: json);
+Future<void> loadCalibrationState({required CalibrationState state}) =>
+    RustLib.instance.api.crateApiLoadCalibrationState(state: state);
 
-/// Get current calibration state as JSON
+/// Get current calibration state
 ///
-/// Retrieves the current calibration state serialized to JSON string.
-/// This JSON can be saved to persistent storage and restored later using
-/// `load_calibration_state`.
+/// Retrieves the current calibration state struct.
 ///
 /// # Returns
-/// * `Ok(String)` - JSON string containing serialized CalibrationState
-/// * `Err(CalibrationError)` - Error if serialization fails or lock poisoning
+/// * `Ok(CalibrationState)` - The current calibration state
+/// * `Err(CalibrationError)` - Error if lock poisoning
 ///
 /// # Errors
-/// - JSON serialization error (should be rare)
 /// - Lock poisoning on calibration state
 ///
 /// # Usage
 /// ```dart
 /// try {
-///   final jsonString = await getCalibrationState();
-///   // Save jsonString to SharedPreferences
+///   final state = await getCalibrationState();
+///   // Use state object directly
 /// } catch (e) {
 ///   print('Failed to get calibration state: $e');
 /// }
 /// ```
-Future<String> getCalibrationState() =>
+Future<CalibrationState> getCalibrationState() =>
     RustLib.instance.api.crateApiGetCalibrationState();
 
 /// Get AudioErrorCodes as a structured object with all error code constants
@@ -287,7 +286,7 @@ CalibrationErrorCodes getCalibrationErrorCodes() =>
 /// * `Ok(())` - Threshold updated successfully
 /// * `Err(CalibrationError)` - If key is invalid or lock fails
 Future<void> updateCalibrationThreshold({
-  required String key,
+  required CalibrationThresholdKey key,
   required double value,
 }) => RustLib.instance.api.crateApiUpdateCalibrationThreshold(
   key: key,

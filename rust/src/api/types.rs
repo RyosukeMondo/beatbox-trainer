@@ -22,3 +22,13 @@ pub struct OnsetEvent {
     pub decay_time_ms: f64,
     pub classification: Option<ClassificationResult>,
 }
+
+/// Keys for updating calibration thresholds
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum CalibrationThresholdKey {
+    KickCentroid,
+    KickZcr,
+    SnareCentroid,
+    HihatZcr,
+    NoiseFloorRms,
+}

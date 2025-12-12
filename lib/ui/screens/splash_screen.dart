@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/storage/i_storage_service.dart';
@@ -84,8 +83,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // Step 4: Load calibration into Rust backend
       // Convert CalibrationData to Rust CalibrationState format
-      final calibrationJson = jsonEncode(calibrationData.toRustJson());
-      await api.loadCalibrationState(json: calibrationJson);
+      final calibrationState = calibrationData.toRustState();
+      await api.loadCalibrationState(state: calibrationState);
 
       // Step 5: Navigate to training screen
       if (mounted) {

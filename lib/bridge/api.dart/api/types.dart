@@ -9,7 +9,7 @@ import '../analysis/quantizer.dart';
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
 
 /// Audio metrics for debug visualization
 class AudioMetrics {
@@ -45,6 +45,15 @@ class AudioMetrics {
           spectralFlux == other.spectralFlux &&
           frameNumber == other.frameNumber &&
           timestamp == other.timestamp;
+}
+
+/// Keys for updating calibration thresholds
+enum CalibrationThresholdKey {
+  kickCentroid,
+  kickZcr,
+  snareCentroid,
+  hihatZcr,
+  noiseFloorRms,
 }
 
 /// Onset event with classification details

@@ -8,7 +8,8 @@ fn main() {
     // Test load_calibration_state first (like Flutter does)
     eprintln!("[test_api] Calling load_calibration_state...");
     let json = r#"{"level":1,"t_kick_centroid":2656.7964,"t_kick_zcr":0.022639297,"t_snare_centroid":5948.214,"t_hihat_zcr":0.4505572,"is_calibrated":true,"noise_floor_rms":0.006382522766679049}"#;
-    match beatbox_trainer::api::load_calibration_state(json.to_string()) {
+    let state: beatbox_trainer::api::CalibrationState = serde_json::from_str(json).unwrap();
+    match beatbox_trainer::api::load_calibration_state(state) {
         Ok(()) => eprintln!("[test_api] load_calibration_state succeeded"),
         Err(e) => eprintln!("[test_api] load_calibration_state failed: {:?}", e),
     }

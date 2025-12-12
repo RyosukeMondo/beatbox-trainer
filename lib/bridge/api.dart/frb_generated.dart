@@ -11,6 +11,7 @@ import 'api/diagnostics.dart';
 import 'api/streams.dart';
 import 'api/types.dart';
 import 'calibration/progress.dart';
+import 'calibration/state.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'engine/core.dart';
@@ -112,7 +113,7 @@ abstract class RustLibApi extends BaseApi {
 
   CalibrationErrorCodes crateApiGetCalibrationErrorCodes();
 
-  Future<String> crateApiGetCalibrationState();
+  Future<CalibrationState> crateApiGetCalibrationState();
 
   Future<(double, double, double)> crateApiGetCurrentAudioLevel();
 
@@ -124,7 +125,7 @@ abstract class RustLibApi extends BaseApi {
 
   bool crateApiIsPipelineTracingEnabled();
 
-  Future<void> crateApiLoadCalibrationState({required String json});
+  Future<void> crateApiLoadCalibrationState({required CalibrationState state});
 
   List<FixtureManifestEntry> crateApiDiagnosticsLoadFixtureCatalog();
 
@@ -155,7 +156,7 @@ abstract class RustLibApi extends BaseApi {
   Stream<TelemetryEvent> crateApiStreamsTelemetryStream();
 
   Future<void> crateApiUpdateCalibrationThreshold({
-    required String key,
+    required CalibrationThresholdKey key,
     required double value,
   });
 
@@ -471,7 +472,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiGetCalibrationState() {
+  Future<CalibrationState> crateApiGetCalibrationState() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -484,7 +485,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_calibration_state,
           decodeErrorData: sse_decode_calibration_error,
         ),
         constMeta: kCrateApiGetCalibrationStateConstMeta,
@@ -622,12 +623,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiLoadCalibrationState({required String json}) {
+  Future<void> crateApiLoadCalibrationState({required CalibrationState state}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(json, serializer);
+          sse_encode_box_autoadd_calibration_state(state, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -640,7 +641,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_calibration_error,
         ),
         constMeta: kCrateApiLoadCalibrationStateConstMeta,
-        argValues: [json],
+        argValues: [state],
         apiImpl: this,
       ),
     );
@@ -649,7 +650,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiLoadCalibrationStateConstMeta =>
       const TaskConstMeta(
         debugName: "load_calibration_state",
-        argNames: ["json"],
+        argNames: ["state"],
       );
 
   @override
@@ -1017,14 +1018,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiUpdateCalibrationThreshold({
-    required String key,
+    required CalibrationThresholdKey key,
     required double value,
   }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(key, serializer);
+          sse_encode_calibration_threshold_key(key, serializer);
           sse_encode_f_64(value, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
@@ -1232,6 +1233,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationState dco_decode_box_autoadd_calibration_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_calibration_state(raw);
+  }
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   ) {
@@ -1370,6 +1377,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CalibrationSound dco_decode_calibration_sound(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return CalibrationSound.values[raw as int];
+  }
+
+  @protected
+  CalibrationState dco_decode_calibration_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return CalibrationState(
+      level: dco_decode_u_8(arr[0]),
+      tKickCentroid: dco_decode_f_32(arr[1]),
+      tKickZcr: dco_decode_f_32(arr[2]),
+      tSnareCentroid: dco_decode_f_32(arr[3]),
+      tHihatZcr: dco_decode_f_32(arr[4]),
+      isCalibrated: dco_decode_bool(arr[5]),
+      noiseFloorRms: dco_decode_f_64(arr[6]),
+    );
+  }
+
+  @protected
+  CalibrationThresholdKey dco_decode_calibration_threshold_key(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CalibrationThresholdKey.values[raw as int];
   }
 
   @protected
@@ -1975,6 +2005,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CalibrationState sse_decode_box_autoadd_calibration_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_calibration_state(deserializer));
+  }
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   ) {
@@ -2141,6 +2179,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return CalibrationSound.values[inner];
+  }
+
+  @protected
+  CalibrationState sse_decode_calibration_state(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_level = sse_decode_u_8(deserializer);
+    var var_tKickCentroid = sse_decode_f_32(deserializer);
+    var var_tKickZcr = sse_decode_f_32(deserializer);
+    var var_tSnareCentroid = sse_decode_f_32(deserializer);
+    var var_tHihatZcr = sse_decode_f_32(deserializer);
+    var var_isCalibrated = sse_decode_bool(deserializer);
+    var var_noiseFloorRms = sse_decode_f_64(deserializer);
+    return CalibrationState(
+      level: var_level,
+      tKickCentroid: var_tKickCentroid,
+      tKickZcr: var_tKickZcr,
+      tSnareCentroid: var_tSnareCentroid,
+      tHihatZcr: var_tHihatZcr,
+      isCalibrated: var_isCalibrated,
+      noiseFloorRms: var_noiseFloorRms,
+    );
+  }
+
+  @protected
+  CalibrationThresholdKey sse_decode_calibration_threshold_key(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CalibrationThresholdKey.values[inner];
   }
 
   @protected
@@ -2904,6 +2972,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_calibration_state(
+    CalibrationState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_calibration_state(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -3046,6 +3123,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_calibration_sound(
     CalibrationSound self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_calibration_state(
+    CalibrationState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.level, serializer);
+    sse_encode_f_32(self.tKickCentroid, serializer);
+    sse_encode_f_32(self.tKickZcr, serializer);
+    sse_encode_f_32(self.tSnareCentroid, serializer);
+    sse_encode_f_32(self.tHihatZcr, serializer);
+    sse_encode_bool(self.isCalibrated, serializer);
+    sse_encode_f_64(self.noiseFloorRms, serializer);
+  }
+
+  @protected
+  void sse_encode_calibration_threshold_key(
+    CalibrationThresholdKey self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs

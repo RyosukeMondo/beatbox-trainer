@@ -603,12 +603,13 @@ fn wire__crate__api__load_calibration_state_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_json = <String>::sse_decode(&mut deserializer);
+            let api_state =
+                <crate::calibration::state::CalibrationState>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::error::calibration::CalibrationError>(
                     (move || {
-                        let output_ok = crate::api::load_calibration_state(api_json)?;
+                        let output_ok = crate::api::load_calibration_state(api_state)?;
                         Ok(output_ok)
                     })(),
                 )
@@ -1069,7 +1070,8 @@ fn wire__crate__api__update_calibration_threshold_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_key = <String>::sse_decode(&mut deserializer);
+            let api_key =
+                <crate::api::types::CalibrationThresholdKey>::sse_decode(&mut deserializer);
             let api_value = <f64>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
@@ -1462,6 +1464,43 @@ impl SseDecode for crate::calibration::progress::CalibrationSound {
             2 => crate::calibration::progress::CalibrationSound::Snare,
             3 => crate::calibration::progress::CalibrationSound::HiHat,
             _ => unreachable!("Invalid variant for CalibrationSound: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::calibration::state::CalibrationState {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_level = <u8>::sse_decode(deserializer);
+        let mut var_tKickCentroid = <f32>::sse_decode(deserializer);
+        let mut var_tKickZcr = <f32>::sse_decode(deserializer);
+        let mut var_tSnareCentroid = <f32>::sse_decode(deserializer);
+        let mut var_tHihatZcr = <f32>::sse_decode(deserializer);
+        let mut var_isCalibrated = <bool>::sse_decode(deserializer);
+        let mut var_noiseFloorRms = <f64>::sse_decode(deserializer);
+        return crate::calibration::state::CalibrationState {
+            level: var_level,
+            t_kick_centroid: var_tKickCentroid,
+            t_kick_zcr: var_tKickZcr,
+            t_snare_centroid: var_tSnareCentroid,
+            t_hihat_zcr: var_tHihatZcr,
+            is_calibrated: var_isCalibrated,
+            noise_floor_rms: var_noiseFloorRms,
+        };
+    }
+}
+
+impl SseDecode for crate::api::types::CalibrationThresholdKey {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::types::CalibrationThresholdKey::KickCentroid,
+            1 => crate::api::types::CalibrationThresholdKey::KickZcr,
+            2 => crate::api::types::CalibrationThresholdKey::SnareCentroid,
+            3 => crate::api::types::CalibrationThresholdKey::HihatZcr,
+            4 => crate::api::types::CalibrationThresholdKey::NoiseFloorRms,
+            _ => unreachable!("Invalid variant for CalibrationThresholdKey: {}", inner),
         };
     }
 }
@@ -2435,6 +2474,56 @@ impl flutter_rust_bridge::IntoIntoDart<crate::calibration::progress::Calibration
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::calibration::state::CalibrationState {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.level.into_into_dart().into_dart(),
+            self.t_kick_centroid.into_into_dart().into_dart(),
+            self.t_kick_zcr.into_into_dart().into_dart(),
+            self.t_snare_centroid.into_into_dart().into_dart(),
+            self.t_hihat_zcr.into_into_dart().into_dart(),
+            self.is_calibrated.into_into_dart().into_dart(),
+            self.noise_floor_rms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::calibration::state::CalibrationState
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::calibration::state::CalibrationState>
+    for crate::calibration::state::CalibrationState
+{
+    fn into_into_dart(self) -> crate::calibration::state::CalibrationState {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::types::CalibrationThresholdKey {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::KickCentroid => 0.into_dart(),
+            Self::KickZcr => 1.into_dart(),
+            Self::SnareCentroid => 2.into_dart(),
+            Self::HihatZcr => 3.into_dart(),
+            Self::NoiseFloorRms => 4.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::types::CalibrationThresholdKey
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::types::CalibrationThresholdKey>
+    for crate::api::types::CalibrationThresholdKey
+{
+    fn into_into_dart(self) -> crate::api::types::CalibrationThresholdKey {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::analysis::ClassificationResult {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -3182,6 +3271,38 @@ impl SseEncode for crate::calibration::progress::CalibrationSound {
                 crate::calibration::progress::CalibrationSound::Kick => 1,
                 crate::calibration::progress::CalibrationSound::Snare => 2,
                 crate::calibration::progress::CalibrationSound::HiHat => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::calibration::state::CalibrationState {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.level, serializer);
+        <f32>::sse_encode(self.t_kick_centroid, serializer);
+        <f32>::sse_encode(self.t_kick_zcr, serializer);
+        <f32>::sse_encode(self.t_snare_centroid, serializer);
+        <f32>::sse_encode(self.t_hihat_zcr, serializer);
+        <bool>::sse_encode(self.is_calibrated, serializer);
+        <f64>::sse_encode(self.noise_floor_rms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::types::CalibrationThresholdKey {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::types::CalibrationThresholdKey::KickCentroid => 0,
+                crate::api::types::CalibrationThresholdKey::KickZcr => 1,
+                crate::api::types::CalibrationThresholdKey::SnareCentroid => 2,
+                crate::api::types::CalibrationThresholdKey::HihatZcr => 3,
+                crate::api::types::CalibrationThresholdKey::NoiseFloorRms => 4,
                 _ => {
                     unimplemented!("");
                 }
