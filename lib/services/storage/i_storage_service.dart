@@ -1,4 +1,4 @@
-import '../../models/calibration_state.dart';
+import '../../bridge/api.dart/calibration/state.dart';
 
 /// Storage service interface for calibration and settings persistence.
 ///
@@ -188,23 +188,21 @@ class CalibrationData {
     };
   }
 
-  /// Convert CalibrationData to Rust CalibrationState JSON format.
+  /// Convert CalibrationData to Rust CalibrationState struct.
   ///
   /// Flattens the thresholds map into top-level fields as expected by
   /// Rust's CalibrationState struct.
   ///
   /// Returns:
-  /// - Map with 'level', 't_kick_centroid', 't_kick_zcr', 't_snare_centroid',
-  ///   't_hihat_zcr', 'noise_floor_rms', and 'is_calibrated' keys
+  /// - [CalibrationState] object ready to be passed to Rust engine
   ///
   /// Example:
   /// ```dart
-  /// final rustJson = calibData.toRustJson();
-  /// final jsonString = jsonEncode(rustJson);
-  /// await audioService.loadCalibrationState(jsonString);
+  /// final calibState = calibData.toRustState();
+  /// await audioService.loadCalibrationState(calibState);
   /// ```
-  Map<String, dynamic> toRustJson() {
-    final state = CalibrationState(
+  CalibrationState toRustState() {
+    return CalibrationState(
       level: level,
       tKickCentroid: thresholds['t_kick_centroid'] ?? 1500.0,
       tKickZcr: thresholds['t_kick_zcr'] ?? 0.1,
@@ -216,8 +214,6 @@ class CalibrationData {
       // calibration is already complete.
       isCalibrated: true,
     );
-
-    return state.toJson();
   }
 }
 
