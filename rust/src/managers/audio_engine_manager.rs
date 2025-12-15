@@ -11,7 +11,7 @@ use crate::calibration::{CalibrationProcedure, CalibrationProgress, CalibrationS
 use crate::config::{AudioConfig, OnsetDetectionConfig};
 use crate::error::{log_audio_error, AudioError};
 
-#[cfg(target_os = "android")]
+#[allow(unused_imports)]
 use crate::audio::{
     buffer_pool::{BufferPool, BufferPoolChannels},
     engine::AudioEngine,
@@ -19,10 +19,7 @@ use crate::audio::{
 
 /// AudioEngine state container for lifecycle management
 struct AudioEngineState {
-    #[cfg(target_os = "android")]
     engine: AudioEngine,
-    #[cfg(not(target_os = "android"))]
-    _dummy: (),
 }
 
 /// Manages audio engine lifecycle and state
@@ -93,7 +90,6 @@ impl AudioEngineManager {
     /// - Audio engine already running
     /// - Lock poisoning
     /// - Hardware/platform errors
-    #[cfg_attr(not(target_os = "android"), allow(unused_variables))]
     pub fn start(
         &self,
         bpm: u32,
@@ -103,44 +99,32 @@ impl AudioEngineManager {
         broadcast_tx: broadcast::Sender<ClassificationResult>,
         metronome_enabled: bool,
     ) -> Result<(), AudioError> {
-        #[cfg(not(target_os = "android"))]
-        {
-            let err = AudioError::HardwareError {
-                details: "Audio engine only supported on Android".to_string(),
-            };
-            log_audio_error(&err, "start_audio");
-            Err(err)
-        }
+        self.validate_bpm(bpm)?;
 
-        #[cfg(target_os = "android")]
-        {
-            self.validate_bpm(bpm)?;
+        let mut guard = self.lock_engine()?;
+        self.check_not_running(&guard)?;
 
-            let mut guard = self.lock_engine()?;
-            self.check_not_running(&guard)?;
+        let buffer_pool = self.create_buffer_pool();
+        let mut engine = self.create_engine(bpm, buffer_pool)?;
+        engine.set_metronome_enabled(metronome_enabled);
 
-            let buffer_pool = self.create_buffer_pool();
-            let mut engine = self.create_engine(bpm, buffer_pool)?;
-            engine.set_metronome_enabled(metronome_enabled);
+        engine
+            .start(
+                calibration_state,
+                calibration_procedure,
+                calibration_progress_tx,
+                broadcast_tx,
+                self.onset_config.clone(),
+                self.log_every_n_buffers,
+            )
+            .map_err(|err| {
+                log_audio_error(&err, "start_audio");
+                err
+            })?;
 
-            engine
-                .start(
-                    calibration_state,
-                    calibration_procedure,
-                    calibration_progress_tx,
-                    broadcast_tx,
-                    self.onset_config.clone(),
-                    self.log_every_n_buffers,
-                )
-                .map_err(|err| {
-                    log_audio_error(&err, "start_audio");
-                    err
-                })?;
+        *guard = Some(AudioEngineState { engine });
 
-            *guard = Some(AudioEngineState { engine });
-
-            Ok(())
-        }
+        Ok(())
     }
 
     /// Stop audio engine gracefully
@@ -152,28 +136,16 @@ impl AudioEngineManager {
     /// * `Ok(())` - Audio engine stopped successfully or was not running
     /// * `Err(AudioError)` - Error if shutdown fails or lock poisoning
     pub fn stop(&self) -> Result<(), AudioError> {
-        #[cfg(not(target_os = "android"))]
-        {
-            let err = AudioError::HardwareError {
-                details: "Audio engine only supported on Android".to_string(),
-            };
-            log_audio_error(&err, "stop_audio");
-            Err(err)
+        let mut guard = self.lock_engine()?;
+
+        if let Some(mut state) = guard.take() {
+            state.engine.stop().map_err(|err| {
+                log_audio_error(&err, "stop_audio");
+                err
+            })?;
         }
 
-        #[cfg(target_os = "android")]
-        {
-            let mut guard = self.lock_engine()?;
-
-            if let Some(mut state) = guard.take() {
-                state.engine.stop().map_err(|err| {
-                    log_audio_error(&err, "stop_audio");
-                    err
-                })?;
-            }
-
-            Ok(())
-        }
+        Ok(())
     }
 
     /// Update BPM dynamically (engine must be running)
@@ -191,31 +163,18 @@ impl AudioEngineManager {
     /// - Invalid BPM (must be > 0)
     /// - Audio engine not running
     /// - Lock poisoning
-    #[cfg_attr(not(target_os = "android"), allow(unused_variables))]
     pub fn set_bpm(&self, bpm: u32) -> Result<(), AudioError> {
-        #[cfg(not(target_os = "android"))]
-        {
-            let err = AudioError::HardwareError {
-                details: "Audio engine only supported on Android".to_string(),
-            };
+        self.validate_bpm(bpm)?;
+
+        let guard = self.lock_engine()?;
+        let state = guard.as_ref().ok_or_else(|| {
+            let err = AudioError::NotRunning;
             log_audio_error(&err, "set_bpm");
-            Err(err)
-        }
+            err
+        })?;
 
-        #[cfg(target_os = "android")]
-        {
-            self.validate_bpm(bpm)?;
-
-            let guard = self.lock_engine()?;
-            let state = guard.as_ref().ok_or_else(|| {
-                let err = AudioError::NotRunning;
-                log_audio_error(&err, "set_bpm");
-                err
-            })?;
-
-            state.engine.set_bpm(bpm);
-            Ok(())
-        }
+        state.engine.set_bpm(bpm);
+        Ok(())
     }
 
     // ========================================================================
@@ -278,7 +237,6 @@ impl AudioEngineManager {
     ///
     /// # Returns
     /// BufferPoolChannels with 16 buffers of 2048 samples each
-    #[cfg(target_os = "android")]
     fn create_buffer_pool(&self) -> BufferPoolChannels {
         BufferPool::new(
             self.audio_config.buffer_pool_size,
@@ -295,13 +253,12 @@ impl AudioEngineManager {
     /// # Returns
     /// * `Ok(AudioEngine)` - Engine created successfully
     /// * `Err(AudioError)` - Error during engine creation
-    #[cfg(target_os = "android")]
     fn create_engine(
         &self,
         bpm: u32,
         buffer_channels: BufferPoolChannels,
     ) -> Result<AudioEngine, AudioError> {
-        let sample_rate = 48000; // Standard sample rate for Android
+        let sample_rate = 48000; // Standard sample rate
         AudioEngine::new(bpm, sample_rate, buffer_channels).map_err(|err| {
             log_audio_error(&err, "create_engine");
             err

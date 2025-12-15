@@ -32,9 +32,11 @@ The Beatbox Trainer application is built with a layered, dependency-injected arc
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: Oboe C++ Audio I/O                                 │
+│ Layer 1: Audio Backend (Oboe/CPAL)                          │
 │ - Low-latency native audio streams                          │
 │ - Platform-specific optimizations                           │
+│ - Android: Oboe (AAudio/OpenSL ES)                          │
+│ - Windows/Linux: CPAL (WASAPI/ALSA)                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -268,7 +270,7 @@ Audio processing path maintains real-time guarantees:
 - **Zero allocations**: All buffers pre-allocated
 - **Lock-free**: Atomic operations only (AtomicU64, AtomicU32)
 - **Zero-copy**: Lock-free SPSC queue for audio samples
-- **<20ms latency**: Guaranteed by Oboe + lock-free design
+- **<20ms latency**: Guaranteed by Oboe (Android) and CPAL (Desktop) + lock-free design
 
 ```rust
 // Audio callback (runs in real-time thread)
