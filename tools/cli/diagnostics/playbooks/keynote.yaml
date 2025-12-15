@@ -51,7 +51,7 @@ scenarios:
     tags: [smoke, ci, default]
     env:
       BBT_DIAG_PROFILE: debug
-      RUST_LOG: warn
+      RUST_LOG: info
     artifacts:
       - name: metrics-snapshot
         path: "{{scenarioDir}}/metrics/default-smoke.json"
@@ -98,21 +98,23 @@ scenarios:
             path: "{{scenarioDir}}/metrics/default-smoke.json"
             type: json
             required: true
-#      - id: archive-sample
-#        description: Persist a quick diagnostic snapshot for manual diffing.
-#        run: ./tools/cli/diagnostics/run.sh
-#        args:
-#          - record
-#          - --fixture
-#          - fixtures/basic_hits.wav
-#          - --output
-#          - "{{scenarioDir}}/artifacts/default-smoke-recording.json"
-#        timeoutSeconds: 60
-#        artifacts:
-#          - name: recording-json
-#            path: "{{scenarioDir}}/artifacts/default-smoke-recording.json"
-#            type: json
-#            required: false
+      - id: archive-sample
+        description: Persist a quick diagnostic snapshot for manual diffing.
+        run: ./tools/cli/diagnostics/run.sh
+        args:
+          - record
+          - --fixture
+          - fixtures/basic_hits.wav
+          - --id
+          - basic_hits_smoke
+          - --output
+          - "{{scenarioDir}}/artifacts/default-smoke-recording.json"
+        timeoutSeconds: 60
+        artifacts:
+          - name: recording-json
+            path: "{{scenarioDir}}/artifacts/default-smoke-recording.json"
+            type: json
+            required: false
   keynote-latency:
     summary: High-fidelity latency sweep used for keynote demos.
     tags: [latency, keynote, blocking]

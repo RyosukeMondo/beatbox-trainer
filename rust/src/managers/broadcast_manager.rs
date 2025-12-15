@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_get_calibration_sender() {
-        use crate::calibration::CalibrationSound;
+        use crate::calibration::progress::CalibrationSound;
 
         let manager = BroadcastChannelManager::new();
 
@@ -345,8 +345,6 @@ mod tests {
         let rx2 = manager.subscribe_audio_metrics();
         assert!(rx2.is_some());
     }
-
-
 
     #[test]
     fn test_default_implementation() {

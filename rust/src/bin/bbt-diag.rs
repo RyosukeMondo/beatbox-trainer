@@ -264,10 +264,12 @@ fn run_impl(args: RunArgs) -> Result<()> {
     args.fixture.validate()?;
     let spec = build_fixture_spec(&args.fixture)?;
     let fixture_id = spec.id.clone();
-    let mut classification_rx = engine_handle().subscribe_classification();
+
     let mut observed_events: Vec<ClassificationResult> = Vec::new();
     let mut handle = fixture_engine::start_fixture_session_internal(engine_handle(), spec)
         .context("starting fixture session")?;
+    let mut classification_rx = engine_handle().subscribe_classification();
+
     let mut telemetry_rx = telemetry::hub().collector().subscribe();
     let mut aggregator = TelemetryAggregator::default();
     let deadline = Instant::now() + Duration::from_millis(args.watch_ms.max(100));
@@ -313,22 +315,33 @@ fn record_impl(args: RecordArgs) -> Result<()> {
     let fixture_id = spec.id.clone();
     let sample_rate = spec.sample_rate;
 
-    let mut classification_rx = engine_handle().subscribe_classification();
     let mut handle = fixture_engine::start_fixture_session_internal(engine_handle(), spec)
         .context("starting fixture session")?;
+    eprintln!("[Main] Handle created, running={}", handle.is_running());
 
+    let mut classification_rx = engine_handle().subscribe_classification();
     let mut captured = Vec::new();
     let deadline = Instant::now() + Duration::from_millis(args.watch_ms.max(100));
 
-    while Instant::now() < deadline && captured.len() < args.max_events && handle.is_running() {
+    eprintln!("[Main] Entering loop");
+    while Instant::now() < deadline && captured.len() < args.max_events {
         match classification_rx.try_recv() {
             Ok(event) => captured.push(event),
             Err(TryRecvError::Empty) => thread::sleep(Duration::from_millis(15)),
-            Err(TryRecvError::Disconnected) => break,
+            Err(TryRecvError::Disconnected) => {
+                eprintln!("[Main] Disconnected");
+                break;
+            }
         }
     }
+    eprintln!(
+        "[Main] Loop exited. captured={}, running={}",
+        captured.len(),
+        handle.is_running()
+    );
 
     handle.stop().context("stopping fixture session")?;
+    eprintln!("[Main] Handle stopped");
     drain_classification_events(&mut classification_rx, &mut captured);
 
     let payload = RecordPayload {

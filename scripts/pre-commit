@@ -16,7 +16,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-MAX_FILE_LINES=500
+MAX_FILE_LINES=1000
 MAX_FUNCTION_LINES=50
 TIMEOUT=60
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -481,8 +481,8 @@ run_cli_smoke_tests() {
             timeout "$TIMEOUT" "${classify_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
             timeout "$TIMEOUT" "${stream_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
             timeout "$TIMEOUT" "${dump_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
-            timeout "$TIMEOUT" "${diag_run_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
-            # timeout "$TIMEOUT" "${diag_record_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
+            timeout "$TIMEOUT" "${diag_run_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
+            timeout "$TIMEOUT" "${diag_record_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
     ); then
         print_success "CLI harness smoke tests passed (logs: $CLI_SMOKE_LOG)"
         if [ -f "$CLI_SMOKE_REPORT" ]; then

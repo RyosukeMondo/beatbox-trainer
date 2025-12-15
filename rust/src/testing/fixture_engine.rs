@@ -115,10 +115,13 @@ cfg_if::cfg_if! {
                 frame_counter: Arc<AtomicU64>,
             ) -> JoinHandle<()> {
                 std::thread::spawn(move || {
+                    eprintln!("[FeederThread] Started, running={}", running.load(Ordering::SeqCst));
+                    let mut buffers_processed = 0;
                     while running.load(Ordering::SeqCst) {
                         let mut buffer = match channels.pool_consumer.pop() {
                             Ok(buf) => buf,
                             Err(PopError::Empty) => {
+                                eprintln!("[FeederThread] Pool empty");
                                 if !running.load(Ordering::SeqCst) {
                                     break;
                                 }
@@ -132,25 +135,31 @@ cfg_if::cfg_if! {
                                 frames_written,
                                 finished,
                             } => {
+                                // eprintln!("[FeederThread] Read {} frames, finished={}", frames_written, finished);
                                 if frames_written < buffer.len() {
                                     buffer[frames_written..].fill(0.0);
                                 }
                                 frame_counter.fetch_add(frames_written as u64, Ordering::SeqCst);
 
                                 if channels.data_producer.push(buffer).is_err() {
+                                    eprintln!("[FeederThread] Failed to push data");
                                     break;
                                 }
+                                buffers_processed += 1;
 
                                 if finished {
+                                    eprintln!("[FeederThread] Finished reading source. Processed {} buffers", buffers_processed);
                                     running.store(false, Ordering::SeqCst);
                                 }
                             }
                             FixtureRead::Finished => {
+                                eprintln!("[FeederThread] Source finished immediately. Processed {} buffers", buffers_processed);
                                 running.store(false, Ordering::SeqCst);
                                 break;
                             }
                         }
                     }
+                    eprintln!("[FeederThread] Exiting");
                 })
             }
 

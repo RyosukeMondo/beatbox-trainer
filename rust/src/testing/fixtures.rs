@@ -167,6 +167,11 @@ struct WavFixtureSource {
 impl WavFixtureSource {
     fn new(path: &Path, loop_count: u16) -> Result<Self, AudioError> {
         let (samples, sample_rate) = read_wav(path)?;
+        eprintln!(
+            "WavFixtureSource loaded {} samples from {}",
+            samples.len(),
+            path.display()
+        );
         Ok(Self {
             samples,
             sample_rate,
@@ -212,6 +217,13 @@ impl FixtureAudioSource for WavFixtureSource {
             buffer[frames_written] = sample;
             frames_written += 1;
             self.cursor += ratio;
+        }
+
+        if frames_written > 0 && self.loops_completed == 0 && self.cursor < 2000.0 {
+            eprintln!(
+                "WavFixtureSource: Read {} frames, cursor {}, sample 0: {}",
+                frames_written, self.cursor, buffer[0]
+            );
         }
 
         let finished = self.loops_completed >= self.loop_count;

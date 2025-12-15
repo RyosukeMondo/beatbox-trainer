@@ -144,11 +144,16 @@ pub fn spawn_analysis_thread(
     audio_metrics_tx: Option<tokio::sync::broadcast::Sender<AudioMetrics>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
+        eprintln!("[AnalysisThread] Thread started");
         // Initialize DSP components (all allocations happen here, not in loop)
         let mut onset_detector = OnsetDetector::with_config(sample_rate, onset_config.clone());
+        eprintln!("[AnalysisThread] OnsetDetector created");
         let feature_extractor = FeatureExtractor::new(sample_rate);
+        eprintln!("[AnalysisThread] FeatureExtractor created");
         let classifier = Classifier::new(Arc::clone(&calibration_state));
+        eprintln!("[AnalysisThread] Classifier created");
         let quantizer = Quantizer::new(Arc::clone(&frame_counter), Arc::clone(&bpm), sample_rate);
+        eprintln!("[AnalysisThread] Quantizer created, entering loop");
 
         // Main analysis loop - runs until sender is dropped (audio engine stops)
         tracing::info!("[AnalysisThread] Starting analysis loop");
@@ -179,28 +184,36 @@ pub fn spawn_analysis_thread(
         // This captures samples when RMS crosses from below to above the detection threshold,
         // with hysteresis to avoid double-counting the same utterance.
         let mut prev_rms_for_crossing: f64 = 0.0;
-        let mut last_level_crossing_capture = Instant::now();
+        let mut processed_samples: u64 = 0;
+        const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150;
+        let debounce_samples = (LEVEL_CROSSING_DEBOUNCE_MS * sample_rate as u64) / 1000;
+        let mut last_level_crossing_capture: u64 = 0;
         let mut calibration_captured_in_gate = false;
-        const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150; // Minimum time between captures
 
         loop {
-            // Check shutdown flag first to ensure responsive termination
-            if let Some(flag) = shutdown_flag.as_ref() {
-                if flag.load(Ordering::SeqCst) {
-                    tracing::info!("[AnalysisThread] Shutdown flag set, exiting");
-                    break;
-                }
-            }
-
             // Attempt to pop from queue
             let buffer = match analysis_channels.data_consumer.pop() {
-                Ok(buf) => buf,
+                Ok(buf) => {
+                    eprintln!("[AnalysisThread] Popped buffer len {}", buf.len());
+                    buf
+                }
                 Err(PopError::Empty) => {
+                    // Check shutdown flag only when queue is empty
+                    if let Some(flag) = shutdown_flag.as_ref() {
+                        if !flag.load(Ordering::SeqCst) {
+                            tracing::info!(
+                                "[AnalysisThread] Shutdown flag set and queue empty, exiting"
+                            );
+                            break;
+                        }
+                    }
                     // Small sleep to avoid busy loop when empty
                     std::thread::sleep(std::time::Duration::from_millis(1));
                     continue;
                 }
             };
+
+            processed_samples += buffer.len() as u64;
 
             // Accumulate small buffers into larger chunks
             accumulator.extend_from_slice(&buffer);
@@ -428,8 +441,7 @@ pub fn spawn_analysis_thread(
             // This runs IN ADDITION to onset detection, catching sounds that spectral flux misses
             if calibration_active_snapshot
                 && accumulator.len() >= 1024
-                && last_level_crossing_capture.elapsed()
-                    >= Duration::from_millis(LEVEL_CROSSING_DEBOUNCE_MS)
+                && processed_samples.saturating_sub(last_level_crossing_capture) >= debounce_samples
             {
                 let detection_threshold =
                     detection_threshold_snapshot.unwrap_or(quiet_clear_gate * 2.0); // 2x noise floor fallback
@@ -480,7 +492,7 @@ pub fn spawn_analysis_thread(
                                     }
                                     calibration_captured_in_gate = true;
                                     guidance_limiter.clear();
-                                    last_level_crossing_capture = Instant::now();
+                                    last_level_crossing_capture = processed_samples;
                                 }
                                 Err(err) => {
                                     tracing::info!(
@@ -554,7 +566,7 @@ pub fn spawn_analysis_thread(
                             }
                         }
                     }
-                    last_level_crossing_capture = Instant::now();
+                    last_level_crossing_capture = processed_samples;
                     calibration_captured_in_gate = true;
                 }
             }
@@ -564,8 +576,7 @@ pub fn spawn_analysis_thread(
             // This is more reliable than onset detection which can fire on spectral changes in quiet audio
             if !calibration_active_snapshot
                 && accumulator.len() >= 1024
-                && last_level_crossing_capture.elapsed()
-                    >= Duration::from_millis(LEVEL_CROSSING_DEBOUNCE_MS)
+                && processed_samples.saturating_sub(last_level_crossing_capture) >= debounce_samples
             {
                 let noise_floor_gate = match calibration_state.read() {
                     Ok(state) => state.noise_floor_rms * 2.0,
@@ -598,7 +609,8 @@ pub fn spawn_analysis_thread(
                     };
 
                     // Timestamp is approximate for level-crossing detection
-                    let timestamp_ms = 0u64; // TODO: Implement proper timestamp tracking
+                    let timestamp_ms =
+                        (processed_samples as f64 / sample_rate as f64 * 1000.0) as u64;
 
                     // Create result and send to Dart UI
                     let result = ClassificationResult {
@@ -617,7 +629,7 @@ pub fn spawn_analysis_thread(
                     telemetry::hub().record_classification(&result);
                     let _ = result_sender.send(result);
 
-                    last_level_crossing_capture = Instant::now();
+                    last_level_crossing_capture = processed_samples;
                 }
             }
 
@@ -639,6 +651,15 @@ pub fn spawn_analysis_thread(
             // approach as level-crossing detection: extract the most recent 1024 samples,
             // which contain the onset (due to the onset detector's look-ahead delay).
             for onset_timestamp in onsets {
+                // Avoid double-triggering if level-crossing detector already captured this event
+                if processed_samples.saturating_sub(last_level_crossing_capture) < debounce_samples
+                {
+                    tracing::debug!(
+                        "[AnalysisThread] Skipping onset duplicate (captured via level-crossing)"
+                    );
+                    continue;
+                }
+
                 // Skip if accumulator doesn't have enough samples
                 if accumulator.len() < 1024 {
                     tracing::debug!(
