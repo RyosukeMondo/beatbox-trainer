@@ -184,17 +184,19 @@ pub fn spawn_analysis_thread(
         const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150; // Minimum time between captures
 
         loop {
+            // Check shutdown flag first to ensure responsive termination
+            if let Some(flag) = shutdown_flag.as_ref() {
+                if flag.load(Ordering::SeqCst) {
+                    tracing::info!("[AnalysisThread] Shutdown flag set, exiting");
+                    break;
+                }
+            }
+
             // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
             let buffer = match analysis_channels.data_consumer.pop() {
                 Ok(buf) => buf,
                 Err(PopError::Empty) => {
-                    // Check shutdown flag - exit if shutdown requested (flag is true)
-                    if let Some(flag) = shutdown_flag.as_ref() {
-                        if flag.load(Ordering::SeqCst) {
-                            tracing::info!("[AnalysisThread] Shutdown flag set, exiting");
-                            break;
-                        }
-                    }
+                    // Small sleep to avoid busy loop when empty
                     std::thread::sleep(std::time::Duration::from_millis(1));
                     continue;
                 }
