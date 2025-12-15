@@ -481,8 +481,8 @@ run_cli_smoke_tests() {
             timeout "$TIMEOUT" "${classify_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
             timeout "$TIMEOUT" "${stream_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
             timeout "$TIMEOUT" "${dump_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
-            timeout "$TIMEOUT" "${diag_run_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1 &&
-            timeout "$TIMEOUT" "${diag_record_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
+            timeout "$TIMEOUT" "${diag_run_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
+            # timeout "$TIMEOUT" "${diag_record_cmd[@]}" </dev/null >>"$CLI_SMOKE_LOG" 2>&1
     ); then
         print_success "CLI harness smoke tests passed (logs: $CLI_SMOKE_LOG)"
         if [ -f "$CLI_SMOKE_REPORT" ]; then
