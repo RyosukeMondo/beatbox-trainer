@@ -423,14 +423,14 @@ impl AudioEngine {
 pub type PlatformAudioEngine = AudioEngine;
 
 #[cfg(not(target_os = "android"))]
-pub use super::stubs::AudioEngine as StubAudioEngine;
+pub use super::engine_cpal::AudioEngine as CpalAudioEngine;
 
 #[cfg(not(target_os = "android"))]
-pub type PlatformAudioEngine = StubAudioEngine;
+pub type PlatformAudioEngine = CpalAudioEngine;
 
 // Re-export AudioEngine for backward compatibility on non-Android platforms
 #[cfg(not(target_os = "android"))]
-pub use StubAudioEngine as AudioEngine;
+pub use CpalAudioEngine as AudioEngine;
 
 #[cfg(test)]
 mod tests;

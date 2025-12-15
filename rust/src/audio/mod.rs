@@ -6,6 +6,8 @@ pub mod callback;
 pub mod engine;
 pub mod metronome;
 #[cfg(not(target_os = "android"))]
+pub mod engine_cpal;
+#[cfg(not(target_os = "android"))]
 pub mod stubs;
 
 // Re-export commonly used types for convenience

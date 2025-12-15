@@ -78,6 +78,8 @@ fn test_audio_engine_start_with_calibration_parameters() {
         calibration_procedure,
         Some(calibration_progress_tx),
         result_tx,
+        crate::config::OnsetDetectionConfig::default(),
+        100,
     );
 
     #[cfg(not(target_os = "android"))]
