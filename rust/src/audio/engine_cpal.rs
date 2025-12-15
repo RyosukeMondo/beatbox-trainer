@@ -10,11 +10,11 @@ use std::thread::{self, JoinHandle};
 #[cfg(not(target_os = "android"))]
 use super::buffer_pool::{AudioThreadChannels, BufferPoolChannels};
 #[cfg(not(target_os = "android"))]
+use super::metronome::{generate_click_sample, is_on_beat};
+#[cfg(not(target_os = "android"))]
 use crate::config::OnsetDetectionConfig;
 #[cfg(not(target_os = "android"))]
 use crate::error::AudioError;
-#[cfg(not(target_os = "android"))]
-use super::metronome::{generate_click_sample, is_on_beat};
 
 #[cfg(not(target_os = "android"))]
 pub struct AudioEngine {
@@ -22,7 +22,7 @@ pub struct AudioEngine {
     // Instead, we hold handles to threads that own the streams.
     input_thread: Option<JoinHandle<()>>,
     output_thread: Option<JoinHandle<()>>,
-    
+
     // Flag to signal threads to stop
     shutdown_flag: Arc<AtomicBool>,
 
@@ -50,7 +50,7 @@ impl AudioEngine {
         buffer_channels: BufferPoolChannels,
     ) -> Result<Self, AudioError> {
         let click_samples = generate_click_sample(sample_rate);
-        
+
         Ok(AudioEngine {
             input_thread: None,
             output_thread: None,
@@ -64,11 +64,11 @@ impl AudioEngine {
             metronome_enabled: Arc::new(AtomicBool::new(true)),
         })
     }
-    
+
     pub fn set_metronome_enabled(&mut self, enabled: bool) {
         self.metronome_enabled.store(enabled, Ordering::Relaxed);
     }
-    
+
     pub fn set_bpm(&self, new_bpm: u32) {
         self.bpm.store(new_bpm, Ordering::Relaxed);
     }
@@ -138,7 +138,7 @@ impl AudioEngine {
                         }
                     },
                     err_fn,
-                    None
+                    None,
                 ),
                 _ => {
                     eprintln!("Only F32 sample format supported for input");
@@ -151,7 +151,7 @@ impl AudioEngine {
                     eprintln!("Failed to play input stream: {:?}", e);
                     return;
                 }
-                
+
                 // Keep thread alive
                 while !shutdown_flag.load(Ordering::Relaxed) {
                     thread::sleep(std::time::Duration::from_millis(100));
@@ -189,7 +189,7 @@ impl AudioEngine {
                     return;
                 }
             };
-            
+
             let stream_config: cpal::StreamConfig = config.clone().into();
             let channels_count = stream_config.channels as usize;
             let err_fn = |err| eprintln!("Output stream error: {}", err);
@@ -201,35 +201,35 @@ impl AudioEngine {
                         let current_bpm = bpm.load(Ordering::Relaxed);
                         let clicks_enabled = metronome_enabled.load(Ordering::Relaxed);
                         let mut click_pos = click_position.load(Ordering::Relaxed) as usize;
-                        
+
                         let frame_count = data.len() / channels_count;
                         let current_frame_start = frame_counter.load(Ordering::Relaxed);
-                        
+
                         for i in 0..frame_count {
                             let frame_idx = current_frame_start + i as u64;
                             let mut sample_val = 0.0;
-                            
+
                             if clicks_enabled && is_on_beat(frame_idx, current_bpm, sample_rate) {
                                 click_pos = 0;
                             }
-                            
+
                             if clicks_enabled && click_pos < click_samples.len() {
                                 sample_val = click_samples[click_pos];
                                 click_pos += 1;
                             }
-                            
+
                             for ch in 0..channels_count {
                                 data[i * channels_count + ch] = sample_val;
                             }
                         }
-                        
+
                         click_position.store(click_pos as u64, Ordering::Relaxed);
                         frame_counter.fetch_add(frame_count as u64, Ordering::Relaxed);
                     },
                     err_fn,
-                    None
+                    None,
                 ),
-                 _ => {
+                _ => {
                     eprintln!("Only F32 sample format supported for output");
                     return;
                 }
@@ -240,7 +240,7 @@ impl AudioEngine {
                     eprintln!("Failed to play output stream: {:?}", e);
                     return;
                 }
-                
+
                 while !shutdown_flag.load(Ordering::Relaxed) {
                     thread::sleep(std::time::Duration::from_millis(100));
                 }
@@ -250,6 +250,7 @@ impl AudioEngine {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn spawn_analysis_thread_internal(
         &self,
         buffer_channels: BufferPoolChannels,
@@ -322,12 +323,10 @@ impl AudioEngine {
         // We need to pass data to threads. Threads will handle stream creation.
         // If stream creation fails, it will log error but this function returns Ok.
         // Ideally we should wait for stream status, but for now this fixes Send/Sync.
-        
-        let input_thread = Self::spawn_input_stream_thread(
-            self.shutdown_flag.clone(),
-            audio_channels,
-        );
-        
+
+        let input_thread =
+            Self::spawn_input_stream_thread(self.shutdown_flag.clone(), audio_channels);
+
         let output_thread = Self::spawn_output_stream_thread(
             self.shutdown_flag.clone(),
             self.frame_counter.clone(),
@@ -337,17 +336,17 @@ impl AudioEngine {
             self.click_position.clone(),
             self.metronome_enabled.clone(),
         );
-        
+
         self.input_thread = Some(input_thread);
         self.output_thread = Some(output_thread);
 
         // Spawn analysis
         self.spawn_analysis_thread_internal(
             BufferPoolChannels {
-                data_producer: rtrb::RingBuffer::new(1).0, 
+                data_producer: rtrb::RingBuffer::new(1).0,
                 data_consumer: analysis_channels.data_consumer,
                 pool_producer: analysis_channels.pool_producer,
-                pool_consumer: rtrb::RingBuffer::new(1).1, 
+                pool_consumer: rtrb::RingBuffer::new(1).1,
             },
             calibration_state,
             calibration_procedure,
@@ -363,7 +362,7 @@ impl AudioEngine {
     pub fn stop(&mut self) -> Result<(), AudioError> {
         // Signal shutdown
         self.shutdown_flag.store(true, Ordering::SeqCst);
-        
+
         if let Some(thread) = self.input_thread.take() {
             let _ = thread.join();
         }

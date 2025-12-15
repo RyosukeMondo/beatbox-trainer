@@ -77,6 +77,9 @@ struct RunArgs {
     /// Output format for telemetry summary.
     #[arg(long, value_enum, default_value_t = TelemetryFormat::Table)]
     telemetry_format: TelemetryFormat,
+    /// Destination file for telemetry output (JSON only).
+    #[arg(long)]
+    telemetry_out: Option<PathBuf>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -281,9 +284,18 @@ fn run_impl(args: RunArgs) -> Result<()> {
 
     let snapshot = telemetry::hub().snapshot();
     let report = aggregator.into_report(snapshot.total_events, snapshot.dropped_events);
-    match args.telemetry_format {
-        TelemetryFormat::Json => report.print_json()?,
-        TelemetryFormat::Table => report.print_table(),
+    
+    if let Some(path) = args.telemetry_out {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).context("creating telemetry output directory")?;
+        }
+        let json = serde_json::to_string_pretty(&report).context("serializing telemetry report")?;
+        std::fs::write(&path, json).with_context(|| format!("writing telemetry to {}", path.display()))?;
+    } else {
+        match args.telemetry_format {
+            TelemetryFormat::Json => report.print_json()?,
+            TelemetryFormat::Table => report.print_table(),
+        }
     }
 
     enforce_fixture_metadata(&fixture_id, &observed_events, "bbt-diag run")?;
@@ -327,6 +339,11 @@ fn record_impl(args: RecordArgs) -> Result<()> {
     };
     let json =
         serde_json::to_string_pretty(&payload).context("serializing classification payload")?;
+    
+    if let Some(parent) = args.output.parent() {
+        std::fs::create_dir_all(parent).context("creating record output directory")?;
+    }
+    
     std::fs::write(&args.output, json)
         .with_context(|| format!("writing classification log to {}", args.output.display()))?;
     enforce_fixture_metadata(&payload.fixture_id, &payload.events, "bbt-diag record")?;
@@ -340,7 +357,7 @@ fn record_impl(args: RecordArgs) -> Result<()> {
 
 #[cfg(all(feature = "debug_http", debug_assertions))]
 fn serve_impl(args: ServeArgs) -> Result<()> {
-    use beatbox_trainer::http;
+    use beatbox_trainer::debug::http;
 
     let addr = format!("{}:{}", args.host, args.metrics_port);
     std::env::set_var("BEATBOX_DEBUG_HTTP_ADDR", addr);

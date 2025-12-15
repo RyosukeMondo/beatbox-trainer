@@ -5,7 +5,7 @@ mod bridge_generated;
 mod calibration;
 mod config;
 pub mod context;
-mod debug;
+pub mod debug;
 pub mod engine;
 pub mod error;
 pub mod fixtures;

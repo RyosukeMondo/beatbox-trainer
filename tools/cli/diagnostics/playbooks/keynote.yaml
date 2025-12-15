@@ -81,7 +81,7 @@ scenarios:
         args:
           - run
           - --synthetic
-          - pulse
+          - impulse-train
           - --duration-ms
           - "6000"
           - --telemetry-format
@@ -104,7 +104,7 @@ scenarios:
         args:
           - record
           - --fixture
-          - rust/fixtures/basic_hits.wav
+          - fixtures/basic_hits.wav
           - --output
           - "{{scenarioDir}}/artifacts/default-smoke-recording.json"
         timeoutSeconds: 60
@@ -130,7 +130,7 @@ scenarios:
         args:
           - run
           - --synthetic
-          - noise
+          - white-noise
           - --duration-ms
           - "4000"
           - --telemetry-format
@@ -174,7 +174,7 @@ scenarios:
         args:
           - record
           - --fixture
-          - rust/fixtures/basic_hits.wav
+          - fixtures/basic_hits.wav
           - --output
           - "{{scenarioDir}}/artifacts/keynote-basic_hits.json"
         timeoutSeconds: 120

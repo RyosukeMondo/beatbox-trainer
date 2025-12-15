@@ -1,0 +1,40 @@
+{
+  "runId": "run-20251216T033710",
+  "specName": null,
+  "status": "running",
+  "iteration": {
+    "current": 1,
+    "specified": 50
+  },
+  "codeMetrics": {
+    "totalLines": 0,
+    "fileCount": 0
+  },
+  "currentTask": {
+    "description": "Working from steering documents",
+    "status": "completed"
+  },
+  "lastOutput": "Iteration 1 finished with exit code 0",
+  "timestamp": "2025-12-16T03:37:10.730534",
+  "git": {
+    "commit": "f7462e2b2083a10d5011bb94886b0d9149004741",
+    "branch": "main",
+    "dirty": true,
+    "aheadBy": 8
+  },
+  "artifacts": {
+    "coverageReport": "/home/rmondo/repos/beatbox-trainer/coverage/lcov.info",
+    "depGraph": "/home/rmondo/repos/beatbox-trainer/.spec-workflow/monitor/deps/dep-graph-run-20251216T033710.json",
+    "specMap": null,
+    "testReport": "/home/rmondo/repos/beatbox-trainer/.spec-workflow/monitor/tests/test-report-run-20251216T033710.json",
+    "stateFile": "/home/rmondo/repos/beatbox-trainer/.spec-workflow/monitor/state.json"
+  },
+  "alerts": [],
+  "metadata": {
+    "churn": {
+      "files": 1,
+      "insertions": 12,
+      "deletions": 8
+    }
+  }
+}

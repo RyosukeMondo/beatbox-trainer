@@ -117,9 +117,8 @@ impl AudioEngineManager {
                 self.onset_config.clone(),
                 self.log_every_n_buffers,
             )
-            .map_err(|err| {
-                log_audio_error(&err, "start_audio");
-                err
+            .inspect_err(|err| {
+                log_audio_error(err, "start_audio");
             })?;
 
         *guard = Some(AudioEngineState { engine });
@@ -139,9 +138,8 @@ impl AudioEngineManager {
         let mut guard = self.lock_engine()?;
 
         if let Some(mut state) = guard.take() {
-            state.engine.stop().map_err(|err| {
-                log_audio_error(&err, "stop_audio");
-                err
+            state.engine.stop().inspect_err(|err| {
+                log_audio_error(err, "stop_audio");
             })?;
         }
 
@@ -259,9 +257,8 @@ impl AudioEngineManager {
         buffer_channels: BufferPoolChannels,
     ) -> Result<AudioEngine, AudioError> {
         let sample_rate = 48000; // Standard sample rate
-        AudioEngine::new(bpm, sample_rate, buffer_channels).map_err(|err| {
-            log_audio_error(&err, "create_engine");
-            err
+        AudioEngine::new(bpm, sample_rate, buffer_channels).inspect_err(|err| {
+            log_audio_error(err, "create_engine");
         })
     }
 }
