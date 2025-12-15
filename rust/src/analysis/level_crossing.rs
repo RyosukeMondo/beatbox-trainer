@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 #[derive(Debug)]
 pub enum LevelCrossingEvent {
     Crossing,
@@ -99,14 +97,14 @@ impl LevelCrossingDetector {
         // Here we prioritize the ForcedCapture check above.
         // If we didn't force capture, check crossing:
         if event.is_none() {
-             let crossed = self.prev_rms < detection_threshold && rms >= detection_threshold;
-             if crossed && !self.captured_in_gate {
-                 event = Some(LevelCrossingEvent::Crossing);
-                 self.captured_in_gate = true;
-                 self.last_capture_sample = current_sample_count;
-             }
+            let crossed = self.prev_rms < detection_threshold && rms >= detection_threshold;
+            if crossed && !self.captured_in_gate {
+                event = Some(LevelCrossingEvent::Crossing);
+                self.captured_in_gate = true;
+                self.last_capture_sample = current_sample_count;
+            }
         }
-        
+
         self.prev_rms = rms;
         event
     }
@@ -123,8 +121,10 @@ mod tests {
         let start_sample = 5000; // Start after potential debounce window if last_capture was 0
 
         // Below threshold
-        assert!(detector.process_classification(0.1, threshold, start_sample).is_none());
-        
+        assert!(detector
+            .process_classification(0.1, threshold, start_sample)
+            .is_none());
+
         // Crossing
         assert!(matches!(
             detector.process_classification(0.6, threshold, start_sample + 100),
@@ -135,15 +135,21 @@ mod tests {
         // We are at sample start_sample + 100 (captured here). Debounce is 4800 samples.
         // Next sample: start_sample + 200. Diff is 100 < 4800.
         // We simulate dropping low then going high again while in debounce
-        assert!(detector.process_classification(0.1, threshold, start_sample + 200).is_none());
-        assert!(detector.process_classification(0.6, threshold, start_sample + 300).is_none()); 
+        assert!(detector
+            .process_classification(0.1, threshold, start_sample + 200)
+            .is_none());
+        assert!(detector
+            .process_classification(0.6, threshold, start_sample + 300)
+            .is_none());
 
         // Debounce expired
         let debounce_samples = (100 * 48000) / 1000; // 4800
         let next_safe_sample = start_sample + 100 + debounce_samples + 100;
-        
+
         // Reset low first to enable crossing
-        assert!(detector.process_classification(0.1, threshold, next_safe_sample - 1).is_none());
+        assert!(detector
+            .process_classification(0.1, threshold, next_safe_sample - 1)
+            .is_none());
 
         assert!(matches!(
             detector.process_classification(0.6, threshold, next_safe_sample),
@@ -165,14 +171,20 @@ mod tests {
         assert!(detector.captured_in_gate);
 
         // Still above, no new capture
-        assert!(detector.process_calibration(0.7, threshold, start_sample + 100).is_none());
+        assert!(detector
+            .process_calibration(0.7, threshold, start_sample + 100)
+            .is_none());
 
         // Drop but not below reset (0.3)
-        assert!(detector.process_calibration(0.4, threshold, start_sample + 200).is_none());
+        assert!(detector
+            .process_calibration(0.4, threshold, start_sample + 200)
+            .is_none());
         assert!(detector.captured_in_gate);
 
         // Drop below reset
-        assert!(detector.process_calibration(0.2, threshold, start_sample + 300).is_none());
+        assert!(detector
+            .process_calibration(0.2, threshold, start_sample + 300)
+            .is_none());
         assert!(!detector.captured_in_gate);
 
         // Wait for debounce

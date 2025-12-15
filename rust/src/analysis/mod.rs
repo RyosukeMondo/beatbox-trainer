@@ -185,7 +185,8 @@ pub fn spawn_analysis_thread(
         let mut processed_samples: u64 = 0;
         const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150;
         let debounce_samples = (LEVEL_CROSSING_DEBOUNCE_MS * sample_rate as u64) / 1000;
-        let mut level_crossing_detector = LevelCrossingDetector::new(sample_rate, LEVEL_CROSSING_DEBOUNCE_MS);
+        let mut level_crossing_detector =
+            LevelCrossingDetector::new(sample_rate, LEVEL_CROSSING_DEBOUNCE_MS);
 
         loop {
             // Attempt to pop from queue
@@ -576,7 +577,8 @@ pub fn spawn_analysis_thread(
             // which contain the onset (due to the onset detector's look-ahead delay).
             for onset_timestamp in onsets {
                 // Avoid double-triggering if level-crossing detector already captured this event
-                if processed_samples.saturating_sub(level_crossing_detector.last_capture_sample()) < debounce_samples
+                if processed_samples.saturating_sub(level_crossing_detector.last_capture_sample())
+                    < debounce_samples
                 {
                     tracing::debug!(
                         "[AnalysisThread] Skipping onset duplicate (captured via level-crossing)"
