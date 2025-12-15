@@ -11,16 +11,19 @@ void main() {
   late MockAudioService mockAudioService;
   late MockPermissionService mockPermissionService;
   late MockSettingsService mockSettingsService;
+  late MockStorageService mockStorageService;
 
   setUp(() {
     mockAudioService = MockAudioService();
     mockPermissionService = MockPermissionService();
     mockSettingsService = MockSettingsService();
+    mockStorageService = MockStorageService();
 
     controller = TrainingController(
       audioService: mockAudioService,
       permissionService: mockPermissionService,
       settingsService: mockSettingsService,
+      storageService: mockStorageService,
     );
   });
 

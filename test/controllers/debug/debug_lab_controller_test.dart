@@ -175,6 +175,23 @@ class _FakeAudioService implements IAudioService {
 
   @override
   Future<void> stopAudio() => throw UnimplementedError();
+
+  @override
+  Future<String> getCalibrationState() => throw UnimplementedError();
+
+  @override
+  Future<void> loadCalibrationState(String json) => throw UnimplementedError();
+
+  @override
+  Future<CalibrationProgress> manualAcceptLastCandidate() =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> resetCalibrationSession() => throw UnimplementedError();
+
+  @override
+  Future<void> updateCalibrationThreshold(String key, double value) =>
+      throw UnimplementedError();
 }
 
 class _FakeDebugService implements IDebugService {
