@@ -11,8 +11,7 @@ use anyhow::{anyhow, Context};
 use anyhow::{bail, Result};
 #[cfg(feature = "diagnostics_fixtures")]
 use beatbox_trainer::telemetry;
-#[cfg(feature = "diagnostics_fixtures")]
-use beatbox_trainer::testing::fixture_engine;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 #[cfg(feature = "diagnostics_fixtures")]
 use tokio::sync::mpsc::error::TryRecvError;
@@ -284,13 +283,14 @@ fn run_impl(args: RunArgs) -> Result<()> {
 
     let snapshot = telemetry::hub().snapshot();
     let report = aggregator.into_report(snapshot.total_events, snapshot.dropped_events);
-    
+
     if let Some(path) = args.telemetry_out {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).context("creating telemetry output directory")?;
         }
         let json = serde_json::to_string_pretty(&report).context("serializing telemetry report")?;
-        std::fs::write(&path, json).with_context(|| format!("writing telemetry to {}", path.display()))?;
+        std::fs::write(&path, json)
+            .with_context(|| format!("writing telemetry to {}", path.display()))?;
     } else {
         match args.telemetry_format {
             TelemetryFormat::Json => report.print_json()?,
@@ -312,10 +312,10 @@ fn record_impl(args: RecordArgs) -> Result<()> {
     let spec = build_fixture_spec(&args.fixture)?;
     let fixture_id = spec.id.clone();
     let sample_rate = spec.sample_rate;
-    let mut handle = fixture_engine::start_fixture_session_internal(engine_handle(), spec)
-        .context("starting fixture session")?;
 
     let mut classification_rx = engine_handle().subscribe_classification();
+    let mut handle = fixture_engine::start_fixture_session_internal(engine_handle(), spec)
+        .context("starting fixture session")?;
 
     let mut captured = Vec::new();
     let deadline = Instant::now() + Duration::from_millis(args.watch_ms.max(100));
@@ -339,11 +339,11 @@ fn record_impl(args: RecordArgs) -> Result<()> {
     };
     let json =
         serde_json::to_string_pretty(&payload).context("serializing classification payload")?;
-    
+
     if let Some(parent) = args.output.parent() {
         std::fs::create_dir_all(parent).context("creating record output directory")?;
     }
-    
+
     std::fs::write(&args.output, json)
         .with_context(|| format!("writing classification log to {}", args.output.display()))?;
     enforce_fixture_metadata(&payload.fixture_id, &payload.events, "bbt-diag record")?;

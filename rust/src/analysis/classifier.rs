@@ -111,18 +111,6 @@ impl Classifier {
                 BeatboxHit::Unknown
             };
 
-        // Debug logging for classification decisions
-        eprintln!(
-            "[Classifier] classify_level1: centroid={:.1}, zcr={:.4}",
-            features.centroid, features.zcr
-        );
-        eprintln!("[Classifier]   thresholds: t_kick_centroid={:.1}, t_kick_zcr={:.4}, t_snare_centroid={:.1}, t_hihat_zcr={:.4}",
-                  cal.t_kick_centroid, cal.t_kick_zcr, cal.t_snare_centroid, cal.t_hihat_zcr);
-        eprintln!(
-            "[Classifier]   is_calibrated={}, result={:?}, confidence={:.2}",
-            cal.is_calibrated, classification, confidence
-        );
-
         (classification, confidence)
     }
 

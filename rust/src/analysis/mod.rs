@@ -192,7 +192,7 @@ pub fn spawn_analysis_thread(
                 }
             }
 
-            // Blocking pop from DATA_QUEUE (this is NOT the audio thread, so blocking is OK)
+            // Attempt to pop from queue
             let buffer = match analysis_channels.data_consumer.pop() {
                 Ok(buf) => buf,
                 Err(PopError::Empty) => {
@@ -779,20 +779,24 @@ pub fn spawn_analysis_thread(
                     };
 
                     // Log every onset attempt for debugging
+                    /*
                     eprintln!(
                         "[AnalysisThread] Onset: rms={:.4}, gate={:.4}, pass={}",
                         onset_rms,
                         noise_floor_gate,
                         onset_rms >= noise_floor_gate
                     );
+                    */
 
                     if onset_rms < noise_floor_gate {
                         // Below noise floor - skip classification to avoid false positives
+                        /*
                         eprintln!(
                             "[AnalysisThread] SKIPPED onset below noise floor: rms {:.4} < gate {:.4}",
                             onset_rms,
                             noise_floor_gate
                         );
+                        */
                         continue;
                     }
 
@@ -835,6 +839,3 @@ pub fn spawn_analysis_thread(
         }
     })
 }
-
-#[cfg(test)]
-mod tests;

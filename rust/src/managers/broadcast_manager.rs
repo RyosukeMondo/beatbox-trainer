@@ -210,12 +210,8 @@ impl BroadcastChannelManager {
     /// - Buffer size: 100 messages
     /// - Used for debug UI visualization only
     /// - Not part of critical audio path
-    pub fn init_onset_events(&self) -> broadcast::Sender<OnsetEvent> {
-        let (tx, _) = broadcast::channel(100);
-        *self.onset_events.lock().unwrap() = Some(tx.clone());
-        tx
-    }
-
+    ///
+    ///
     /// Subscribe to onset events
     ///
     /// Returns a receiver for consuming onset events for debug visualization.
@@ -350,20 +346,7 @@ mod tests {
         assert!(rx2.is_some());
     }
 
-    #[test]
-    fn test_onset_events_channel_lifecycle() {
-        let manager = BroadcastChannelManager::new();
 
-        // Initially no subscription possible
-        assert!(manager.subscribe_onset_events().is_none());
-
-        // Initialize channel
-        let _tx = manager.init_onset_events();
-
-        // Now subscription works
-        let rx = manager.subscribe_onset_events();
-        assert!(rx.is_some());
-    }
 
     #[test]
     fn test_default_implementation() {

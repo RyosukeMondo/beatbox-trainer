@@ -1,0 +1,13 @@
+{
+  "runId": "run-20251216T043611",
+  "generatedAt": "2025-12-15T19:36:11.005573",
+  "tool": "filesystem-scan",
+  "summary": {
+    "nodeCount": 0,
+    "edgeCount": 0,
+    "cycles": []
+  },
+  "nodes": [],
+  "edges": [],
+  "clusters": []
+}

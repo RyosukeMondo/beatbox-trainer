@@ -19,4 +19,3 @@ pub mod validation;
 pub use procedure::CalibrationProcedure;
 pub use progress::{CalibrationProgress, CalibrationSound};
 pub use state::CalibrationState;
-pub use validation::SampleValidator;

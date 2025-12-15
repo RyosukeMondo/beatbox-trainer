@@ -154,7 +154,17 @@ impl AppConfig {
     /// Load configuration for non-Android platforms
     #[cfg(not(target_os = "android"))]
     pub fn load() -> Self {
-        Self::load_from_file("assets/onset_config.json")
+        let paths = ["assets/onset_config.json", "../assets/onset_config.json"];
+        for path in paths {
+            if Path::new(path).exists() {
+                return Self::load_from_file(path);
+            }
+        }
+        tracing::warn!(
+            "[Config] Config file not found in search paths: {:?}. Using defaults.",
+            paths
+        );
+        Self::default()
     }
 }
 

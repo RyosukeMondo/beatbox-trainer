@@ -3,7 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 #[cfg(not(target_os = "android"))]
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 #[cfg(not(target_os = "android"))]
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 #[cfg(not(target_os = "android"))]
 use std::thread::{self, JoinHandle};
 
