@@ -6,7 +6,7 @@ A Flutter-based beatbox training application with real-time audio analysis, buil
 
 This project follows a layered architecture with strict separation of concerns:
 
-- **Layer 1 (Oboe C++)**: Low-latency audio I/O
+- **Layer 1 (Audio Backend)**: Low-latency audio I/O (Oboe on Android, CPAL on Windows/Linux)
 - **Layer 2 (Rust)**: Real-time audio processing with lock-free algorithms
 - **Layer 3 (FFI Bridge)**: Type-safe Rust-Dart communication via flutter_rust_bridge
 - **Layer 4 (Dart/Flutter)**: Service layer abstractions and reactive UI
@@ -91,6 +91,9 @@ flutter test && cd rust && cargo test
 # Run with coverage
 ./scripts/coverage.sh
 ```
+
+**Desktop Testing:**
+On Linux and Windows, `cargo test` now uses the real **CPAL** audio backend, allowing verification of the actual audio engine logic without an Android emulator.
 
 ### Test Coverage
 

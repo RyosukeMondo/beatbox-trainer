@@ -67,6 +67,7 @@ CRITICAL_PATHS=(
     "error.rs"
     "testing/fixture_engine.rs"
     "api/diagnostics.rs"
+    "audio/engine_cpal.rs"
 )
 
 DART_CRITICAL_PREFIXES=(

@@ -4,9 +4,9 @@ pub mod buffer_pool;
 #[cfg(target_os = "android")]
 pub mod callback;
 pub mod engine;
-pub mod metronome;
 #[cfg(not(target_os = "android"))]
 pub mod engine_cpal;
+pub mod metronome;
 #[cfg(not(target_os = "android"))]
 pub mod stubs;
 

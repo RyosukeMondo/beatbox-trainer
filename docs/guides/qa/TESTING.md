@@ -34,6 +34,8 @@ flutter test && cd rust && cargo test
 ./scripts/coverage.sh
 ```
 
+**Note**: `cargo test` on desktop platforms (Windows/Linux/macOS) now runs the **real CPAL-based audio engine** (`engine_cpal.rs`), enabling verification of the actual audio processing logic without requiring an Android emulator.
+
 ### Generate Coverage Reports
 
 ```bash
@@ -619,8 +621,9 @@ fn test_with_output() {
 ```rust
 #[test]
 fn test_with_logging() {
-    env_logger::init();
-    log::debug!("Debug message");
+    // Initialize tracing (replacing env_logger)
+    beatbox_trainer::setup_logging();
+    tracing::debug!("Debug message");
     // Run with: RUST_LOG=debug cargo test
 }
 ```

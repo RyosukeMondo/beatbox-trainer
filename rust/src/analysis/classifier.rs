@@ -325,7 +325,9 @@ impl Classifier {
             Ok(guard) => guard.level,
             Err(_) => {
                 // Lock poisoned - log error and default to Level 1
-                tracing::error!("Calibration state lock poisoned in classify, defaulting to Level 1");
+                tracing::error!(
+                    "Calibration state lock poisoned in classify, defaulting to Level 1"
+                );
                 1
             }
         };

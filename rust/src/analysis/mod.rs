@@ -293,7 +293,10 @@ pub fn spawn_analysis_thread(
                                 }
                             }
                             Err(e) => {
-                                tracing::warn!("[AnalysisThread] Noise floor sample rejected: {:?}", e);
+                                tracing::warn!(
+                                    "[AnalysisThread] Noise floor sample rejected: {:?}",
+                                    e
+                                );
                             }
                         }
                     }

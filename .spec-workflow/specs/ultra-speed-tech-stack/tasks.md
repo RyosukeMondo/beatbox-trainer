@@ -20,7 +20,7 @@
 
 ## Phase 2: DSP Stack Evaluation (Fundsp)
 
-- [ ] 2.1. Investigate fundsp suitability
+- [x] 2.1. Investigate fundsp suitability
   - File: `docs/research/FUNDSP_ANALYSIS.md`
   - Create a research note comparing current `rustfft`/custom DSP with `fundsp`.
   - Check if `fundsp` offers better performance or expressiveness for the current feature set (filters, oscillators, etc.).
@@ -29,9 +29,10 @@
 
 ## Phase 3: Zero-Copy Optimization
 
-- [ ] 3.1. Analyze current data transfer
+- [x] 3.1. Analyze current data transfer
   - File: `rust/src/api.rs`
   - Review how `ClassificationResult` and audio buffers are passed to Dart.
   - Check if serialization overhead is significant.
+  - See `docs/research/ZERO_COPY_PLAN.md` for details.
   - _Requirements: Ultra Speed Doc (Zero-Copy: Vec<f32> to Dart)_
   - _Prompt: Role: Performance Engineer | Task: Review `rust/src/api.rs` and `lib/bridge/api.dart`. Identify where large data (like audio buffers for visualization) might be serialized. The `ClassificationResult` is small, but if we add waveform visualization, we need zero-copy. Create a plan for zero-copy audio buffer streaming if visualization is on the roadmap._

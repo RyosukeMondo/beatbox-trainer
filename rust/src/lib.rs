@@ -1,6 +1,6 @@
 pub mod analysis;
 pub mod api;
-mod audio;
+pub mod audio;
 mod bridge_generated;
 mod calibration;
 mod config;
@@ -10,13 +10,13 @@ pub mod engine;
 pub mod error;
 pub mod fixtures;
 mod managers;
-mod telemetry;
+pub mod telemetry;
 // Unconditionally expose testing to satisfy bridge_generated.rs dependencies
 // The module itself might handle feature gating internally if needed, or we accept it for now.
 pub mod testing;
 
 #[cfg(target_os = "android")]
-use jni::{JavaVM, JNIEnv};
+use jni::{JNIEnv, JavaVM};
 #[cfg(target_os = "android")]
 use std::ffi::c_void;
 
@@ -39,7 +39,7 @@ pub extern "C" fn JNI_OnLoad(vm: JavaVM, _res: *mut c_void) -> jni::sys::jint {
             .with(tracing_subscriber::filter::LevelFilter::INFO)
             .try_init()
             .expect("Failed to initialize tracing subscriber");
-            
+
         tracing::info!("JNI_OnLoad: Tracing initialized");
     });
 
@@ -48,24 +48,24 @@ pub extern "C" fn JNI_OnLoad(vm: JavaVM, _res: *mut c_void) -> jni::sys::jint {
 
     match get_android_context(&env) {
         Ok(context) => {
-             // Safety: We are passing valid pointers from JNI
-             unsafe {
-                 ndk_context::initialize_android_context(
-                     vm.get_java_vm_pointer() as *mut _,
-                     context.as_raw() as *mut _,
-                 );
-             }
-             tracing::info!("ndk_context initialized with Application Context");
+            // Safety: We are passing valid pointers from JNI
+            unsafe {
+                ndk_context::initialize_android_context(
+                    vm.get_java_vm_pointer() as *mut _,
+                    context.as_raw() as *mut _,
+                );
+            }
+            tracing::info!("ndk_context initialized with Application Context");
         }
         Err(e) => {
             tracing::error!("Failed to get Android Context: {}", e);
             // Fallback to null context, might fail for OpenSL ES
-             unsafe {
-                 ndk_context::initialize_android_context(
-                     vm.get_java_vm_pointer() as *mut _,
-                     std::ptr::null_mut(),
-                 );
-             }
+            unsafe {
+                ndk_context::initialize_android_context(
+                    vm.get_java_vm_pointer() as *mut _,
+                    std::ptr::null_mut(),
+                );
+            }
         }
     }
 
@@ -75,20 +75,24 @@ pub extern "C" fn JNI_OnLoad(vm: JavaVM, _res: *mut c_void) -> jni::sys::jint {
 #[cfg(target_os = "android")]
 fn get_android_context(env: &JNIEnv) -> jni::errors::Result<jni::objects::JObject<'static>> {
     let activity_thread_class = env.find_class("android/app/ActivityThread")?;
-    let current_activity_thread = env.call_static_method(
-        activity_thread_class,
-        "currentActivityThread",
-        "()Landroid/app/ActivityThread;",
-        &[],
-    )?.l()?;
-    
-    let application = env.call_method(
-        current_activity_thread,
-        "getApplication",
-        "()Landroid/app/Application;",
-        &[],
-    )?.l()?;
-    
+    let current_activity_thread = env
+        .call_static_method(
+            activity_thread_class,
+            "currentActivityThread",
+            "()Landroid/app/ActivityThread;",
+            &[],
+        )?
+        .l()?;
+
+    let application = env
+        .call_method(
+            current_activity_thread,
+            "getApplication",
+            "()Landroid/app/Application;",
+            &[],
+        )?
+        .l()?;
+
     let global_ref = env.new_global_ref(application)?;
     Ok(jni::objects::JObject::from(global_ref.into_raw()))
 }
