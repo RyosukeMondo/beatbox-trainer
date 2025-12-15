@@ -49,7 +49,7 @@ static ENGINE_HANDLE: Lazy<EngineHandle> = Lazy::new(EngineHandle::new);
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
     crate::debug::pipeline_tracer::init();
-    crate::http::spawn_if_enabled(&ENGINE_HANDLE);
+    crate::debug::http::spawn_if_enabled(&ENGINE_HANDLE);
 }
 
 /// Initialize and greet from Rust

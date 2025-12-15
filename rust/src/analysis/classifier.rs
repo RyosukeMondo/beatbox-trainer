@@ -76,7 +76,7 @@ impl Classifier {
             Ok(guard) => guard,
             Err(_) => {
                 // Lock poisoned - log error and return Unknown with zero confidence
-                log::error!("Calibration state lock poisoned in classify_level1");
+                tracing::error!("Calibration state lock poisoned in classify_level1");
                 return (BeatboxHit::Unknown, 0.0);
             }
         };
@@ -177,7 +177,7 @@ impl Classifier {
         let cal = match self.calibration.read() {
             Ok(guard) => guard,
             Err(_) => {
-                log::error!("Calibration state lock poisoned in classify_level2");
+                tracing::error!("Calibration state lock poisoned in classify_level2");
                 return (BeatboxHit::Unknown, 0.0);
             }
         };
@@ -325,7 +325,7 @@ impl Classifier {
             Ok(guard) => guard.level,
             Err(_) => {
                 // Lock poisoned - log error and default to Level 1
-                log::error!("Calibration state lock poisoned in classify, defaulting to Level 1");
+                tracing::error!("Calibration state lock poisoned in classify, defaulting to Level 1");
                 1
             }
         };

@@ -151,7 +151,7 @@ impl AdaptiveBackoff {
                 state.zcr_min = (state.zcr_min * (1.0 - FEATURE_BACKOFF_PCT)).max(0.0);
                 state.zcr_max = (state.zcr_max * (1.0 + FEATURE_BACKOFF_PCT)).min(1.0);
 
-                log::info!(
+                tracing::info!(
                     "[CalibrationProcedure] Backoff step {} for {:?} after {} rejects (reason: {}). RMS gate: {:.4}, centroid: {:.1}-{:.1}, zcr: {:.3}-{:.3}",
                     state.step,
                     sound,

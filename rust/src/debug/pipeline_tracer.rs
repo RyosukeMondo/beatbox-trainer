@@ -25,7 +25,7 @@ pub fn init() {
         .unwrap_or(false);
     TRACING_ENABLED.store(enabled, Ordering::SeqCst);
     if enabled {
-        log::info!("[TRACE] Pipeline tracing ENABLED - set BEATBOX_TRACE=0 to disable");
+        tracing::info!("[TRACE] Pipeline tracing ENABLED - set BEATBOX_TRACE=0 to disable");
     }
 }
 
@@ -38,13 +38,13 @@ pub fn is_enabled() -> bool {
 /// Enable tracing at runtime
 pub fn enable() {
     TRACING_ENABLED.store(true, Ordering::SeqCst);
-    log::info!("[TRACE] Pipeline tracing enabled at runtime");
+    tracing::info!("[TRACE] Pipeline tracing enabled at runtime");
 }
 
 /// Disable tracing at runtime
 pub fn disable() {
     TRACING_ENABLED.store(false, Ordering::SeqCst);
-    log::info!("[TRACE] Pipeline tracing disabled at runtime");
+    tracing::info!("[TRACE] Pipeline tracing disabled at runtime");
 }
 
 /// Pipeline stages for structured logging
@@ -125,7 +125,7 @@ pub fn trace(stage: PipelineStage, message: &str) {
     let id = TRACE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let ts = get_timestamp_us();
 
-    log::info!(
+    tracing::info!(
         "[TRACE] {:>12} #{:06} @{:>10}us | {}",
         stage.as_str(),
         id,

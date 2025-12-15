@@ -112,11 +112,11 @@ impl AppConfig {
         match fs::read_to_string(&path) {
             Ok(contents) => match serde_json::from_str(&contents) {
                 Ok(config) => {
-                    log::info!("[Config] Loaded configuration from {:?}", path.as_ref());
+                    tracing::info!("[Config] Loaded configuration from {:?}", path.as_ref());
                     config
                 }
                 Err(err) => {
-                    log::warn!(
+                    tracing::warn!(
                         "[Config] Failed to parse JSON from {:?}: {}. Using defaults.",
                         path.as_ref(),
                         err
@@ -125,7 +125,7 @@ impl AppConfig {
                 }
             },
             Err(err) => {
-                log::warn!(
+                tracing::warn!(
                     "[Config] Failed to read config file {:?}: {}. Using defaults.",
                     path.as_ref(),
                     err
@@ -145,7 +145,7 @@ impl AppConfig {
         // Note: flutter_rust_bridge automatically bundles assets/ directory
         // into the APK, but accessing it requires going through Android AssetManager
         // For now, we'll just use defaults and add asset loading later
-        log::info!(
+        tracing::info!(
             "[Config] Using default configuration (Android asset loading not yet implemented)"
         );
         Self::default()

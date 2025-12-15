@@ -3,7 +3,8 @@ use std::time::{Duration, Instant};
 
 fn main() {
     eprintln!("[test_api] Starting API test...");
-    env_logger::init();
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
 
     // Test load_calibration_state first (like Flutter does)
     eprintln!("[test_api] Calling load_calibration_state...");

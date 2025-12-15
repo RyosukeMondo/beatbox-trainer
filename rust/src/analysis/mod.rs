@@ -151,11 +151,11 @@ pub fn spawn_analysis_thread(
         let quantizer = Quantizer::new(Arc::clone(&frame_counter), Arc::clone(&bpm), sample_rate);
 
         // Main analysis loop - runs until sender is dropped (audio engine stops)
-        log::info!("[AnalysisThread] Starting analysis loop");
+        tracing::info!("[AnalysisThread] Starting analysis loop");
 
         // Log initial noise floor gate for debugging
         if let Ok(state) = calibration_state.read() {
-            log::info!(
+            tracing::info!(
                 "[AnalysisThread] Noise floor RMS from calibration: {:.4}, gate threshold: {:.4}",
                 state.noise_floor_rms,
                 state.noise_floor_rms * 2.0
@@ -191,7 +191,7 @@ pub fn spawn_analysis_thread(
                     // Check shutdown flag - exit if shutdown requested (flag is true)
                     if let Some(flag) = shutdown_flag.as_ref() {
                         if flag.load(Ordering::SeqCst) {
-                            log::info!("[AnalysisThread] Shutdown flag set, exiting");
+                            tracing::info!("[AnalysisThread] Shutdown flag set, exiting");
                             break;
                         }
                     }
@@ -210,7 +210,7 @@ pub fn spawn_analysis_thread(
 
             // Return buffer to pool immediately
             if analysis_channels.pool_producer.push(buffer).is_err() {
-                log::warn!("[AnalysisThread] Pool queue full, dropping buffer");
+                tracing::warn!("[AnalysisThread] Pool queue full, dropping buffer");
             }
 
             // Only process when we have enough samples
@@ -286,14 +286,14 @@ pub fn spawn_analysis_thread(
                                 }
 
                                 if complete {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Noise floor calibration complete! Threshold: {:?}",
                                         procedure.noise_floor_threshold()
                                     );
                                 }
                             }
                             Err(e) => {
-                                log::warn!("[AnalysisThread] Noise floor sample rejected: {:?}", e);
+                                tracing::warn!("[AnalysisThread] Noise floor sample rejected: {:?}", e);
                             }
                         }
                     }
@@ -311,7 +311,7 @@ pub fn spawn_analysis_thread(
                     if interval > 0 && NON_ZERO_CHECK.is_multiple_of(interval) {
                         let max_amplitude =
                             accumulator.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                        log::info!(
+                        tracing::info!(
                             "[AnalysisThread] Max amplitude in accumulated buffer: {}, RMS: {}",
                             max_amplitude,
                             rms
@@ -401,7 +401,7 @@ pub fn spawn_analysis_thread(
                         let progress = procedure
                             .get_progress_with_guidance_and_features(None, None, None, None);
                         debug_emit_counter = debug_emit_counter.wrapping_add(1);
-                        log::debug!(
+                        tracing::debug!(
                             "[AnalysisThread] Progress heartbeat [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, misses {}",
                             debug_emit_counter,
                             progress.debug.as_ref().and_then(|d| d.rms_gate),
@@ -458,7 +458,7 @@ pub fn spawn_analysis_thread(
                                 capture_max_amp,
                             ) {
                                 Ok(()) => {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Forced-window sample accepted (rms {:.4}, gate {:.4})",
                                         window_rms,
                                         detection_threshold
@@ -478,7 +478,7 @@ pub fn spawn_analysis_thread(
                                     last_level_crossing_capture = Instant::now();
                                 }
                                 Err(err) => {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Forced-window sample rejected: {:?} (rms {:.4}, gate {:.4})",
                                         err,
                                         window_rms,
@@ -491,7 +491,7 @@ pub fn spawn_analysis_thread(
                 }
 
                 if crossed_threshold {
-                    log::info!(
+                    tracing::info!(
                         "[AnalysisThread] Level crossing detected: prev_rms {:.4} -> rms {:.4} (threshold {:.4})",
                         prev_rms_for_crossing,
                         window_rms,
@@ -523,7 +523,7 @@ pub fn spawn_analysis_thread(
                                 crossing_max_amp,
                             ) {
                                 Ok(()) => {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Level-crossing sample accepted (rms {:.4})",
                                         crossing_rms
                                     );
@@ -540,7 +540,7 @@ pub fn spawn_analysis_thread(
                                     guidance_limiter.clear();
                                 }
                                 Err(err) => {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Level-crossing sample rejected: {:?} (rms {:.4})",
                                         err,
                                         crossing_rms
@@ -622,7 +622,7 @@ pub fn spawn_analysis_thread(
             let onsets = onset_detector.process(&accumulator);
 
             if !onsets.is_empty() {
-                log::info!("[AnalysisThread] Detected {} onsets", onsets.len());
+                tracing::info!("[AnalysisThread] Detected {} onsets", onsets.len());
             }
 
             // For each detected onset, run pipeline (calibration or classification mode)
@@ -636,7 +636,7 @@ pub fn spawn_analysis_thread(
             for onset_timestamp in onsets {
                 // Skip if accumulator doesn't have enough samples
                 if accumulator.len() < 1024 {
-                    log::debug!(
+                    tracing::debug!(
                         "[AnalysisThread] Skipping onset - accumulator too small: {} < 1024",
                         accumulator.len()
                     );
@@ -660,7 +660,7 @@ pub fn spawn_analysis_thread(
                 // Extract DSP features (always needed for both modes)
                 let features = feature_extractor.extract(onset_window);
                 let features_for_progress = features;
-                log::debug!(
+                tracing::debug!(
                     "[AnalysisThread] Onset features: centroid {:.1} Hz, zcr {:.3}, rms {:.4}, max_amp {:.3}",
                     features.centroid,
                     features.zcr,
@@ -681,7 +681,7 @@ pub fn spawn_analysis_thread(
                                 detection_threshold_snapshot.unwrap_or(quiet_clear_gate);
                             match procedure.add_sample(features, onset_rms, max_amplitude) {
                                 Ok(()) => {
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Onset sample accepted (rms {:.4}, max_amp {:.3})",
                                         onset_rms,
                                         max_amplitude
@@ -695,7 +695,7 @@ pub fn spawn_analysis_thread(
                                             Some(max_amplitude),
                                         );
                                     debug_emit_counter = debug_emit_counter.wrapping_add(1);
-                                    log::debug!(
+                                    tracing::debug!(
                                         "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
                                         debug_emit_counter,
                                         progress.debug.as_ref().and_then(|d| d.rms_gate),
@@ -712,7 +712,7 @@ pub fn spawn_analysis_thread(
                                 }
                                 Err(err) => {
                                     // Sample rejected (validation error) - keep warning to a minimum
-                                    log::info!(
+                                    tracing::info!(
                                         "[AnalysisThread] Sample rejected: {:?} (misses: {}, gate_rms: {:?}, rms {:.4})",
                                         err,
                                         procedure.rejects_for_current_sound(),
@@ -747,7 +747,7 @@ pub fn spawn_analysis_thread(
                                             Some(max_amplitude),
                                         );
                                     debug_emit_counter = debug_emit_counter.wrapping_add(1);
-                                    log::debug!(
+                                    tracing::debug!(
                                         "[AnalysisThread] Progress debug [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, last_max_amp {:?}, misses {}",
                                         debug_emit_counter,
                                         progress.debug.as_ref().and_then(|d| d.rms_gate),

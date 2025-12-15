@@ -20,6 +20,8 @@ rustfft = "6"
 
 # Logging
 log = "0.4"
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = "0.3"
 
 # Async runtime for Dart streams
 tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "time", "macros", "net", "signal"] }
@@ -58,12 +60,10 @@ jni = "0.21"
 # Android context initialization for Oboe
 ndk-context = "0.1"
 
-# Android logging
-android_logger = "0.14"
+tracing-android = "0.2"
 
 # Non-Android dependencies (Linux/macOS/Windows)
 [target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.11"
 # Cross-platform audio I/O for desktop
 cpal = "0.15"
 

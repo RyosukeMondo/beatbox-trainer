@@ -267,7 +267,7 @@ impl CalibrationManager {
         let raw = self.calibration_config.samples_per_sound;
         let clamped = raw.clamp(1, u8::MAX as usize);
         if raw != clamped {
-            log::warn!(
+            tracing::warn!(
                 "[CalibrationManager] samples_per_sound={} is out of u8 range, clamped to {}",
                 raw,
                 clamped

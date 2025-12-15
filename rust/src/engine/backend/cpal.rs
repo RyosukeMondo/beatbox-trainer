@@ -162,7 +162,7 @@ impl AudioBackend for CpalBackend {
             let sample_rate = supported_config.sample_rate().0;
             let channels = supported_config.channels() as usize;
 
-            log::info!(
+            tracing::info!(
                 "[CpalBackend] Input config: {} Hz, {} channels, {:?}",
                 sample_rate,
                 channels,
@@ -182,7 +182,7 @@ impl AudioBackend for CpalBackend {
             let frame_counter_cb = Arc::clone(&frame_counter);
             let audio_channels_cb = Arc::clone(&audio_channels);
 
-            let err_fn = |err| log::error!("[CpalBackend] Stream error: {}", err);
+            let err_fn = |err| tracing::error!("[CpalBackend] Stream error: {}", err);
 
             // Build the input stream based on sample format
             eprintln!(
@@ -312,7 +312,7 @@ impl AudioBackend for CpalBackend {
                 return;
             }
 
-            log::info!("[CpalBackend] Audio stream started at {} Hz", sample_rate);
+            tracing::info!("[CpalBackend] Audio stream started at {} Hz", sample_rate);
 
             // Signal success with sample rate
             let _ = sample_rate_tx.send(Ok(sample_rate));
@@ -324,7 +324,7 @@ impl AudioBackend for CpalBackend {
             }
 
             // Stream will be dropped when this thread exits
-            log::info!("[CpalBackend] Stream thread exiting");
+            tracing::info!("[CpalBackend] Stream thread exiting");
         });
 
         // Wait for sample rate or error from stream thread
@@ -401,7 +401,7 @@ impl AudioBackend for CpalBackend {
                     })?;
             if let Some(handle) = handle_guard.take() {
                 let _ = handle.join();
-                log::info!("[CpalBackend] Stream thread stopped");
+                tracing::info!("[CpalBackend] Stream thread stopped");
             }
         }
 
@@ -415,7 +415,7 @@ impl AudioBackend for CpalBackend {
                     })?;
             if let Some(handle) = handle_guard.take() {
                 let _ = handle.join();
-                log::info!("[CpalBackend] Analysis thread stopped");
+                tracing::info!("[CpalBackend] Analysis thread stopped");
             }
         }
 

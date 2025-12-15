@@ -138,7 +138,7 @@ impl CalibrationProcedure {
                 "[CalibrationProcedure] NOISE FLOOR SET: mean_rms={:.6}, max_rms={:.6}, threshold={:.6}",
                 mean_rms, max_rms, threshold
             );
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] Noise floor calibration complete. Mean RMS: {:.4}, Max RMS: {:.4}, Threshold: {:.4}. Waiting for user confirmation.",
                 mean_rms, max_rms, threshold
             );
@@ -199,7 +199,7 @@ impl CalibrationProcedure {
 
         // Reject if waiting for user confirmation
         if self.waiting_for_confirmation {
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] Reject {:?}: waiting for confirmation (rms {:.4}, centroid {:.1}, zcr {:.3})",
                 current_sound,
                 rms,
@@ -214,7 +214,7 @@ impl CalibrationProcedure {
 
         // Reject if still in noise floor phase
         if self.current_sound == CalibrationSound::NoiseFloor {
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] Reject {:?}: noise floor not complete (rms {:.4}, centroid {:.1}, zcr {:.3})",
                 current_sound,
                 rms,
@@ -236,7 +236,7 @@ impl CalibrationProcedure {
 
         let detection_threshold = self.detection_threshold();
 
-        log::debug!(
+        tracing::debug!(
             "[CalibrationProcedure] Evaluating {:?}: rms {:.4}, centroid {:.1}, zcr {:.3}, max_amp {:.3}, gate {:.4}",
             self.current_sound,
             rms,
@@ -254,7 +254,7 @@ impl CalibrationProcedure {
         if let Some(noise_threshold) = self.noise_floor_threshold {
             if rms < detection_threshold {
                 self.store_candidate(current_sound, features);
-                log::info!(
+                tracing::info!(
                     "[CalibrationProcedure] Reject {:?}: too quiet rms {:.4} < thresh {:.4} (noise_floor {:.4}) centroid {:.1} zcr {:.3} max_amp {:.3}",
                     current_sound,
                     rms,
@@ -274,7 +274,7 @@ impl CalibrationProcedure {
         } else if rms < detection_threshold {
             // No noise floor? Stay conservative but still gate by a minimal threshold to avoid silence captures.
             self.store_candidate(current_sound, features);
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] Reject {:?}: noise floor unset, rms {:.4} < gate {:.4}",
                 current_sound,
                 rms,
@@ -290,7 +290,7 @@ impl CalibrationProcedure {
 
         // Reject implausible centroids that indicate corrupted audio
         if features.centroid > 20_000.0 {
-            log::warn!(
+            tracing::warn!(
                 "[CalibrationProcedure] Reject {:?}: centroid {:.1} exceeds hardware range",
                 current_sound,
                 features.centroid
@@ -326,7 +326,7 @@ impl CalibrationProcedure {
         self.backoff.record_success(self.current_sound);
 
         // Log successful sample collection
-        log::info!(
+        tracing::info!(
             "[CalibrationProcedure] {:?} sample {} accepted: centroid {:.1} Hz, zcr {:.3}, rms {:.4} (gate {:.4})",
             self.current_sound,
             self.get_current_sound_count(),
@@ -347,7 +347,7 @@ impl CalibrationProcedure {
         // Set waiting_for_confirmation when current sound is complete (DON'T auto-advance)
         if self.is_current_sound_complete() {
             self.waiting_for_confirmation = true;
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] {:?} samples complete! Collected {} samples.",
                 self.current_sound,
                 self.get_current_sound_count()
@@ -521,7 +521,7 @@ impl CalibrationProcedure {
         self.waiting_for_confirmation = false;
 
         if let Some(next_sound) = self.current_sound.next() {
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] User confirmed {:?}. Advancing to {:?}.",
                 self.current_sound,
                 next_sound
@@ -531,7 +531,7 @@ impl CalibrationProcedure {
             self.clear_all_candidates();
             Ok(true)
         } else {
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] User confirmed {:?}. Calibration complete!",
                 self.current_sound
             );
@@ -553,7 +553,7 @@ impl CalibrationProcedure {
             });
         }
 
-        log::info!(
+        tracing::info!(
             "[CalibrationProcedure] User requested retry for {:?}. Clearing samples.",
             self.current_sound
         );

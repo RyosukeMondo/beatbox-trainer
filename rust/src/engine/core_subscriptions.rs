@@ -39,7 +39,7 @@ impl EngineHandle {
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                                log::warn!(
+                                tracing::warn!(
                                     "[subscribe_classification] Receiver lagged, skipped {} messages",
                                     skipped
                                 );
@@ -75,7 +75,7 @@ impl EngineHandle {
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                                log::warn!(
+                                tracing::warn!(
                                     "[subscribe_calibration] Receiver lagged, skipped {} messages",
                                     skipped
                                 );
@@ -111,7 +111,7 @@ impl EngineHandle {
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                                log::warn!(
+                                tracing::warn!(
                                     "[subscribe_audio_metrics] Receiver lagged, skipped {} messages",
                                     skipped
                                 );
@@ -147,7 +147,7 @@ impl EngineHandle {
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                                log::warn!(
+                                tracing::warn!(
                                     "[subscribe_onset_events] Receiver lagged, skipped {} messages",
                                     skipped
                                 );
@@ -183,7 +183,7 @@ impl EngineHandle {
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                            log::warn!(
+                            tracing::warn!(
                                 "[subscribe_telemetry] Receiver lagged, skipped {} messages",
                                 skipped
                             );

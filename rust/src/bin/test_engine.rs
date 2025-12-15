@@ -4,7 +4,8 @@ use std::time::{Duration, Instant};
 
 fn main() {
     eprintln!("[test_engine] Starting engine test...");
-    env_logger::init();
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
 
     // Create engine handle
     eprintln!("[test_engine] Creating EngineHandle...");

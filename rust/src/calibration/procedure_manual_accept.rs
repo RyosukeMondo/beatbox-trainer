@@ -92,14 +92,14 @@ impl CalibrationProcedure {
 
         if self.is_current_sound_complete() {
             self.waiting_for_confirmation = true;
-            log::info!(
+            tracing::info!(
                 "[CalibrationProcedure] Manual accept completed {:?} collection",
                 sound
             );
         }
 
         let progress = self.get_progress();
-        log::info!(
+        tracing::info!(
             "[CalibrationProcedure] Manual accept used for {:?}. Progress: {:?}",
             sound,
             progress

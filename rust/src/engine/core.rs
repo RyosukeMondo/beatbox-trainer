@@ -343,7 +343,7 @@ impl EngineHandle {
             if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
                 if let Some(ref mut procedure) = *procedure_guard {
                     let initial_progress = procedure.get_progress();
-                    log::info!(
+                    tracing::info!(
                         "[EngineHandle] Emitting initial calibration progress: {:?}",
                         initial_progress
                     );
@@ -381,7 +381,7 @@ impl EngineHandle {
             if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
                 if let Some(ref mut procedure) = *procedure_guard {
                     let progress = procedure.get_progress();
-                    log::info!(
+                    tracing::info!(
                         "[EngineHandle] Emitting calibration progress after confirm: {:?}",
                         progress
                     );
@@ -405,7 +405,7 @@ impl EngineHandle {
             if let Ok(mut procedure_guard) = self.calibration.get_procedure_arc().lock() {
                 if let Some(ref mut procedure) = *procedure_guard {
                     let progress = procedure.get_progress();
-                    log::info!(
+                    tracing::info!(
                         "[EngineHandle] Emitting calibration progress after retry: {:?}",
                         progress
                     );
