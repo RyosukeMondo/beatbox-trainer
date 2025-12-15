@@ -48,6 +48,8 @@ clap = { version = "4.5", features = ["derive"] }
 hound = "3.5"
 axum = { version = "0.7", optional = true, features = ["macros", "http1", "tokio"] }
 tower = { version = "0.4", optional = true, features = ["timeout", "util"] }
+wgpu = "27.0.1"
+bytemuck = { version = "1.24.0", features = ["derive"] }
 
 # Android-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]
