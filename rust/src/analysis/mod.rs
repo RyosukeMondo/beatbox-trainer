@@ -26,11 +26,13 @@ use rtrb::PopError;
 
 pub mod classifier;
 pub mod features;
+pub mod level_crossing;
 pub mod onset;
 pub mod quantizer;
 
 use classifier::{BeatboxHit, Classifier};
 use features::FeatureExtractor;
+use level_crossing::LevelCrossingDetector;
 use onset::OnsetDetector;
 use quantizer::{Quantizer, TimingFeedback};
 
@@ -180,15 +182,10 @@ pub fn spawn_analysis_thread(
         let mut last_progress_heartbeat = Instant::now();
         let mut debug_emit_counter: u64 = 0;
         let mut last_debug_probe = Instant::now();
-        // Level-crossing detector state for calibration mode
-        // This captures samples when RMS crosses from below to above the detection threshold,
-        // with hysteresis to avoid double-counting the same utterance.
-        let mut prev_rms_for_crossing: f64 = 0.0;
         let mut processed_samples: u64 = 0;
         const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150;
         let debounce_samples = (LEVEL_CROSSING_DEBOUNCE_MS * sample_rate as u64) / 1000;
-        let mut last_level_crossing_capture: u64 = 0;
-        let mut calibration_captured_in_gate = false;
+        let mut level_crossing_detector = LevelCrossingDetector::new(sample_rate, LEVEL_CROSSING_DEBOUNCE_MS);
 
         loop {
             // Attempt to pop from queue
@@ -439,157 +436,82 @@ pub fn spawn_analysis_thread(
             // ====== LEVEL-CROSSING DETECTOR FOR CALIBRATION ======
             // Simpler detection: capture sample when RMS crosses from below to above threshold
             // This runs IN ADDITION to onset detection, catching sounds that spectral flux misses
-            if calibration_active_snapshot
-                && accumulator.len() >= 1024
-                && processed_samples.saturating_sub(last_level_crossing_capture) >= debounce_samples
-            {
+            if calibration_active_snapshot && accumulator.len() >= 1024 {
                 let detection_threshold =
                     detection_threshold_snapshot.unwrap_or(quiet_clear_gate * 2.0); // 2x noise floor fallback
-                let reset_threshold = detection_threshold * 0.6; // hysteresis to avoid double counts
-                let crossed_threshold = prev_rms_for_crossing < detection_threshold
-                    && window_rms >= detection_threshold;
 
-                // Track gate state for hysteresis
-                if window_rms <= reset_threshold {
-                    calibration_captured_in_gate = false;
-                }
-
-                // If we're already above the gate and haven't captured yet, force a capture using
-                // the latest window to avoid missing loud hits that slip past onset/crossing logic.
-                if !calibration_captured_in_gate && window_rms >= detection_threshold {
-                    let capture_window = if accumulator.len() >= 1024 {
-                        &accumulator[accumulator.len() - 1024..]
-                    } else {
-                        &accumulator[..]
-                    };
-                    let capture_features = feature_extractor.extract(capture_window);
+                if let Some(event) = level_crossing_detector.process_calibration(
+                    window_rms,
+                    detection_threshold,
+                    processed_samples,
+                ) {
+                    let capture_window = &accumulator[accumulator.len() - 1024..];
+                    let capture_rms = window_rms;
                     let capture_max_amp = capture_window
                         .iter()
                         .map(|sample| sample.abs())
                         .fold(0.0f32, f32::max);
+                    let capture_features = feature_extractor.extract(capture_window);
+                    let capture_features_for_progress = capture_features;
+
                     if let Ok(mut procedure_guard) = calibration_procedure.lock() {
                         if let Some(ref mut procedure) = *procedure_guard {
                             match procedure.add_sample(
                                 capture_features,
-                                window_rms,
+                                capture_rms,
                                 capture_max_amp,
                             ) {
                                 Ok(()) => {
                                     tracing::info!(
-                                        "[AnalysisThread] Forced-window sample accepted (rms {:.4}, gate {:.4})",
-                                        window_rms,
+                                        "[AnalysisThread] Level-crossing event {:?} accepted (rms {:.4}, gate {:.4})",
+                                        event,
+                                        capture_rms,
                                         detection_threshold
                                     );
                                     let progress = procedure
                                         .get_progress_with_guidance_and_features(
                                             None,
-                                            Some(&capture_features),
-                                            Some(window_rms),
+                                            Some(&capture_features_for_progress),
+                                            Some(capture_rms),
                                             Some(capture_max_amp),
                                         );
                                     if let Some(ref tx) = calibration_progress_tx {
                                         let _ = tx.send(progress);
                                     }
-                                    calibration_captured_in_gate = true;
                                     guidance_limiter.clear();
-                                    last_level_crossing_capture = processed_samples;
                                 }
                                 Err(err) => {
                                     tracing::info!(
-                                        "[AnalysisThread] Forced-window sample rejected: {:?} (rms {:.4}, gate {:.4})",
+                                        "[AnalysisThread] Level-crossing event {:?} rejected: {:?} (rms {:.4})",
+                                        event,
                                         err,
-                                        window_rms,
-                                        detection_threshold
+                                        capture_rms
                                     );
                                 }
                             }
                         }
                     }
-                }
-
-                if crossed_threshold {
-                    tracing::info!(
-                        "[AnalysisThread] Level crossing detected: prev_rms {:.4} -> rms {:.4} (threshold {:.4})",
-                        prev_rms_for_crossing,
-                        window_rms,
-                        detection_threshold
-                    );
-
-                    // Skip if we've already captured in this gate window
-                    if calibration_captured_in_gate {
-                        prev_rms_for_crossing = window_rms;
-                        continue;
-                    }
-
-                    // Extract features from the most recent 1024 samples
-                    let crossing_window = &accumulator[accumulator.len() - 1024..];
-                    let crossing_rms = window_rms;
-                    let crossing_max_amp = crossing_window
-                        .iter()
-                        .map(|sample| sample.abs())
-                        .fold(0.0f32, f32::max);
-                    let crossing_features = feature_extractor.extract(crossing_window);
-                    let crossing_features_for_progress = crossing_features;
-
-                    // Try to add sample via calibration procedure
-                    if let Ok(mut procedure_guard) = calibration_procedure.lock() {
-                        if let Some(ref mut procedure) = *procedure_guard {
-                            match procedure.add_sample(
-                                crossing_features,
-                                crossing_rms,
-                                crossing_max_amp,
-                            ) {
-                                Ok(()) => {
-                                    tracing::info!(
-                                        "[AnalysisThread] Level-crossing sample accepted (rms {:.4})",
-                                        crossing_rms
-                                    );
-                                    let progress = procedure
-                                        .get_progress_with_guidance_and_features(
-                                            None,
-                                            Some(&crossing_features_for_progress),
-                                            Some(crossing_rms),
-                                            Some(crossing_max_amp),
-                                        );
-                                    if let Some(ref tx) = calibration_progress_tx {
-                                        let _ = tx.send(progress);
-                                    }
-                                    guidance_limiter.clear();
-                                }
-                                Err(err) => {
-                                    tracing::info!(
-                                        "[AnalysisThread] Level-crossing sample rejected: {:?} (rms {:.4})",
-                                        err,
-                                        crossing_rms
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    last_level_crossing_capture = processed_samples;
-                    calibration_captured_in_gate = true;
                 }
             }
 
             // ====== LEVEL-CROSSING DETECTOR FOR CLASSIFICATION ======
             // Same approach as calibration: detect when RMS crosses from below to above threshold
             // This is more reliable than onset detection which can fire on spectral changes in quiet audio
-            if !calibration_active_snapshot
-                && accumulator.len() >= 1024
-                && processed_samples.saturating_sub(last_level_crossing_capture) >= debounce_samples
-            {
+            if !calibration_active_snapshot && accumulator.len() >= 1024 {
                 let noise_floor_gate = match calibration_state.read() {
                     Ok(state) => state.noise_floor_rms * 2.0,
                     Err(_) => 0.02, // Conservative fallback
                 };
-                let crossed_threshold =
-                    prev_rms_for_crossing < noise_floor_gate && rms >= noise_floor_gate;
 
-                if crossed_threshold {
-                    eprintln!(
-                        "[AnalysisThread] Level crossing for classification: prev_rms {:.4} -> rms {:.4} (gate {:.4})",
-                        prev_rms_for_crossing,
-                        rms,
+                if let Some(event) = level_crossing_detector.process_classification(
+                    window_rms,
+                    noise_floor_gate,
+                    processed_samples,
+                ) {
+                    tracing::info!(
+                        "[AnalysisThread] Level crossing event {:?} for classification (rms {:.4}, gate {:.4})",
+                        event,
+                        window_rms,
                         noise_floor_gate
                     );
 
@@ -603,9 +525,15 @@ pub fn spawn_analysis_thread(
                     // Timing feedback
                     // Note: For level-crossing detection, we don't have precise onset timestamps.
                     // Return neutral "on-time" feedback. Future improvement: track sample counter.
-                    let timing = TimingFeedback {
-                        classification: quantizer::TimingClassification::OnTime,
-                        error_ms: 0.0,
+                    let current_bpm = bpm.load(std::sync::atomic::Ordering::Relaxed);
+                    let timing = if current_bpm > 0 {
+                        quantizer.quantize(processed_samples)
+                    } else {
+                        // No metronome - no timing feedback
+                        TimingFeedback {
+                            classification: quantizer::TimingClassification::OnTime,
+                            error_ms: 0.0,
+                        }
                     };
 
                     // Timestamp is approximate for level-crossing detection
@@ -628,12 +556,8 @@ pub fn spawn_analysis_thread(
                     // Send result to broadcast channel
                     telemetry::hub().record_classification(&result);
                     let _ = result_sender.send(result);
-
-                    last_level_crossing_capture = processed_samples;
                 }
             }
-
-            prev_rms_for_crossing = window_rms;
 
             // Process accumulated buffer through onset detection
             let onsets = onset_detector.process(&accumulator);
@@ -652,7 +576,7 @@ pub fn spawn_analysis_thread(
             // which contain the onset (due to the onset detector's look-ahead delay).
             for onset_timestamp in onsets {
                 // Avoid double-triggering if level-crossing detector already captured this event
-                if processed_samples.saturating_sub(last_level_crossing_capture) < debounce_samples
+                if processed_samples.saturating_sub(level_crossing_detector.last_capture_sample()) < debounce_samples
                 {
                     tracing::debug!(
                         "[AnalysisThread] Skipping onset duplicate (captured via level-crossing)"
@@ -696,7 +620,7 @@ pub fn spawn_analysis_thread(
 
                 if calibration_active_snapshot {
                     // If we already captured in this gate window, skip to avoid double counts
-                    if calibration_captured_in_gate {
+                    if level_crossing_detector.is_captured_in_gate() {
                         continue;
                     }
                     // ====== CALIBRATION MODE ======
