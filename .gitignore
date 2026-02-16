@@ -64,3 +64,6 @@ rust/is_mul
 
 # FVM (ignore entire .fvm directory, track .fvmrc)
 .fvm/
+
+# Serena
+.serena/
