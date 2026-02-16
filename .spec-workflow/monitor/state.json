@@ -1,5 +1,5 @@
 {
-  "status": "running",
+  "status": "stopped",
   "iteration": {
     "current": 6,
     "specified": 50
@@ -10,8 +10,8 @@
   },
   "current_task": {
     "description": "Working from steering documents",
-    "status": "in_progress"
+    "status": "error"
   },
-  "last_output": "Iteration 6 starting...",
-  "timestamp": "2025-12-16T06:01:13.131438"
+  "last_output": "Iteration 6 finished with exit code 130",
+  "timestamp": "2025-12-16T06:24:01.807922"
 }

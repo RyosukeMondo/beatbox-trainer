@@ -67,3 +67,12 @@ rust/is_mul
 
 # Serena
 .serena/
+
+# Generated/template artifacts
+rust/{{scenarioDir}}/
+
+# Spec workflow run artifacts
+.spec-workflow/monitor/runs/
+.spec-workflow/monitor/coverage/
+.spec-workflow/monitor/deps/
+.spec-workflow/monitor/tests/
