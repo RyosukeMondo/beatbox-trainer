@@ -207,6 +207,9 @@ jobs:
         working-directory: rust
         run: cargo fmt -- --check
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
       - name: Run clippy
         working-directory: rust
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -237,6 +240,9 @@ jobs:
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-test-
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
 
       - name: Run Rust tests
         working-directory: rust
