@@ -152,7 +152,7 @@ impl AnalysisWorker {
         const LEVEL_CROSSING_DEBOUNCE_MS: u64 = 150;
         let level_crossing_detector =
             LevelCrossingDetector::new(sample_rate, LEVEL_CROSSING_DEBOUNCE_MS);
-        
+
         let min_buffer_size = onset_config.min_buffer_size.max(64);
         let accumulator = Vec::with_capacity(min_buffer_size.max(2048));
         let guidance_limiter = GuidanceRateLimiter::new(Duration::from_secs(5));
@@ -214,14 +214,15 @@ impl AnalysisWorker {
     }
 
     fn process_noise_floor_calibration(&mut self, rms: f64) -> bool {
-        let in_noise_floor_phase = if let Ok(procedure_guard) = self.calibration_procedure.try_lock() {
-            procedure_guard
-                .as_ref()
-                .map(|p| p.is_in_noise_floor_phase())
-                .unwrap_or(false)
-        } else {
-            false
-        };
+        let in_noise_floor_phase =
+            if let Ok(procedure_guard) = self.calibration_procedure.try_lock() {
+                procedure_guard
+                    .as_ref()
+                    .map(|p| p.is_in_noise_floor_phase())
+                    .unwrap_or(false)
+            } else {
+                false
+            };
 
         if in_noise_floor_phase {
             if let Ok(mut procedure_guard) = self.calibration_procedure.lock() {
@@ -274,11 +275,7 @@ impl AnalysisWorker {
 
             if let Ok(mut procedure_guard) = self.calibration_procedure.lock() {
                 if let Some(ref mut procedure) = *procedure_guard {
-                    match procedure.add_sample(
-                        capture_features,
-                        capture_rms,
-                        capture_max_amp,
-                    ) {
+                    match procedure.add_sample(capture_features, capture_rms, capture_max_amp) {
                         Ok(()) => {
                             tracing::info!(
                                 "[AnalysisThread] Level-crossing event {:?} accepted (rms {:.4}, gate {:.4})",
@@ -575,8 +572,8 @@ impl AnalysisWorker {
         if self.last_progress_heartbeat.elapsed() >= Duration::from_millis(100) {
             if let Ok(mut procedure_guard) = self.calibration_procedure.try_lock() {
                 if let Some(ref mut procedure) = *procedure_guard {
-                    let progress = procedure
-                        .get_progress_with_guidance_and_features(None, None, None, None);
+                    let progress =
+                        procedure.get_progress_with_guidance_and_features(None, None, None, None);
                     self.debug_emit_counter = self.debug_emit_counter.wrapping_add(1);
                     tracing::debug!(
                         "[AnalysisThread] Progress heartbeat [{}]: gate_rms {:?}, last_rms {:?}, last_centroid {:?}, last_zcr {:?}, misses {}",
@@ -622,7 +619,7 @@ impl AnalysisWorker {
         } else {
             Some(self.log_every_n_buffers)
         };
-        
+
         let debounce_samples = (150 * self.sample_rate as u64) / 1000;
 
         loop {
@@ -670,7 +667,11 @@ impl AnalysisWorker {
 
             // Calculate RMS for audio metrics (level meter)
             let rms: f64 = {
-                let sum_squares: f64 = self.accumulator.iter().map(|&x| (x as f64) * (x as f64)).sum();
+                let sum_squares: f64 = self
+                    .accumulator
+                    .iter()
+                    .map(|&x| (x as f64) * (x as f64))
+                    .sum();
                 (sum_squares / self.accumulator.len() as f64).sqrt()
             };
             // More responsive RMS from the most recent window (used for gating)
@@ -696,8 +697,11 @@ impl AnalysisWorker {
                 NON_ZERO_CHECK += 1;
                 if let Some(interval) = log_interval {
                     if interval > 0 && NON_ZERO_CHECK.is_multiple_of(interval) {
-                        let max_amplitude =
-                            self.accumulator.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+                        let max_amplitude = self
+                            .accumulator
+                            .iter()
+                            .map(|x| x.abs())
+                            .fold(0.0f32, f32::max);
                         tracing::info!(
                             "[AnalysisThread] Max amplitude in accumulated buffer: {}, RMS: {}",
                             max_amplitude,
