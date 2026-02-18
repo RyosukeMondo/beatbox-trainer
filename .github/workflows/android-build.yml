@@ -15,7 +15,6 @@ on:
       - '.github/workflows/android-build.yml'
 
 env:
-  FLUTTER_VERSION: '3.24.0'
   JAVA_VERSION: '17'
   NDK_VERSION: '25.2.9519653'
 
@@ -47,7 +46,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
 

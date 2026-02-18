@@ -222,9 +222,7 @@ pub async fn apply_params(
     }
 
     let sender = state.handle.command_sender();
-    sender
-        .try_send(patch.clone())
-        .map_err(|err| map_try_send_error(err))?;
+    sender.try_send(patch.clone()).map_err(map_try_send_error)?;
 
     Ok(Json(ParamAck { accepted: true }))
 }

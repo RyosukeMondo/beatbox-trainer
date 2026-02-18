@@ -800,6 +800,7 @@ impl AnalysisWorker {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_analysis_thread(
     analysis_channels: AnalysisThreadChannels,
     calibration_state: Arc<RwLock<CalibrationState>>,

@@ -97,11 +97,9 @@ pub fn spawn_watchdog_task(watchdog: DebugWatchdog) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut receiver = telemetry::hub().collector().subscribe();
         while let Ok(event) = receiver.recv().await {
-            if matches!(event, MetricEvent::Error { .. }) {
-                watchdog.beat();
-            } else {
-                watchdog.beat();
-            }
+            // Beat the watchdog on every event regardless of type
+            let _ = event; // acknowledge event
+            watchdog.beat();
         }
     })
 }
