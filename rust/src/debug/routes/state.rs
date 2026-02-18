@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use tokio::task::JoinHandle;
 
-use crate::telemetry::{self, MetricEvent};
+use crate::telemetry;
 
 pub const DEFAULT_WATCHDOG_TIMEOUT_MS: u64 = 5_000;
 
