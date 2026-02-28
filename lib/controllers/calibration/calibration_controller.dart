@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import '../../bridge/api.dart/api.dart' as api;
 import '../../bridge/api.dart/api/streams.dart' as streams;
 import '../../bridge/api.dart/api/types.dart';
+import '../../bridge/api.dart/calibration/state.dart';
 import '../../models/calibration_progress.dart';
-import '../../models/calibration_state.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/error_handler/exceptions.dart';
 import '../../services/storage/i_storage_service.dart';
@@ -225,14 +225,10 @@ class CalibrationController {
       debugPrint('[CalibrationController] Calibration finished successfully');
 
       // Get calibration state from bridge
-      final stateJson = await api.getCalibrationState();
-      debugPrint('[CalibrationController] Raw JSON from Rust: $stateJson');
-      final jsonMap = jsonDecode(stateJson) as Map<String, dynamic>;
-      debugPrint('[CalibrationController] Parsed JSON: $jsonMap');
+      final state = await _audioService.getCalibrationState();
       debugPrint(
-        '[CalibrationController] noise_floor_rms in JSON: ${jsonMap['noise_floor_rms']}',
+        '[CalibrationController] Got state from Rust: level=${state.level}, noiseFloor=${state.noiseFloorRms}',
       );
-      final state = CalibrationState.fromJson(jsonMap);
 
       // Persist calibration state
       await _persistCalibrationState(state);
@@ -396,7 +392,13 @@ class CalibrationController {
         '[CalibrationController]   state.noiseFloorRms=${state.noiseFloorRms}',
       );
       // Convert CalibrationState to CalibrationData for storage
-      final thresholds = state.toThresholdMap();
+      final thresholds = {
+        't_kick_centroid': state.tKickCentroid,
+        't_kick_zcr': state.tKickZcr,
+        't_snare_centroid': state.tSnareCentroid,
+        't_hihat_zcr': state.tHihatZcr,
+        'noise_floor_rms': state.noiseFloorRms,
+      };
       debugPrint('[CalibrationController]   thresholds=$thresholds');
       final calibrationData = CalibrationData(
         level: state.level,

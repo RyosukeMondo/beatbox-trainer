@@ -22,7 +22,8 @@ pub use streams::{
     audio_metrics_stream, diagnostic_metrics_stream, onset_events_stream, telemetry_stream,
 };
 use tokio::sync::mpsc::error::TrySendError;
-pub use types::{AudioMetrics, OnsetEvent};
+pub use crate::calibration::CalibrationState;
+pub use types::{AudioMetrics, CalibrationThresholdKey, OnsetEvent};
 
 // Re-export error code constants for FFI exposure
 pub use crate::error::{AudioErrorCodes, CalibrationErrorCodes};
@@ -401,22 +402,12 @@ pub fn calibration_stream(sink: StreamSink<CalibrationProgress>) {
 /// }
 /// ```
 #[flutter_rust_bridge::frb]
-pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
-    use crate::calibration::CalibrationState;
-
+pub fn load_calibration_state(state: CalibrationState) -> Result<(), CalibrationError> {
     eprintln!("[Rust API] load_calibration_state called");
-    eprintln!("[Rust API] JSON input: {}", json);
-
-    // Deserialize JSON to CalibrationState
-    let state: CalibrationState = serde_json::from_str(&json).map_err(|e| {
-        eprintln!("[Rust API] Failed to deserialize: {}", e);
-        CalibrationError::InvalidFeatures {
-            reason: format!("Failed to deserialize calibration JSON: {}", e),
-        }
-    })?;
-
-    eprintln!("[Rust API] Deserialized state: level={}, is_calibrated={}, t_kick_centroid={}, t_snare_centroid={}, noise_floor_rms={}",
-              state.level, state.is_calibrated, state.t_kick_centroid, state.t_snare_centroid, state.noise_floor_rms);
+    eprintln!(
+        "[Rust API] State: level={}, is_calibrated={}, t_kick_centroid={}, t_snare_centroid={}, noise_floor_rms={}",
+        state.level, state.is_calibrated, state.t_kick_centroid, state.t_snare_centroid, state.noise_floor_rms
+    );
 
     // Load state into EngineHandle
     ENGINE_HANDLE.load_calibration(state)?;
@@ -425,31 +416,28 @@ pub fn load_calibration_state(json: String) -> Result<(), CalibrationError> {
     Ok(())
 }
 
-/// Get current calibration state as JSON
+/// Get current calibration state
 ///
-/// Retrieves the current calibration state serialized to JSON string.
-/// This JSON can be saved to persistent storage and restored later using
-/// `load_calibration_state`.
+/// Retrieves the current calibration state struct.
 ///
 /// # Returns
-/// * `Ok(String)` - JSON string containing serialized CalibrationState
-/// * `Err(CalibrationError)` - Error if serialization fails or lock poisoning
+/// * `Ok(CalibrationState)` - The current calibration state
+/// * `Err(CalibrationError)` - Error if lock poisoning
 ///
 /// # Errors
-/// - JSON serialization error (should be rare)
 /// - Lock poisoning on calibration state
 ///
 /// # Usage
 /// ```dart
 /// try {
-///   final jsonString = await getCalibrationState();
-///   // Save jsonString to SharedPreferences
+///   final state = await getCalibrationState();
+///   // Use state object directly
 /// } catch (e) {
 ///   print('Failed to get calibration state: $e');
 /// }
 /// ```
 #[flutter_rust_bridge::frb]
-pub fn get_calibration_state() -> Result<String, CalibrationError> {
+pub fn get_calibration_state() -> Result<CalibrationState, CalibrationError> {
     // Get calibration state from EngineHandle
     let state = ENGINE_HANDLE.get_calibration_state()?;
     eprintln!(
@@ -457,10 +445,7 @@ pub fn get_calibration_state() -> Result<String, CalibrationError> {
         state.level, state.is_calibrated, state.noise_floor_rms
     );
 
-    // Serialize to JSON
-    serde_json::to_string(&state).map_err(|e| CalibrationError::InvalidFeatures {
-        reason: format!("Failed to serialize calibration state to JSON: {}", e),
-    })
+    Ok(state)
 }
 
 // Error code constant accessors for Dart/Flutter
@@ -496,29 +481,27 @@ pub fn get_calibration_error_codes() -> CalibrationErrorCodes {
 /// * `Ok(())` - Threshold updated successfully
 /// * `Err(CalibrationError)` - If key is invalid or lock fails
 #[flutter_rust_bridge::frb]
-pub fn update_calibration_threshold(key: String, value: f64) -> Result<(), CalibrationError> {
+pub fn update_calibration_threshold(
+    key: CalibrationThresholdKey,
+    value: f64,
+) -> Result<(), CalibrationError> {
     eprintln!(
-        "[Rust API] update_calibration_threshold: key={}, value={}",
+        "[Rust API] update_calibration_threshold: key={:?}, value={}",
         key, value
     );
 
     let mut state = ENGINE_HANDLE.get_calibration_state()?;
 
-    match key.as_str() {
-        "t_kick_centroid" => state.t_kick_centroid = value as f32,
-        "t_kick_zcr" => state.t_kick_zcr = value as f32,
-        "t_snare_centroid" => state.t_snare_centroid = value as f32,
-        "t_hihat_zcr" => state.t_hihat_zcr = value as f32,
-        "noise_floor_rms" => state.noise_floor_rms = value,
-        _ => {
-            return Err(CalibrationError::InvalidFeatures {
-                reason: format!("Unknown threshold key: {}", key),
-            });
-        }
+    match key {
+        CalibrationThresholdKey::KickCentroid => state.t_kick_centroid = value as f32,
+        CalibrationThresholdKey::KickZcr => state.t_kick_zcr = value as f32,
+        CalibrationThresholdKey::SnareCentroid => state.t_snare_centroid = value as f32,
+        CalibrationThresholdKey::HihatZcr => state.t_hihat_zcr = value as f32,
+        CalibrationThresholdKey::NoiseFloorRms => state.noise_floor_rms = value,
     }
 
     ENGINE_HANDLE.load_calibration(state)?;
-    eprintln!("[Rust API] Threshold {} updated to {}", key, value);
+    eprintln!("[Rust API] Threshold {:?} updated to {}", key, value);
     Ok(())
 }
 
