@@ -38,8 +38,8 @@ fn synthetic_run_outputs_json() {
 
 #[test]
 fn record_command_writes_payload() {
-    let output_path = std::env::temp_dir()
-        .join(format!("bbt-diag-record-{}.json", std::process::id()));
+    let output_path =
+        std::env::temp_dir().join(format!("bbt-diag-record-{}.json", std::process::id()));
 
     let output = cli()
         .args([
