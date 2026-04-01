@@ -11,6 +11,7 @@ import 'api/diagnostics.dart';
 import 'api/streams.dart';
 import 'api/types.dart';
 import 'calibration/progress.dart';
+import 'calibration/state.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -109,6 +110,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CalibrationState dco_decode_box_autoadd_calibration_state(dynamic raw);
+
+  @protected
   ClassificationResult dco_decode_box_autoadd_classification_result(
     dynamic raw,
   );
@@ -150,6 +154,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationSound dco_decode_calibration_sound(dynamic raw);
+
+  @protected
+  CalibrationState dco_decode_calibration_state(dynamic raw);
+
+  @protected
+  CalibrationThresholdKey dco_decode_calibration_threshold_key(dynamic raw);
 
   @protected
   ClassificationResult dco_decode_classification_result(dynamic raw);
@@ -365,6 +375,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CalibrationState sse_decode_box_autoadd_calibration_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClassificationResult sse_decode_box_autoadd_classification_result(
     SseDeserializer deserializer,
   );
@@ -416,6 +431,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CalibrationSound sse_decode_calibration_sound(SseDeserializer deserializer);
+
+  @protected
+  CalibrationState sse_decode_calibration_state(SseDeserializer deserializer);
+
+  @protected
+  CalibrationThresholdKey sse_decode_calibration_threshold_key(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ClassificationResult sse_decode_classification_result(
@@ -675,6 +698,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_calibration_state(
+    CalibrationState self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_classification_result(
     ClassificationResult self,
     SseSerializer serializer,
@@ -740,6 +769,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_calibration_sound(
     CalibrationSound self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_state(
+    CalibrationState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_calibration_threshold_key(
+    CalibrationThresholdKey self,
     SseSerializer serializer,
   );
 

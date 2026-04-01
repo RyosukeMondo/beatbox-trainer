@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../bridge/api.dart/api.dart' as api;
+import '../../bridge/api.dart/api/types.dart';
 
 /// Debug panel for displaying and adjusting calibration parameters.
 ///
@@ -36,41 +37,17 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
     });
 
     try {
-      final json = await api.getCalibrationState();
-      debugPrint('[CalibrationDebugPanel] Raw JSON: $json');
-
-      // Parse JSON manually
-      final Map<String, dynamic> state = {};
-      // Simple JSON parsing for this flat object
-      final cleaned = json.replaceAll('{', '').replaceAll('}', '');
-      for (final pair in cleaned.split(',')) {
-        final parts = pair.split(':');
-        if (parts.length == 2) {
-          final key = parts[0].trim().replaceAll('"', '');
-          final value = parts[1].trim().replaceAll('"', '');
-          if (value == 'true') {
-            state[key] = true;
-          } else if (value == 'false') {
-            state[key] = false;
-          } else {
-            state[key] = double.tryParse(value) ?? value;
-          }
-        }
-      }
-
-      debugPrint('[CalibrationDebugPanel] Parsed state: $state');
+      final state = await api.getCalibrationState();
+      debugPrint('[CalibrationDebugPanel] State: $state');
 
       if (mounted) {
         setState(() {
-          _kickCentroid =
-              (state['t_kick_centroid'] as num?)?.toDouble() ?? 1500;
-          _kickZcr = (state['t_kick_zcr'] as num?)?.toDouble() ?? 0.1;
-          _snareCentroid =
-              (state['t_snare_centroid'] as num?)?.toDouble() ?? 4000;
-          _hihatZcr = (state['t_hihat_zcr'] as num?)?.toDouble() ?? 0.3;
-          _noiseFloorRms =
-              (state['noise_floor_rms'] as num?)?.toDouble() ?? 0.01;
-          _isCalibrated = state['is_calibrated'] as bool? ?? false;
+          _kickCentroid = state.tKickCentroid;
+          _kickZcr = state.tKickZcr;
+          _snareCentroid = state.tSnareCentroid;
+          _hihatZcr = state.tHihatZcr;
+          _noiseFloorRms = state.noiseFloorRms;
+          _isCalibrated = state.isCalibrated;
           _isLoading = false;
         });
       }
@@ -85,7 +62,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
     }
   }
 
-  Future<void> _updateThreshold(String key, double value) async {
+  Future<void> _updateThreshold(CalibrationThresholdKey key, double value) async {
     try {
       await api.updateCalibrationThreshold(key: key, value: value);
       debugPrint('[CalibrationDebugPanel] Updated $key to $value');
@@ -167,7 +144,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
           else ...[
             _buildThresholdSlider(
               'Noise Floor RMS',
-              'noise_floor_rms',
+              CalibrationThresholdKey.noiseFloorRms,
               _noiseFloorRms,
               0.001,
               0.1,
@@ -176,7 +153,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
             ),
             _buildThresholdSlider(
               'Kick Centroid',
-              't_kick_centroid',
+              CalibrationThresholdKey.kickCentroid,
               _kickCentroid,
               500,
               5000,
@@ -185,7 +162,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
             ),
             _buildThresholdSlider(
               'Kick ZCR',
-              't_kick_zcr',
+              CalibrationThresholdKey.kickZcr,
               _kickZcr,
               0.01,
               0.5,
@@ -193,7 +170,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
             ),
             _buildThresholdSlider(
               'Snare Centroid',
-              't_snare_centroid',
+              CalibrationThresholdKey.snareCentroid,
               _snareCentroid,
               2000,
               10000,
@@ -202,7 +179,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
             ),
             _buildThresholdSlider(
               'Hi-Hat ZCR',
-              't_hihat_zcr',
+              CalibrationThresholdKey.hihatZcr,
               _hihatZcr,
               0.1,
               0.8,
@@ -216,7 +193,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
 
   Widget _buildThresholdSlider(
     String label,
-    String key,
+    CalibrationThresholdKey key,
     double value,
     double min,
     double max,

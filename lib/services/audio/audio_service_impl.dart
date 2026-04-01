@@ -3,12 +3,14 @@ import '../../models/calibration_progress.dart';
 import '../../models/classification_result.dart';
 import '../../models/telemetry_event.dart';
 import '../../models/timing_feedback.dart';
-import '../../bridge/api.dart/api.dart' as api;
-import '../../bridge/api.dart/api/streams.dart' as api_streams;
 import '../../bridge/api.dart/analysis.dart' as ffi_analysis;
 import '../../bridge/api.dart/analysis/classifier.dart' as ffi_classifier;
 import '../../bridge/api.dart/analysis/quantizer.dart' as ffi_quantizer;
+import '../../bridge/api.dart/api.dart' as api;
+import '../../bridge/api.dart/api/streams.dart' as api_streams;
+import '../../bridge/api.dart/api/types.dart';
 import '../../bridge/api.dart/calibration/progress.dart' as ffi_calibration;
+import '../../bridge/api.dart/calibration/state.dart';
 import '../../bridge/api.dart/engine/core.dart' as ffi_engine;
 import '../../bridge/extensions/error_code_extensions.dart';
 import '../error_handler/error_handler.dart';
@@ -413,11 +415,10 @@ class AudioServiceImpl implements IAudioService {
   }
 
   @override
-  Future<void> loadCalibrationState(String json) async {
+  Future<void> loadCalibrationState(CalibrationState state) async {
     debugPrint('[AudioServiceImpl] loadCalibrationState called');
-    debugPrint('[AudioServiceImpl] JSON: $json');
     try {
-      await api.loadCalibrationState(json: json);
+      await api.loadCalibrationState(state: state);
       debugPrint(
         '[AudioServiceImpl] loadCalibrationState completed successfully',
       );
@@ -428,7 +429,10 @@ class AudioServiceImpl implements IAudioService {
   }
 
   @override
-  Future<void> updateCalibrationThreshold(String key, double value) async {
+  Future<void> updateCalibrationThreshold(
+    CalibrationThresholdKey key,
+    double value,
+  ) async {
     debugPrint('[AudioServiceImpl] updateCalibrationThreshold: $key = $value');
     try {
       await api.updateCalibrationThreshold(key: key, value: value);
@@ -440,12 +444,12 @@ class AudioServiceImpl implements IAudioService {
   }
 
   @override
-  Future<String> getCalibrationState() async {
+  Future<CalibrationState> getCalibrationState() async {
     debugPrint('[AudioServiceImpl] getCalibrationState called');
     try {
-      final json = await api.getCalibrationState();
-      debugPrint('[AudioServiceImpl] getCalibrationState: $json');
-      return json;
+      final state = await api.getCalibrationState();
+      debugPrint('[AudioServiceImpl] getCalibrationState: $state');
+      return state;
     } catch (e) {
       debugPrint('[AudioServiceImpl] getCalibrationState error: $e');
       throw _errorHandler.createCalibrationException(e.toString());

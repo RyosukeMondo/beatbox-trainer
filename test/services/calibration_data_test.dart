@@ -2,7 +2,7 @@ import 'package:beatbox_trainer/services/storage/i_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('CalibrationData.toRustJson', () {
+  group('CalibrationData.toRustState', () {
     test(
       'marks persisted calibration as calibrated and flattens thresholds',
       () {
@@ -17,14 +17,14 @@ void main() {
           },
         );
 
-        final rustJson = data.toRustJson();
+        final rustState = data.toRustState();
 
-        expect(rustJson['level'], equals(2));
-        expect(rustJson['t_kick_centroid'], equals(2100.0));
-        expect(rustJson['t_kick_zcr'], equals(0.12));
-        expect(rustJson['t_snare_centroid'], equals(5200.0));
-        expect(rustJson['t_hihat_zcr'], equals(0.28));
-        expect(rustJson['is_calibrated'], isTrue);
+        expect(rustState.level, equals(2));
+        expect(rustState.tKickCentroid, equals(2100.0));
+        expect(rustState.tKickZcr, equals(0.12));
+        expect(rustState.tSnareCentroid, equals(5200.0));
+        expect(rustState.tHihatZcr, equals(0.28));
+        expect(rustState.isCalibrated, isTrue);
       },
     );
 
@@ -35,13 +35,13 @@ void main() {
         thresholds: const <String, double>{},
       );
 
-      final rustJson = data.toRustJson();
+      final rustState = data.toRustState();
 
-      expect(rustJson['t_kick_centroid'], equals(1500.0));
-      expect(rustJson['t_kick_zcr'], equals(0.1));
-      expect(rustJson['t_snare_centroid'], equals(4000.0));
-      expect(rustJson['t_hihat_zcr'], equals(0.3));
-      expect(rustJson['is_calibrated'], isTrue);
+      expect(rustState.tKickCentroid, equals(1500.0));
+      expect(rustState.tKickZcr, equals(0.1));
+      expect(rustState.tSnareCentroid, equals(4000.0));
+      expect(rustState.tHihatZcr, equals(0.3));
+      expect(rustState.isCalibrated, isTrue);
     });
   });
 }

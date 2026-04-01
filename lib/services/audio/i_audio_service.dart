@@ -1,3 +1,5 @@
+import '../../bridge/api.dart/api/types.dart';
+import '../../bridge/api.dart/calibration/state.dart';
 import '../../models/calibration_progress.dart';
 import '../../models/classification_result.dart';
 import '../../models/telemetry_event.dart';
@@ -162,45 +164,38 @@ abstract class IAudioService {
     double? zcrThreshold,
   });
 
-  /// Load calibration state from JSON into the Rust engine.
+  /// Load calibration state into the Rust engine.
   ///
   /// Restores previously saved calibration thresholds so the classifier
   /// can detect sounds correctly. Must be called before startAudio when
   /// restoring from saved calibration.
   ///
   /// Parameters:
-  /// - [json]: JSON string containing serialized CalibrationState
-  ///
-  /// Throws:
-  /// - [CalibrationServiceException] if JSON is invalid or parsing fails
+  /// - [state]: CalibrationState object to load
   ///
   /// Example:
   /// ```dart
   /// final calibData = await storageService.loadCalibration();
   /// if (calibData != null) {
-  ///   await audioService.loadCalibrationState(jsonEncode(calibData.toRustJson()));
+  ///   await audioService.loadCalibrationState(calibData.toRustState());
   /// }
   /// await audioService.startAudio(bpm: 120);
   /// ```
-  Future<void> loadCalibrationState(String json);
+  Future<void> loadCalibrationState(CalibrationState state);
 
   /// Update a single calibration threshold value.
   ///
   /// Enables manual threshold tweaking for debugging without full recalibration.
   ///
   /// Parameters:
-  /// - [key]: Threshold key (t_kick_centroid, t_kick_zcr, t_snare_centroid,
-  ///   t_hihat_zcr, noise_floor_rms)
+  /// - [key]: Threshold key enum
   /// - [value]: New threshold value
-  ///
-  /// Throws:
-  /// - [CalibrationServiceException] if key is invalid
-  Future<void> updateCalibrationThreshold(String key, double value);
+  Future<void> updateCalibrationThreshold(CalibrationThresholdKey key, double value);
 
-  /// Get current calibration state as JSON string.
+  /// Get current calibration state.
   ///
   /// Returns the active calibration parameters for display/debugging.
-  Future<String> getCalibrationState();
+  Future<CalibrationState> getCalibrationState();
 
   /// Reset calibration session (clears in-progress state and stops audio).
   Future<void> resetCalibrationSession();
