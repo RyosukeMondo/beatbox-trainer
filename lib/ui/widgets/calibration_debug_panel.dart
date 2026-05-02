@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../../bridge/api.dart/api.dart' as api;
 
@@ -39,24 +41,7 @@ class _CalibrationDebugPanelState extends State<CalibrationDebugPanel> {
       final json = await api.getCalibrationState();
       debugPrint('[CalibrationDebugPanel] Raw JSON: $json');
 
-      // Parse JSON manually
-      final Map<String, dynamic> state = {};
-      // Simple JSON parsing for this flat object
-      final cleaned = json.replaceAll('{', '').replaceAll('}', '');
-      for (final pair in cleaned.split(',')) {
-        final parts = pair.split(':');
-        if (parts.length == 2) {
-          final key = parts[0].trim().replaceAll('"', '');
-          final value = parts[1].trim().replaceAll('"', '');
-          if (value == 'true') {
-            state[key] = true;
-          } else if (value == 'false') {
-            state[key] = false;
-          } else {
-            state[key] = double.tryParse(value) ?? value;
-          }
-        }
-      }
+      final Map<String, dynamic> state = jsonDecode(json);
 
       debugPrint('[CalibrationDebugPanel] Parsed state: $state');
 
