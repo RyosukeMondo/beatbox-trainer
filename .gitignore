@@ -68,6 +68,9 @@ rust/is_mul
 # Serena
 .serena/
 
+# Tech debt cleaner
+.tech_debt_cleaner/
+
 # Generated/template artifacts
 rust/{{scenarioDir}}/
 

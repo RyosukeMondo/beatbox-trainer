@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../models/classification_result.dart';
+import '../../services/audio/audio_service_impl.dart';
 import '../../services/audio/i_audio_service.dart';
 import '../../services/permission/i_permission_service.dart';
 import '../../services/settings/i_settings_service.dart';
@@ -121,7 +122,9 @@ class TrainingController {
     debugPrint('[TrainingController] Calibration state loaded');
 
     // Start audio engine
-    debugPrint('[TrainingController] Calling audioService.startAudio(bpm: $_currentBpm)...');
+    debugPrint(
+      '[TrainingController] Calling audioService.startAudio(bpm: $_currentBpm)...',
+    );
     await _audioService.startAudio(bpm: _currentBpm);
     debugPrint('[TrainingController] audioService.startAudio() completed');
     _isTraining = true;
@@ -210,8 +213,10 @@ class TrainingController {
   /// }
   /// ```
   Future<void> updateBpm(int newBpm) async {
-    if (newBpm < 40 || newBpm > 240) {
-      throw ArgumentError('BPM must be between 40 and 240');
+    if (newBpm < AudioServiceImpl.minBpm || newBpm > AudioServiceImpl.maxBpm) {
+      throw ArgumentError(
+        'BPM must be between ${AudioServiceImpl.minBpm} and ${AudioServiceImpl.maxBpm}',
+      );
     }
 
     if (_isTraining) {

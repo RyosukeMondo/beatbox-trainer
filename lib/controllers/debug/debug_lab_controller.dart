@@ -270,6 +270,7 @@ class DebugLabController {
   }
 
   Future<void> dispose() async {
+    _syntheticTimer?.cancel();
     await _classificationSub?.cancel();
     await _telemetrySub?.cancel();
     await _metricsSub?.cancel();
@@ -279,7 +280,10 @@ class DebugLabController {
     await _telemetryController.close();
     await _metricsController.close();
     await _sseClient.dispose();
-    _syntheticTimer?.cancel();
+    logEntries.dispose();
+    remoteConnected.dispose();
+    remoteError.dispose();
+    syntheticEnabled.dispose();
     fixtureAnomaly.dispose();
   }
 

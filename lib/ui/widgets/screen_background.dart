@@ -26,6 +26,7 @@ class ScreenBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overlay = overlayOpacity.clamp(0.0, 1.0).toDouble();
+    final topOverlay = (overlay + 0.15).clamp(0.0, 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -41,7 +42,7 @@ class ScreenBackground extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withValues(alpha: overlay + 0.15),
+              Colors.black.withValues(alpha: topOverlay),
               Colors.black.withValues(alpha: overlay),
             ],
           ),

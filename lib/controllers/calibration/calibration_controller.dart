@@ -317,6 +317,8 @@ class CalibrationController {
     } finally {
       await _progressSubscription?.cancel();
       _progressSubscription = null;
+      await _audioMetricsSubscription?.cancel();
+      _audioMetricsSubscription = null;
       _setCalibrating(false);
       _clearProgress();
       debugPrint('[CalibrationController] Calibration cancelled');
